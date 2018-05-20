@@ -6,10 +6,16 @@
   "scripts": {
     "build": "tsc"
   },
+  "bin": {
+    "minyami": "./dist/index.js"
+  },
   "author": "",
   "license": "MIT",
   "dependencies": {
     "axios": "^0.18.0",
-    "erii": "^1.1.0"
+    "erii": "^1.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^10.1.2"
   }
 }
