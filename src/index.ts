@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import Erii from 'erii';
+import Downloader from './core/downloader';
 
 Erii.setMetaInfo({
     version: '1.0.0',
@@ -22,7 +23,8 @@ Erii.bind({
         validate: () => true
     }
 }, (ctx) => {
-
+    const path = ctx.getArgument('download');
+    const downloader = new Downloader(path);
 });
 
 Erii.addOption({

@@ -13,6 +13,7 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^0.18.0",
+    "chalk": "^2.4.1",
     "erii": "^1.2.1"
   },
   "devDependencies": {
