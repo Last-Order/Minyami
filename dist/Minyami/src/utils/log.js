@@ -10,7 +10,7 @@ class Log {
     }
     static error(message) {
         console.info(chalk_1.default.red(`[MINYAMI][ERROR] ${message}`));
-        process.exit();
+        throw new Error(message);
     }
 }
 exports.default = Log;

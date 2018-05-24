@@ -9,13 +9,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const erii_1 = require("erii");
+const index_1 = require("../../erii/src/index");
 const downloader_1 = require("./core/downloader");
-erii_1.default.setMetaInfo({
+index_1.default.setMetaInfo({
     version: '1.0.0',
     name: 'Minyami / A lovely video downloader'
 });
-erii_1.default.bind({
+index_1.default.bind({
     name: ['help', 'h'],
     description: 'Show help documentation',
     argument: {
@@ -23,9 +23,10 @@ erii_1.default.bind({
         description: 'query help of a specified command',
     }
 }, (ctx) => {
-    ctx.showHelp();
+    console.log(index_1.default.parsedArguments);
+    //ctx.showHelp();
 });
-erii_1.default.bind({
+index_1.default.bind({
     name: ['download', 'd'],
     description: 'Download video',
     argument: {
@@ -33,23 +34,14 @@ erii_1.default.bind({
         description: 'm3u8 file path',
     }
 }, (ctx, options) => __awaiter(this, void 0, void 0, function* () {
-    const path = ctx.getArgument().toString();
+    const path = ctx.getArgument();
+    console.log(index_1.default.parsedArguments);
     const downloader = new downloader_1.default(path);
     yield downloader.init();
-    yield downloader.download();
 }));
-erii_1.default.addOption({
+index_1.default.addOption({
     name: ['verbose', 'debug'],
     description: 'Debug output'
 });
-erii_1.default.addOption({
-    name: ['threads'],
-    description: 'Threads limit',
-    argument: {
-        name: 'limit',
-        description: 'Limit of threads',
-        validate: 'isInt'
-    }
-});
-erii_1.default.start();
+index_1.default.start();
 //# sourceMappingURL=index.js.map

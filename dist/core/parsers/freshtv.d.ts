@@ -1,0 +1,4 @@
+import { ParserOptions, ParserResult } from "./types";
+export default class Parser {
+    static parse({key, iv}: ParserOptions): ParserResult;
+}

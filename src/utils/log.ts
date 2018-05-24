@@ -9,7 +9,8 @@ class Log {
     }
 
     static error(message: string) {
-        console.info(chalk.red(`[MINYAMI][ERROR] ${message}`))
+        console.info(chalk.red(`[MINYAMI][ERROR] ${message}`));
+        process.exit();
     }
 }
 

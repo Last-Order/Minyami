@@ -1,4 +1,5 @@
 import { exec } from './system';
+import axios from 'axios';
 const fs = require('fs');
 
 /**
@@ -20,4 +21,37 @@ export async function mergeVideo(fileList = [], output = "output.mkv") {
     await exec('mkvmerge @temp.json');
 
     fs.unlinkSync('./temp.json');
+}
+
+/**
+ * 下载文件
+ * @param url 
+ * @param path 
+ */
+export function download(url: string, path: string) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const response = await axios({
+                url,
+                method: 'GET',
+                responseType: 'stream',
+            });
+            response.data.pipe(fs.createWriteStream(path));
+            response.data.on('end', () => {
+                resolve();
+            })
+        } catch (e) {
+            reject(e);
+        }
+    })
+}
+/**
+ * 解密文件
+ * @param input 
+ * @param output 
+ * @param key 
+ * @param iv 
+ */
+export async function decrypt(input: string, output: string, key: string, iv: string) {
+    return await exec(`openssl aes-128-cbc -d -in '${input}' -out '${output}' -K "${key}" -iv "${iv}"`);
 }
