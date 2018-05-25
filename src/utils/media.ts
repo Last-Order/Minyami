@@ -53,5 +53,5 @@ export function download(url: string, path: string) {
  * @param iv 
  */
 export async function decrypt(input: string, output: string, key: string, iv: string) {
-    return await exec(`openssl aes-128-cbc -d -in '${input}' -out '${output}' -K "${key}" -iv "${iv}"`);
+    return await exec(`openssl aes-128-cbc -d -in "${input}" -out "${output}" -K "${key}" -iv "${iv}"`);
 }
