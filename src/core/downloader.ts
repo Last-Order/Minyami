@@ -104,9 +104,6 @@ class Downloader {
                 filename: chunk.match(/\/([^\/]+?\.ts)/)[1]
             };
         });
-         // DEBUG
-         this.chunks = this.chunks.slice(0, 10);
-         // DEBUG
         this.totalChunks = this.chunks.length;
         this.outputFileList = this.chunks.map(chunk => {
             return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
@@ -140,6 +137,7 @@ class Downloader {
                 Log.info(`Proccess ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}%)`);
                 this.checkQueue();
             }).catch(e => {
+                console.error(e);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();

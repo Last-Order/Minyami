@@ -21,9 +21,13 @@ function mergeVideo(fileList = [], output = "./output.mkv") {
         if (fileList.length === 0) {
             return;
         }
+        fileList = fileList.map((file, index) => {
+            return index === 0 ? file : `+${file}`;
+        });
         const parameters = fileList.concat([
             "-o",
-            output
+            output,
+            "-q"
         ]);
         fs.writeFileSync('./temp.json', JSON.stringify(parameters));
         yield system_1.exec('mkvmerge @temp.json');
@@ -64,7 +68,7 @@ exports.download = download;
  */
 function decrypt(input, output, key, iv) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield system_1.exec(`openssl aes-128-cbc -d -in '${input}' -out '${output}' -K "${key}" -iv "${iv}"`);
+        return yield system_1.exec(`openssl aes-128-cbc -d -in "${input}" -out "${output}" -K "${key}" -iv "${iv}"`);
     });
 }
 exports.decrypt = decrypt;

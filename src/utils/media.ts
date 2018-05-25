@@ -11,9 +11,14 @@ export async function mergeVideo(fileList = [], output = "./output.mkv") {
     if (fileList.length === 0) {
         return;
     }
+    fileList = fileList.map((file, index) => {
+        return index === 0 ? file : `+${file}`;
+    });
+    
     const parameters = fileList.concat([
         "-o",
-        output
+        output,
+        "-q"
     ]);
 
     fs.writeFileSync('./temp.json', JSON.stringify(parameters));
