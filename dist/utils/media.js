@@ -16,7 +16,7 @@ const fs = require('fs');
  * @param fileList 文件列表
  * @param output 输出路径
  */
-function mergeVideo(fileList = [], output = "output.mkv") {
+function mergeVideo(fileList = [], output = "./output.mkv") {
     return __awaiter(this, void 0, void 0, function* () {
         if (fileList.length === 0) {
             return;

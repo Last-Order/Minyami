@@ -34,7 +34,7 @@ erii_1.default.bind({
     }
 }, (ctx, options) => __awaiter(this, void 0, void 0, function* () {
     const path = ctx.getArgument().toString();
-    const downloader = new downloader_1.default(path);
+    const downloader = new downloader_1.default(path, options);
     yield downloader.init();
     yield downloader.download();
 }));
@@ -44,11 +44,27 @@ erii_1.default.addOption({
 });
 erii_1.default.addOption({
     name: ['threads'],
+    command: 'download',
     description: 'Threads limit',
     argument: {
         name: 'limit',
-        description: 'Limit of threads',
+        description: '(Optional) Limit of threads, default to 5',
         validate: 'isInt'
+    }
+});
+erii_1.default.addOption({
+    name: ['output', 'o'],
+    command: 'download',
+    description: 'Output path',
+    argument: {
+        name: 'path',
+        description: '(Optional) Output file path, default to ./output.mkv',
+        validate: (path) => path.endsWith('.mkv')
+    },
+});
+erii_1.default.always(() => {
+    if (erii_1.default.parsedArguments['_'].length === 0 && Object.keys(erii_1.default.parsedArguments).length === 1) {
+        erii_1.default.showHelp();
     }
 });
 erii_1.default.start();

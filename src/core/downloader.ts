@@ -1,11 +1,13 @@
 import * as fs from 'fs';
 import Log from '../utils/log';
-import { download, decrypt } from '../utils/media';
+import { download, decrypt, mergeVideo } from '../utils/media';
 import axios from 'axios';
+import { exec } from '../utils/system';
 const path = require('path');
 
 export interface DownloaderConfig {
     threads?: number;
+    output?: string;
 }
 
 export interface Chunk {
@@ -15,13 +17,19 @@ export interface Chunk {
 
 class Downloader {
     tempPath: string;
+    outputPath: string = './output.mkv';
+    m3u8Path: string;
+
     chunks: Chunk[];
+    outputFileList: string[];
+
     totalChunks: number;
     finishedChunks: number = 0;
     threads: number = 5;
     runningThreads: number = 0;
-    m3u8Path: string;
+   
     m3u8Content: string;
+
     key: string;
     iv: string;
     prefix: string;
@@ -32,10 +40,17 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output }: DownloaderConfig = {
         threads: 5
     }) {
-        this.threads = threads;
+        if (threads) {
+            this.threads = threads;
+        }
+
+        if (output) {
+            this.outputPath = output;
+        }
+      
         this.m3u8Path = m3u8Path;
         this.tempPath = path.resolve(__dirname, '../../temp');
     }
@@ -89,7 +104,13 @@ class Downloader {
                 filename: chunk.match(/\/([^\/]+?\.ts)/)[1]
             };
         });
+         // DEBUG
+         this.chunks = this.chunks.slice(0, 10);
+         // DEBUG
         this.totalChunks = this.chunks.length;
+        this.outputFileList = this.chunks.map(chunk => {
+            return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
+        })
         this.checkQueue();
     }
 
@@ -125,7 +146,15 @@ class Downloader {
             });
             this.checkQueue();
         }
-        
+        if (this.chunks.length === 0 && this.runningThreads === 0) {
+            Log.info('All chunks downloaded. Start merging chunks.');
+            mergeVideo(this.outputFileList, this.outputPath).then(async () => {
+                Log.info('End of merging.');
+                Log.info('Starting cleaning temporary files.');
+                await exec(`rm -rf ${this.tempPath}`);
+                Log.info(`All finished. Check your file at [${this.outputPath}] .`);
+            });
+        }
     }
 }
 

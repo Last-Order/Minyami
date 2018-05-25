@@ -7,7 +7,7 @@ const fs = require('fs');
  * @param fileList 文件列表
  * @param output 输出路径
  */
-export async function mergeVideo(fileList = [], output = "output.mkv") {
+export async function mergeVideo(fileList = [], output = "./output.mkv") {
     if (fileList.length === 0) {
         return;
     }

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import Erii from 'erii';
 import Downloader from './core/downloader';
+import Log from './utils/log';
 
 Erii.setMetaInfo({
     version: '1.0.0',
@@ -26,7 +27,7 @@ Erii.bind({
     }
 }, async (ctx, options) => {
     const path = ctx.getArgument().toString();
-    const downloader = new Downloader(path);
+    const downloader = new Downloader(path, options);
     await downloader.init();
     await downloader.download();
 });
@@ -38,11 +39,29 @@ Erii.addOption({
 
 Erii.addOption({
     name: ['threads'],
+    command: 'download',
     description: 'Threads limit',
     argument: {
         name: 'limit',
-        description: 'Limit of threads',
+        description: '(Optional) Limit of threads, default to 5',
         validate: 'isInt'
+    }
+});
+
+Erii.addOption({
+    name: ['output', 'o'],
+    command: 'download',
+    description: 'Output path',
+    argument: {
+        name: 'path',
+        description: '(Optional) Output file path, default to ./output.mkv',
+        validate: (path: string) => path.endsWith('.mkv')
+    },
+})
+
+Erii.always(() => {
+    if (Erii.parsedArguments['_'].length === 0 && Object.keys(Erii.parsedArguments).length === 1) {
+        Erii.showHelp();
     }
 })
 

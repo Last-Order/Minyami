@@ -12,6 +12,7 @@ const fs = require("fs");
 const log_1 = require("../utils/log");
 const media_1 = require("../utils/media");
 const axios_1 = require("axios");
+const system_1 = require("../utils/system");
 const path = require('path');
 class Downloader {
     /**
@@ -20,13 +21,19 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads } = {
+    constructor(m3u8Path, { threads, output } = {
         threads: 5
     }) {
+        this.outputPath = './output.mkv';
         this.finishedChunks = 0;
         this.threads = 5;
         this.runningThreads = 0;
-        this.threads = threads;
+        if (threads) {
+            this.threads = threads;
+        }
+        if (output) {
+            this.outputPath = output;
+        }
         this.m3u8Path = m3u8Path;
         this.tempPath = path.resolve(__dirname, '../../temp');
     }
@@ -83,7 +90,13 @@ class Downloader {
                     filename: chunk.match(/\/([^\/]+?\.ts)/)[1]
                 };
             });
+            // DEBUG
+            this.chunks = this.chunks.slice(0, 10);
+            // DEBUG
             this.totalChunks = this.chunks.length;
+            this.outputFileList = this.chunks.map(chunk => {
+                return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
+            });
             this.checkQueue();
         });
     }
@@ -118,6 +131,15 @@ class Downloader {
                 this.checkQueue();
             });
             this.checkQueue();
+        }
+        if (this.chunks.length === 0 && this.runningThreads === 0) {
+            log_1.default.info('All chunks downloaded. Start merging chunks.');
+            media_1.mergeVideo(this.outputFileList, this.outputPath).then(() => __awaiter(this, void 0, void 0, function* () {
+                log_1.default.info('End of merging.');
+                log_1.default.info('Starting cleaning temporary files.');
+                yield system_1.exec(`rm -rf ${this.tempPath}`);
+                log_1.default.info(`All finished. Check your file at [${this.outputPath}] .`);
+            }));
         }
     }
 }
