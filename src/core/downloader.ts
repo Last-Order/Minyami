@@ -30,6 +30,8 @@ class Downloader {
    
     m3u8Content: string;
 
+    isEncrypted: boolean = true;
+
     key: string;
     iv: string;
     prefix: string;
@@ -79,20 +81,32 @@ class Downloader {
         }
         this.m3u8Content = m3u8Content;
         // parse m3u8
-        const key = m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
-        const iv = m3u8Content.match(/IV=0x(.+)/)[1];
-        if (!key || !iv) {
-            Log.error('Unsupported site.');
-        }
-        if (key.startsWith('abemafresh')) {
-            Log.info('Site comfirmed: FreshTV.');
-            const parser = await import('./parsers/freshtv');
-            const parseResult = parser.default.parse({
-                key,
-                iv
-            });
-            [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-            Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+        if (m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/) !== null) {
+            // Encrypted
+            this.isEncrypted = true;
+            const key = m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
+            const iv = m3u8Content.match(/IV=0x(.+)/)[1];
+            if (!key || !iv) {
+                Log.error('Unsupported site.');
+            }
+            if (key.startsWith('abemafresh')) {
+                Log.info('Site comfirmed: FreshTV.');
+                const parser = await import('./parsers/freshtv');
+                const parseResult = parser.default.parse({
+                    key,
+                    iv
+                });
+                [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
+                Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+            }
+        } else {
+            // Not encrypted
+            this.isEncrypted = false;
+            if (this.m3u8Path.includes('freshlive')) {
+                // FreshTV
+                const parser = await import('./parsers/freshtv');
+                this.prefix = parser.default.prefix;
+            }
         }
     }
 
@@ -106,7 +120,11 @@ class Downloader {
         });
         this.totalChunks = this.chunks.length;
         this.outputFileList = this.chunks.map(chunk => {
-            return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
+            if (this.isEncrypted) {
+                return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
+            } else {
+                return path.resolve(this.tempPath, `./${chunk.filename}`);
+            }
         })
         this.checkQueue();
     }
@@ -117,8 +135,10 @@ class Downloader {
             try {
                 await download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
                 Log.debug(`Download ${task.filename} succeed.`);
-                await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                Log.debug(`Decrypt ${task.filename} succeed`);
+                if (this.isEncrypted) {
+                    await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
+                    Log.debug(`Decrypt ${task.filename} succeed`);
+                }
                 resolve();
             } catch (e) {
                 Log.info(`Download or decrypt ${task.filename} failed. Retry later.`);

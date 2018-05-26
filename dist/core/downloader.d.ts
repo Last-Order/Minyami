@@ -17,6 +17,7 @@ declare class Downloader {
     threads: number;
     runningThreads: number;
     m3u8Content: string;
+    isEncrypted: boolean;
     key: string;
     iv: string;
     prefix: string;

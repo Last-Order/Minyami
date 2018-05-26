@@ -26,9 +26,10 @@ class Parser {
         return {
             key: result.join(''),
             iv: iv,
-            prefix: 'https://movie.freshlive.tv'
+            prefix: Parser.prefix
         };
     }
 }
+Parser.prefix = 'https://movie.freshlive.tv';
 exports.default = Parser;
 //# sourceMappingURL=freshtv.js.map

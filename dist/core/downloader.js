@@ -28,6 +28,7 @@ class Downloader {
         this.finishedChunks = 0;
         this.threads = 5;
         this.runningThreads = 0;
+        this.isEncrypted = true;
         if (threads) {
             this.threads = threads;
         }
@@ -64,20 +65,33 @@ class Downloader {
             }
             this.m3u8Content = m3u8Content;
             // parse m3u8
-            const key = m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
-            const iv = m3u8Content.match(/IV=0x(.+)/)[1];
-            if (!key || !iv) {
-                log_1.default.error('Unsupported site.');
+            if (m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/) !== null) {
+                // Encrypted
+                this.isEncrypted = true;
+                const key = m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
+                const iv = m3u8Content.match(/IV=0x(.+)/)[1];
+                if (!key || !iv) {
+                    log_1.default.error('Unsupported site.');
+                }
+                if (key.startsWith('abemafresh')) {
+                    log_1.default.info('Site comfirmed: FreshTV.');
+                    const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
+                    const parseResult = parser.default.parse({
+                        key,
+                        iv
+                    });
+                    [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
+                    log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                }
             }
-            if (key.startsWith('abemafresh')) {
-                log_1.default.info('Site comfirmed: FreshTV.');
-                const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
-                const parseResult = parser.default.parse({
-                    key,
-                    iv
-                });
-                [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
+            else {
+                // Not encrypted
+                this.isEncrypted = false;
+                if (this.m3u8Path.includes('freshlive')) {
+                    // FreshTV
+                    const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
+                    this.prefix = parser.default.prefix;
+                }
             }
         });
     }
@@ -92,7 +106,12 @@ class Downloader {
             });
             this.totalChunks = this.chunks.length;
             this.outputFileList = this.chunks.map(chunk => {
-                return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
+                if (this.isEncrypted) {
+                    return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
+                }
+                else {
+                    return path.resolve(this.tempPath, `./${chunk.filename}`);
+                }
             });
             this.checkQueue();
         });
@@ -103,8 +122,10 @@ class Downloader {
             try {
                 yield media_1.download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
                 log_1.default.debug(`Download ${task.filename} succeed.`);
-                yield media_1.decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                log_1.default.debug(`Decrypt ${task.filename} succeed`);
+                if (this.isEncrypted) {
+                    yield media_1.decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
+                    log_1.default.debug(`Decrypt ${task.filename} succeed`);
+                }
                 resolve();
             }
             catch (e) {

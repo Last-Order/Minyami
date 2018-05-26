@@ -3,6 +3,7 @@ import Log from "../../utils/log";
 
 const cryptojs = require('crypto-js');
 export default class Parser {
+    static prefix = 'https://movie.freshlive.tv';
     static parse({
         key = '',
         iv = '',
@@ -35,7 +36,7 @@ export default class Parser {
         return {
             key: result.join(''),
             iv: iv,
-            prefix: 'https://movie.freshlive.tv'
+            prefix: Parser.prefix
         }
     }
 }
