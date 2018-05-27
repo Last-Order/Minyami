@@ -4,7 +4,7 @@ import Downloader from './core/downloader';
 import Log from './utils/log';
 
 Erii.setMetaInfo({
-    version: '1.0.0',
+    version: '1.0.6',
     name: 'Minyami / A lovely video downloader'
 });
 Erii.bind({
@@ -57,12 +57,20 @@ Erii.addOption({
         description: '(Optional) Output file path, default to ./output.mkv',
         validate: (path: string) => path.endsWith('.mkv')
     },
+});
+
+Erii.addOption({
+    name: ['key'],
+    command: 'download',
+    description: 'Set key manually',
+    argument: {
+        name: 'key',
+        description: '(Optional) Key for decrypt video.'
+    }
 })
 
-Erii.always(() => {
-    if (Erii.parsedArguments['_'].length === 0 && Object.keys(Erii.parsedArguments).length === 1) {
-        Erii.showHelp();
-    }
+Erii.default(() => {
+    Erii.showHelp();
 })
 
 Erii.start();

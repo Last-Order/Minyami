@@ -3,6 +3,7 @@ import Log from '../utils/log';
 import { download, decrypt, mergeVideo } from '../utils/media';
 import axios from 'axios';
 import { exec } from '../utils/system';
+import M3U8 from './m3u8';
 const path = require('path');
 
 export interface DownloaderConfig {
@@ -19,6 +20,7 @@ class Downloader {
     tempPath: string;
     outputPath: string = './output.mkv';
     m3u8Path: string;
+    m3u8: M3U8;
 
     chunks: Chunk[];
     outputFileList: string[];
@@ -28,10 +30,6 @@ class Downloader {
     threads: number = 5;
     runningThreads: number = 0;
    
-    m3u8Content: string;
-
-    isEncrypted: boolean = true;
-
     key: string;
     iv: string;
     prefix: string;
@@ -79,13 +77,14 @@ class Downloader {
             Log.info('Loading M3U8 file.');
             m3u8Content = fs.readFileSync(this.m3u8Path).toString();
         }
-        this.m3u8Content = m3u8Content;
+
+        this.m3u8 = new M3U8(m3u8Content);
+        
         // parse m3u8
-        if (m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/) !== null) {
+        if (this.m3u8.isEncrypted) {
             // Encrypted
-            this.isEncrypted = true;
-            const key = m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
-            const iv = m3u8Content.match(/IV=0x(.+)/)[1];
+            const key = this.m3u8.getKey();
+            const iv = this.m3u8.getIV();
             if (!key || !iv) {
                 Log.error('Unsupported site.');
             }
@@ -101,7 +100,6 @@ class Downloader {
             }
         } else {
             // Not encrypted
-            this.isEncrypted = false;
             if (this.m3u8Path.includes('freshlive')) {
                 // FreshTV
                 const parser = await import('./parsers/freshtv');
@@ -112,7 +110,7 @@ class Downloader {
 
     async download() {
         Log.info(`Start downloading with ${this.threads} thread(s).`);
-        this.chunks = this.m3u8Content.match(/(.+\.ts.*)/ig).map(chunk => {
+        this.chunks = this.m3u8.getChunks().map(chunk => {
             return {
                 url: this.prefix + chunk,
                 filename: chunk.match(/\/([^\/]+?\.ts)/)[1]
@@ -120,7 +118,7 @@ class Downloader {
         });
         this.totalChunks = this.chunks.length;
         this.outputFileList = this.chunks.map(chunk => {
-            if (this.isEncrypted) {
+            if (this.m3u8.isEncrypted) {
                 return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
             } else {
                 return path.resolve(this.tempPath, `./${chunk.filename}`);
@@ -135,7 +133,7 @@ class Downloader {
             try {
                 await download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
                 Log.debug(`Download ${task.filename} succeed.`);
-                if (this.isEncrypted) {
+                if (this.m3u8.isEncrypted) {
                     await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
                     Log.debug(`Decrypt ${task.filename} succeed`);
                 }

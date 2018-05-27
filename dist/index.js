@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const erii_1 = require("erii");
 const downloader_1 = require("./core/downloader");
 erii_1.default.setMetaInfo({
-    version: '1.0.0',
+    version: '1.0.6',
     name: 'Minyami / A lovely video downloader'
 });
 erii_1.default.bind({
@@ -62,10 +62,17 @@ erii_1.default.addOption({
         validate: (path) => path.endsWith('.mkv')
     },
 });
-erii_1.default.always(() => {
-    if (erii_1.default.parsedArguments['_'].length === 0 && Object.keys(erii_1.default.parsedArguments).length === 1) {
-        erii_1.default.showHelp();
+erii_1.default.addOption({
+    name: ['key'],
+    command: 'download',
+    description: 'Set key manually',
+    argument: {
+        name: 'key',
+        description: '(Optional) Key for decrypt video.'
     }
+});
+erii_1.default.default(() => {
+    erii_1.default.showHelp();
 });
 erii_1.default.start();
 //# sourceMappingURL=index.js.map

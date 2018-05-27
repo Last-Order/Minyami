@@ -1,6 +1,6 @@
 {
   "name": "minyami",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -15,7 +15,7 @@
     "axios": "^0.18.0",
     "chalk": "^2.4.1",
     "crypto-js": "^3.1.9-1",
-    "erii": "^1.2.3"
+    "erii": "^1.2.4"
   },
   "devDependencies": {
     "@types/node": "^10.1.2"

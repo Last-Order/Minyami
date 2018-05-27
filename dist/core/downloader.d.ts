@@ -1,3 +1,4 @@
+import M3U8 from './m3u8';
 export interface DownloaderConfig {
     threads?: number;
     output?: string;
@@ -10,14 +11,13 @@ declare class Downloader {
     tempPath: string;
     outputPath: string;
     m3u8Path: string;
+    m3u8: M3U8;
     chunks: Chunk[];
     outputFileList: string[];
     totalChunks: number;
     finishedChunks: number;
     threads: number;
     runningThreads: number;
-    m3u8Content: string;
-    isEncrypted: boolean;
     key: string;
     iv: string;
     prefix: string;
