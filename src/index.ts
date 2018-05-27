@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import Erii from 'erii';
-import Downloader from './core/downloader';
+import ArchiveDownloader from './core/archive';
 import Log from './utils/log';
 
 Erii.setMetaInfo({
@@ -27,7 +27,7 @@ Erii.bind({
     }
 }, async (ctx, options) => {
     const path = ctx.getArgument().toString();
-    const downloader = new Downloader(path, options);
+    const downloader = new ArchiveDownloader(path, options);
     await downloader.init();
     await downloader.download();
 });

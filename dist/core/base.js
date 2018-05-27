@@ -63,4 +63,4 @@ class Downloader {
 }
 ;
 exports.default = Downloader;
-//# sourceMappingURL=downloader.js.map
+//# sourceMappingURL=base.js.map

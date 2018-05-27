@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const erii_1 = require("erii");
-const downloader_1 = require("./core/downloader");
+const archive_1 = require("./core/archive");
 erii_1.default.setMetaInfo({
     version: '1.0.6',
     name: 'Minyami / A lovely video downloader'
@@ -34,7 +34,7 @@ erii_1.default.bind({
     }
 }, (ctx, options) => __awaiter(this, void 0, void 0, function* () {
     const path = ctx.getArgument().toString();
-    const downloader = new downloader_1.default(path, options);
+    const downloader = new archive_1.default(path, options);
     yield downloader.init();
     yield downloader.download();
 }));

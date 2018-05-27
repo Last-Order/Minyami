@@ -1,8 +1,5 @@
+import { DownloaderConfig } from "./downloader";
 import M3U8 from "./m3u8";
-export interface DownloaderConfig {
-    threads?: number;
-    output?: string;
-}
 declare class Downloader {
     tempPath: any;
     m3u8Path: string;
