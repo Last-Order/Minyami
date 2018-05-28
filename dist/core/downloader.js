@@ -20,7 +20,7 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output } = {
+    constructor(m3u8Path, { threads, output, key } = {
         threads: 5
     }) {
         if (threads) {
@@ -28,6 +28,9 @@ class Downloader {
         }
         if (output) {
             this.outputPath = output;
+        }
+        if (key) {
+            this.key = key;
         }
         this.m3u8Path = m3u8Path;
         this.tempPath = path.resolve(__dirname, '../../temp');

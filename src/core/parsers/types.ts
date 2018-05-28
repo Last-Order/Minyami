@@ -1,7 +1,11 @@
 export interface ParserOptions {
     key: string;
     iv: string;
-    options?: object;
+    options?: ParserAdditionalOptions;
+}
+
+export interface ParserAdditionalOptions {
+    key: string;
 }
 
 export interface ParserResult {

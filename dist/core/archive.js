@@ -20,12 +20,13 @@ class ArchiveDownloader extends downloader_1.default {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output } = {
+    constructor(m3u8Path, { threads, output, key } = {
         threads: 5
     }) {
         super(m3u8Path, {
             threads,
-            output
+            output,
+            key
         });
         this.outputPath = './output.mkv';
         this.finishedChunks = 0;
@@ -51,6 +52,21 @@ class ArchiveDownloader extends downloader_1.default {
                     });
                     [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
                     log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                }
+                else if (key.startsWith('abematv-license')) {
+                    log_1.default.info('Site comfirmed: AbemaTV.');
+                    const parser = yield Promise.resolve().then(() => require('./parsers/abema'));
+                    const parseResult = parser.default.parse({
+                        key,
+                        iv,
+                        options: {
+                            key: this.key
+                        }
+                    });
+                    [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
+                    log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                }
+                else {
                 }
             }
             else {

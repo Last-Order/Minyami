@@ -24,7 +24,7 @@ declare class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path: string, {threads, output}?: DownloaderConfig);
+    constructor(m3u8Path: string, {threads, output, key}?: DownloaderConfig);
     download(): Promise<void>;
     handleTask(task: Chunk): Promise<{}>;
     checkQueue(): void;

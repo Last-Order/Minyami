@@ -38,12 +38,13 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key }: DownloaderConfig = {
         threads: 5
     }) {
         super(m3u8Path, {
             threads,
-            output
+            output,
+            key
         });
     }
 
@@ -65,6 +66,20 @@ class ArchiveDownloader extends Downloader {
                 });
                 [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
                 Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+            } else if (key.startsWith('abematv-license')) {
+                Log.info('Site comfirmed: AbemaTV.');
+                const parser = await import('./parsers/abema');
+                const parseResult = parser.default.parse({
+                    key,
+                    iv,
+                    options: {
+                        key: this.key
+                    }
+                });
+                [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
+                Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+            } else {
+
             }
         } else {
             // Not encrypted

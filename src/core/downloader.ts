@@ -7,6 +7,7 @@ import M3U8 from "./m3u8";
 export interface DownloaderConfig {
     threads?: number;
     output?: string;
+    key?: string;
 }
 
 class Downloader {
@@ -15,13 +16,14 @@ class Downloader {
     m3u8: M3U8;
     outputPath: string;
     threads: number;
+    key: string;
     /**
      * 
      * @param m3u8Path 
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key }: DownloaderConfig = {
         threads: 5
     }) {
         if (threads) {
@@ -30,6 +32,10 @@ class Downloader {
 
         if (output) {
             this.outputPath = output;
+        }
+
+        if (key) {
+            this.key = key;
         }
       
         this.m3u8Path = m3u8Path;
