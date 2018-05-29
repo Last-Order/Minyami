@@ -6,6 +6,8 @@ export default class M3U8 {
     m3u8Content: string;
     isEncrypted: boolean;
     isEnd: boolean;
+    chunks: string[];
+
     constructor(m3u8: string) {
         this.m3u8Content = m3u8;
         this.parse();
@@ -17,13 +19,7 @@ export default class M3U8 {
     parse() {
         this.isEncrypted = this.m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/) !== null;
         this.isEnd = this.m3u8Content.match(/EXT-X-ENDLIST/) !== null;
-    }
-
-    /**
-     * 获得媒体列表
-     */
-    getChunks() {
-        return this.m3u8Content.match(/(.+\.ts.*)/ig);
+        this.chunks = this.m3u8Content.match(/(.+\.ts.*)/ig);
     }
 
     /**

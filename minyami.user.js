@@ -2,8 +2,7 @@
 // @name Minyami 网页提取器
 // @run-at document-start
 // @namespace Violentmonkey Scripts
-// @match https://abema.tv/now-on-air/*
-// @match https://abema.tv/channels/*
+// @match https://abema.tv/*
 // @match https://freshlive.tv/*
 // @grant none
 // ==/UserScript==

@@ -5,7 +5,7 @@ export interface DownloaderConfig {
     key?: string;
 }
 declare class Downloader {
-    tempPath: any;
+    tempPath: string;
     m3u8Path: string;
     m3u8: M3U8;
     outputPath: string;

@@ -11,6 +11,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const erii_1 = require("erii");
 const archive_1 = require("./core/archive");
+const live_1 = require("./core/live");
+process.on('unhandledRejection', error => {
+    // Will print "unhandledRejection err is not defined"
+    console.log('unhandledRejection', error);
+});
 erii_1.default.setMetaInfo({
     version: '1.0.6',
     name: 'Minyami / A lovely video downloader'
@@ -34,9 +39,15 @@ erii_1.default.bind({
     }
 }, (ctx, options) => __awaiter(this, void 0, void 0, function* () {
     const path = ctx.getArgument().toString();
-    const downloader = new archive_1.default(path, options);
-    yield downloader.init();
-    yield downloader.download();
+    if (options.live) {
+        const downloader = new live_1.default(path, options);
+        yield downloader.download();
+    }
+    else {
+        const downloader = new archive_1.default(path, options);
+        yield downloader.init();
+        yield downloader.download();
+    }
 }));
 erii_1.default.addOption({
     name: ['verbose', 'debug'],
@@ -70,6 +81,11 @@ erii_1.default.addOption({
         name: 'key',
         description: '(Optional) Key for decrypt video.'
     }
+});
+erii_1.default.addOption({
+    name: ['live'],
+    command: 'download',
+    description: 'Download live'
 });
 erii_1.default.default(() => {
     erii_1.default.showHelp();

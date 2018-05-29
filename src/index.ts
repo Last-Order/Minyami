@@ -2,7 +2,11 @@
 import Erii from 'erii';
 import ArchiveDownloader from './core/archive';
 import Log from './utils/log';
-
+import LiveDownloader from './core/live';
+process.on('unhandledRejection', error => {
+    // Will print "unhandledRejection err is not defined"
+    console.log('unhandledRejection', error);
+});
 Erii.setMetaInfo({
     version: '1.0.6',
     name: 'Minyami / A lovely video downloader'
@@ -27,9 +31,14 @@ Erii.bind({
     }
 }, async (ctx, options) => {
     const path = ctx.getArgument().toString();
-    const downloader = new ArchiveDownloader(path, options);
-    await downloader.init();
-    await downloader.download();
+    if (options.live) {
+        const downloader = new LiveDownloader(path, options);
+        await downloader.download();
+    } else {
+        const downloader = new ArchiveDownloader(path, options);
+        await downloader.init();
+        await downloader.download();
+    }
 });
 
 Erii.addOption({
@@ -67,6 +76,12 @@ Erii.addOption({
         name: 'key',
         description: '(Optional) Key for decrypt video.'
     }
+});
+
+Erii.addOption({
+    name: ['live'],
+    command: 'download',
+    description: 'Download live'
 })
 
 Erii.default(() => {

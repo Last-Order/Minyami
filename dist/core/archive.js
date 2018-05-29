@@ -78,7 +78,7 @@ class ArchiveDownloader extends downloader_1.default {
                 }
             }
             log_1.default.info(`Start downloading with ${this.threads} thread(s).`);
-            this.chunks = this.m3u8.getChunks().map(chunk => {
+            this.chunks = this.m3u8.chunks.map(chunk => {
                 return {
                     url: this.prefix + chunk,
                     filename: chunk.match(/\/([^\/]+?\.ts)/)[1]

@@ -14,12 +14,7 @@ class M3U8 {
     parse() {
         this.isEncrypted = this.m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/) !== null;
         this.isEnd = this.m3u8Content.match(/EXT-X-ENDLIST/) !== null;
-    }
-    /**
-     * 获得媒体列表
-     */
-    getChunks() {
-        return this.m3u8Content.match(/(.+\.ts.*)/ig);
+        this.chunks = this.m3u8Content.match(/(.+\.ts.*)/ig);
     }
     /**
      * 获得加密Key
