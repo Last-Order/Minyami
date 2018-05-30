@@ -39,6 +39,7 @@ class LiveDownloader extends downloader_1.default {
         this.chunks = [];
         this.runningThreads = 0;
         this.finishedChunks = 0;
+        this.isEncrypted = false;
         this.isEnd = false;
         this.isStarted = false;
     }
@@ -63,6 +64,7 @@ class LiveDownloader extends downloader_1.default {
             this.currentPlaylist = yield m3u8_1.loadM3U8(this.m3u8Path);
             this.playlists.push(this.currentPlaylist);
             if (this.currentPlaylist.isEncrypted) {
+                this.isEncrypted = true;
                 const key = this.currentPlaylist.getKey();
                 const iv = this.currentPlaylist.getIV();
                 if (key.startsWith('abematv-license')) {
@@ -77,6 +79,29 @@ class LiveDownloader extends downloader_1.default {
                     });
                     [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
                     log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                }
+                else if (key.startsWith('abemafresh')) {
+                    log_1.default.info('Site comfirmed: FreshTV.');
+                    const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
+                    const parseResult = parser.default.parse({
+                        key,
+                        iv
+                    });
+                    [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
+                    log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                }
+                else {
+                    log_1.default.error('Unknown site.');
+                }
+            }
+            else {
+                this.isEncrypted = false;
+                // Not encrypted
+                if (this.m3u8Path.includes('freshlive')) {
+                    // FreshTV
+                    log_1.default.info('Site comfirmed: FreshTV.');
+                    const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
+                    this.prefix = parser.default.prefix;
                 }
             }
             yield this.cycling();
@@ -110,7 +135,7 @@ class LiveDownloader extends downloader_1.default {
                 // 加入待完成的任务列表
                 this.chunks.push(...currentUndownloadedChunks);
                 this.outputFileList.push(...currentUndownloadedChunks.map(chunk => {
-                    if (this.currentPlaylist.isEncrypted) {
+                    if (this.isEncrypted) {
                         return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
                     }
                     else {
@@ -122,7 +147,7 @@ class LiveDownloader extends downloader_1.default {
                     this.isStarted = true;
                     this.checkQueue();
                 }
-                yield system_1.sleep(1500);
+                yield system_1.sleep(Math.min(5000, this.currentPlaylist.getChunkLength() * 1000));
             }
         });
     }
@@ -132,7 +157,7 @@ class LiveDownloader extends downloader_1.default {
             try {
                 yield media_1.download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
                 log_1.default.debug(`Download ${task.filename} succeed.`);
-                if (this.currentPlaylist.isEncrypted) {
+                if (this.isEncrypted) {
                     yield media_1.decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
                     log_1.default.debug(`Decrypt ${task.filename} succeed`);
                 }
@@ -145,10 +170,7 @@ class LiveDownloader extends downloader_1.default {
         }));
     }
     checkQueue() {
-        if (!this.chunks) {
-            console.log(this);
-        }
-        if (this.chunks.length > 0 && this.runningThreads < this.threads && !this.isEnd) {
+        if (this.chunks.length > 0 && this.runningThreads < this.threads) {
             const task = this.chunks.shift();
             this.runningThreads++;
             this.handleTask(task).then(() => {

@@ -207,9 +207,9 @@
     let flag = false;
 
 
-
+    listen();
     window.onload = () => {
-        listen();
+        
         switch (location.host) {
             case 'abema.tv': {
                 abema();

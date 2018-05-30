@@ -25,6 +25,7 @@ export default class LiveDownloader extends Downloader {
     runningThreads: number = 0;
     finishedChunks: number = 0;
 
+    isEncrypted: boolean = false;
     isEnd: boolean = false;
     isStarted: boolean = false;
 
@@ -71,6 +72,7 @@ export default class LiveDownloader extends Downloader {
         this.currentPlaylist = await loadM3U8(this.m3u8Path);
         this.playlists.push(this.currentPlaylist);
         if (this.currentPlaylist.isEncrypted) {
+            this.isEncrypted = true;
             const key = this.currentPlaylist.getKey();
             const iv = this.currentPlaylist.getIV();
             if (key.startsWith('abematv-license')) {
@@ -85,6 +87,26 @@ export default class LiveDownloader extends Downloader {
                 });
                 [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
                 Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+            } else if (key.startsWith('abemafresh')) {
+                Log.info('Site comfirmed: FreshTV.');
+                const parser = await import('./parsers/freshtv');
+                const parseResult = parser.default.parse({
+                    key,
+                    iv
+                });
+                [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
+                Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+            } else {
+                Log.error('Unknown site.')
+            }
+        } else {
+            this.isEncrypted = false;
+            // Not encrypted
+            if (this.m3u8Path.includes('freshlive')) {
+                // FreshTV
+                Log.info('Site comfirmed: FreshTV.');
+                const parser = await import('./parsers/freshtv');
+                this.prefix = parser.default.prefix;
             }
         }
         await this.cycling();
@@ -117,7 +139,7 @@ export default class LiveDownloader extends Downloader {
             // 加入待完成的任务列表
             this.chunks.push(...currentUndownloadedChunks);
             this.outputFileList.push(...currentUndownloadedChunks.map(chunk => {
-                if (this.currentPlaylist.isEncrypted) {
+                if (this.isEncrypted) {
                     return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
                 } else {
                     return path.resolve(this.tempPath, `./${chunk.filename}`);
@@ -129,7 +151,7 @@ export default class LiveDownloader extends Downloader {
                 this.isStarted = true;
                 this.checkQueue();
             }
-            await sleep(1500);
+            await sleep(Math.min(5000, this.currentPlaylist.getChunkLength() * 1000));
         }
     }
 
@@ -139,7 +161,7 @@ export default class LiveDownloader extends Downloader {
             try {
                 await download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
                 Log.debug(`Download ${task.filename} succeed.`);
-                if (this.currentPlaylist.isEncrypted) {
+                if (this.isEncrypted) {
                     await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
                     Log.debug(`Decrypt ${task.filename} succeed`);
                 }
@@ -152,10 +174,7 @@ export default class LiveDownloader extends Downloader {
     }
 
     checkQueue() {
-        if (!this.chunks) {
-            console.log(this);
-        }
-        if (this.chunks.length > 0 && this.runningThreads < this.threads && !this.isEnd) {
+        if (this.chunks.length > 0 && this.runningThreads < this.threads) {
             const task = this.chunks.shift();
             this.runningThreads++;
             this.handleTask(task).then(() => {

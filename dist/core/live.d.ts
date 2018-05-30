@@ -15,6 +15,7 @@ export default class LiveDownloader extends Downloader {
     chunks: Chunk[];
     runningThreads: number;
     finishedChunks: number;
+    isEncrypted: boolean;
     isEnd: boolean;
     isStarted: boolean;
     iv: string;
