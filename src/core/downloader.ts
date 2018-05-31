@@ -18,6 +18,10 @@ class Downloader {
     outputPath: string = './output.mkv';
     threads: number = 5;
     key: string;
+
+    startedAt: number;
+    finishedChunks: number = 0;
+
     /**
      * 
      * @param m3u8Path 
@@ -48,6 +52,14 @@ class Downloader {
             fs.mkdirSync(this.tempPath);
         }
         this.m3u8 = await loadM3U8(this.m3u8Path);
+    }
+
+    calculateSpeedByChunk() {
+        return (this.finishedChunks / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
+    }
+
+    calculateSpeedByRatio() {
+        return (this.finishedChunks * this.m3u8.getChunkLength() / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
     }
 };
 

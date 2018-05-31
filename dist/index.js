@@ -12,12 +12,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const erii_1 = require("erii");
 const archive_1 = require("./core/archive");
 const live_1 = require("./core/live");
-process.on('unhandledRejection', error => {
-    // Will print "unhandledRejection err is not defined"
-    console.log('unhandledRejection', error);
-});
+const fs = require('fs');
 erii_1.default.setMetaInfo({
-    version: '1.0.6',
+    version: JSON.parse(fs.readFileSync('./package.json').toString())['version'],
     name: 'Minyami / A lovely video downloader'
 });
 erii_1.default.bind({
@@ -29,6 +26,12 @@ erii_1.default.bind({
     }
 }, (ctx) => {
     ctx.showHelp();
+});
+erii_1.default.bind({
+    name: ['version'],
+    description: 'Show version'
+}, (ctx) => {
+    ctx.showVersion();
 });
 erii_1.default.bind({
     name: ['download', 'd'],

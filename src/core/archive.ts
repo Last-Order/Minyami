@@ -24,9 +24,7 @@ class ArchiveDownloader extends Downloader {
     outputFileList: string[];
 
     totalChunks: number;
-    finishedChunks: number = 0;
     runningThreads: number = 0;
-    startedAt: number;
    
     iv: string;
     prefix: string;
@@ -113,14 +111,14 @@ class ArchiveDownloader extends Downloader {
             Log.debug(`Downloading ${task.filename}`);
             try {
                 await download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
-                Log.debug(`Download ${task.filename} succeed.`);
+                Log.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    Log.debug(`Decrypt ${task.filename} succeed`);
+                    Log.debug(`Decrypting ${task.filename} succeed`);
                 }
                 resolve();
             } catch (e) {
-                Log.info(`Download or decrypt ${task.filename} failed. Retry later.`);
+                Log.info(`Downloading or decrypting ${task.filename} failed. Retry later.`);
                 reject(e);
             }            
         });
@@ -133,10 +131,10 @@ class ArchiveDownloader extends Downloader {
             this.handleTask(task).then(() => {
                 this.finishedChunks++;
                 this.runningThreads--;
-                Log.info(`Proccess ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}% | Avg Speed: ${
-                    (this.finishedChunks / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2)
+                Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}% | Avg Speed: ${
+                    this.calculateSpeedByChunk()
                 } chunks/s or ${
-                    (this.finishedChunks * this.m3u8.getChunkLength() / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2)
+                    this.calculateSpeedByRatio()
                 }x)`);
                 this.checkQueue();
             }).catch(e => {

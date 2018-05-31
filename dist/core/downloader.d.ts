@@ -11,6 +11,8 @@ declare class Downloader {
     outputPath: string;
     threads: number;
     key: string;
+    startedAt: number;
+    finishedChunks: number;
     /**
      *
      * @param m3u8Path
@@ -19,5 +21,7 @@ declare class Downloader {
      */
     constructor(m3u8Path: string, {threads, output, key}?: DownloaderConfig);
     init(): Promise<void>;
+    calculateSpeedByChunk(): string;
+    calculateSpeedByRatio(): string;
 }
 export default Downloader;

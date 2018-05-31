@@ -23,6 +23,7 @@ class Downloader {
     }) {
         this.outputPath = './output.mkv';
         this.threads = 5;
+        this.finishedChunks = 0;
         if (threads) {
             this.threads = threads;
         }
@@ -42,6 +43,12 @@ class Downloader {
             }
             this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path);
         });
+    }
+    calculateSpeedByChunk() {
+        return (this.finishedChunks / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
+    }
+    calculateSpeedByRatio() {
+        return (this.finishedChunks * this.m3u8.getChunkLength() / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
     }
 }
 ;

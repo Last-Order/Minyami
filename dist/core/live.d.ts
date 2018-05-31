@@ -10,14 +10,14 @@ export interface Chunk {
 export default class LiveDownloader extends Downloader {
     outputFileList: string[];
     finishedList: string[];
-    currentPlaylist: M3U8;
+    m3u8: M3U8;
     playlists: M3U8[];
     chunks: Chunk[];
     runningThreads: number;
-    finishedChunks: number;
     isEncrypted: boolean;
     isEnd: boolean;
     isStarted: boolean;
+    forceStop: boolean;
     iv: string;
     prefix: string;
     /**

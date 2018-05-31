@@ -38,13 +38,14 @@ class LiveDownloader extends downloader_1.default {
         this.playlists = [];
         this.chunks = [];
         this.runningThreads = 0;
-        this.finishedChunks = 0;
         this.isEncrypted = false;
         this.isEnd = false;
         this.isStarted = false;
+        this.forceStop = false;
     }
     download() {
         return __awaiter(this, void 0, void 0, function* () {
+            this.startedAt = new Date().valueOf();
             if (!fs.existsSync(this.tempPath)) {
                 fs.mkdirSync(this.tempPath);
             }
@@ -58,15 +59,22 @@ class LiveDownloader extends downloader_1.default {
                 });
             }
             process.on("SIGINT", () => {
-                log_1.default.info('Ctrl+C pressed, waiting for tasks finished.');
-                this.isEnd = true;
+                if (!this.forceStop) {
+                    log_1.default.info('Ctrl+C pressed, waiting for tasks finished.');
+                    this.isEnd = true;
+                    this.forceStop = true;
+                }
+                else {
+                    log_1.default.info('Force stop.');
+                    process.exit();
+                }
             });
-            this.currentPlaylist = yield m3u8_1.loadM3U8(this.m3u8Path);
-            this.playlists.push(this.currentPlaylist);
-            if (this.currentPlaylist.isEncrypted) {
+            this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path);
+            this.playlists.push(this.m3u8);
+            if (this.m3u8.isEncrypted) {
                 this.isEncrypted = true;
-                const key = this.currentPlaylist.getKey();
-                const iv = this.currentPlaylist.getIV();
+                const key = this.m3u8.getKey();
+                const iv = this.m3u8.getIV();
                 if (key.startsWith('abematv-license')) {
                     log_1.default.info('Site comfirmed: AbemaTV');
                     const parser = yield Promise.resolve().then(() => require('./parsers/abema'));
@@ -114,12 +122,12 @@ class LiveDownloader extends downloader_1.default {
                     // 结束下载 进入合并流程
                     break;
                 }
-                if (this.currentPlaylist.isEnd) {
+                if (this.m3u8.isEnd) {
                     // 到达直播末尾
                     this.isEnd = true;
                 }
                 const currentPlaylistChunks = [];
-                this.currentPlaylist.chunks.forEach(chunk => {
+                this.m3u8.chunks.forEach(chunk => {
                     // 去重
                     if (!this.finishedList.includes(chunk)) {
                         this.finishedList.push(chunk);
@@ -142,12 +150,12 @@ class LiveDownloader extends downloader_1.default {
                         return path.resolve(this.tempPath, `./${chunk.filename}`);
                     }
                 }));
-                this.currentPlaylist = yield m3u8_1.loadM3U8(this.m3u8Path);
+                this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path);
                 if (!this.isStarted) {
                     this.isStarted = true;
                     this.checkQueue();
                 }
-                yield system_1.sleep(Math.min(5000, this.currentPlaylist.getChunkLength() * 1000));
+                yield system_1.sleep(Math.min(5000, this.m3u8.getChunkLength() * 1000));
             }
         });
     }
@@ -156,15 +164,15 @@ class LiveDownloader extends downloader_1.default {
             log_1.default.debug(`Downloading ${task.filename}`);
             try {
                 yield media_1.download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
-                log_1.default.debug(`Download ${task.filename} succeed.`);
+                log_1.default.debug(`Downloading ${task.filename} succeed.`);
                 if (this.isEncrypted) {
                     yield media_1.decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    log_1.default.debug(`Decrypt ${task.filename} succeed`);
+                    log_1.default.debug(`Decrypting ${task.filename} succeed`);
                 }
                 resolve();
             }
             catch (e) {
-                log_1.default.info(`Download or decrypt ${task.filename} failed. Retry later.`);
+                log_1.default.info(`Downloading or decrypting ${task.filename} failed. Retry later.`);
                 reject(e);
             }
         }));
@@ -176,7 +184,7 @@ class LiveDownloader extends downloader_1.default {
             this.handleTask(task).then(() => {
                 this.finishedChunks++;
                 this.runningThreads--;
-                log_1.default.info(`Proccess ${task.filename} finished. (${this.finishedChunks} / unknown)`);
+                log_1.default.info(`Proccessing ${task.filename} finished. (${this.finishedChunks} / unknown | Avg Speed: ${this.calculateSpeedByChunk()}chunks/s or ${this.calculateSpeedByRatio()}x)`);
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);

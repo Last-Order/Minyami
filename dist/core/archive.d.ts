@@ -12,9 +12,7 @@ declare class ArchiveDownloader extends Downloader {
     chunks: Chunk[];
     outputFileList: string[];
     totalChunks: number;
-    finishedChunks: number;
     runningThreads: number;
-    startedAt: number;
     iv: string;
     prefix: string;
     /**

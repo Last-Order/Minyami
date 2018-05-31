@@ -29,7 +29,6 @@ class ArchiveDownloader extends downloader_1.default {
             key
         });
         this.outputPath = './output.mkv';
-        this.finishedChunks = 0;
         this.runningThreads = 0;
     }
     download() {
@@ -101,15 +100,15 @@ class ArchiveDownloader extends downloader_1.default {
             log_1.default.debug(`Downloading ${task.filename}`);
             try {
                 yield media_1.download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
-                log_1.default.debug(`Download ${task.filename} succeed.`);
+                log_1.default.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     yield media_1.decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    log_1.default.debug(`Decrypt ${task.filename} succeed`);
+                    log_1.default.debug(`Decrypting ${task.filename} succeed`);
                 }
                 resolve();
             }
             catch (e) {
-                log_1.default.info(`Download or decrypt ${task.filename} failed. Retry later.`);
+                log_1.default.info(`Downloading or decrypting ${task.filename} failed. Retry later.`);
                 reject(e);
             }
         }));
@@ -121,7 +120,7 @@ class ArchiveDownloader extends downloader_1.default {
             this.handleTask(task).then(() => {
                 this.finishedChunks++;
                 this.runningThreads--;
-                log_1.default.info(`Proccess ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}% | Avg Speed: ${(this.finishedChunks / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2)} chunks/s or ${(this.finishedChunks * this.m3u8.getChunkLength() / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2)}x)`);
+                log_1.default.info(`Proccessing ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}% | Avg Speed: ${this.calculateSpeedByChunk()} chunks/s or ${this.calculateSpeedByRatio()}x)`);
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);

@@ -3,12 +3,10 @@ import Erii from 'erii';
 import ArchiveDownloader from './core/archive';
 import Log from './utils/log';
 import LiveDownloader from './core/live';
-process.on('unhandledRejection', error => {
-    // Will print "unhandledRejection err is not defined"
-    console.log('unhandledRejection', error);
-});
+const fs = require('fs');
+
 Erii.setMetaInfo({
-    version: '1.0.6',
+    version: JSON.parse(fs.readFileSync('./package.json').toString())['version'],
     name: 'Minyami / A lovely video downloader'
 });
 Erii.bind({
@@ -20,6 +18,13 @@ Erii.bind({
     }
 }, (ctx) => {
     ctx.showHelp();
+});
+
+Erii.bind({
+    name: ['version'],
+    description: 'Show version'
+}, (ctx) => {
+    ctx.showVersion();
 })
 
 Erii.bind({

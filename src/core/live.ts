@@ -19,15 +19,15 @@ export interface Chunk {
 export default class LiveDownloader extends Downloader {
     outputFileList: string[] = [];
     finishedList: string[] = [];
-    currentPlaylist: M3U8;
+    m3u8: M3U8;
     playlists: M3U8[] = [];
     chunks: Chunk[] = [];
     runningThreads: number = 0;
-    finishedChunks: number = 0;
 
     isEncrypted: boolean = false;
     isEnd: boolean = false;
     isStarted: boolean = false;
+    forceStop: boolean = false;
 
     iv: string;
     prefix: string;
@@ -49,6 +49,7 @@ export default class LiveDownloader extends Downloader {
     }
 
     async download() {
+        this.startedAt = new Date().valueOf();
         if (!fs.existsSync(this.tempPath)) {
             fs.mkdirSync(this.tempPath);
         }
@@ -64,17 +65,23 @@ export default class LiveDownloader extends Downloader {
         }
 
         process.on("SIGINT", () => {
-            Log.info('Ctrl+C pressed, waiting for tasks finished.')
-            this.isEnd = true;
+            if (!this.forceStop) {
+                Log.info('Ctrl+C pressed, waiting for tasks finished.')
+                this.isEnd = true;
+                this.forceStop = true;
+            } else {
+                Log.info('Force stop.');
+                process.exit();
+            }
         });
 
 
-        this.currentPlaylist = await loadM3U8(this.m3u8Path);
-        this.playlists.push(this.currentPlaylist);
-        if (this.currentPlaylist.isEncrypted) {
+        this.m3u8 = await loadM3U8(this.m3u8Path);
+        this.playlists.push(this.m3u8);
+        if (this.m3u8.isEncrypted) {
             this.isEncrypted = true;
-            const key = this.currentPlaylist.getKey();
-            const iv = this.currentPlaylist.getIV();
+            const key = this.m3u8.getKey();
+            const iv = this.m3u8.getIV();
             if (key.startsWith('abematv-license')) {
                 Log.info('Site comfirmed: AbemaTV');
                 const parser = await import('./parsers/abema');
@@ -118,12 +125,12 @@ export default class LiveDownloader extends Downloader {
                 // 结束下载 进入合并流程
                 break;
             }
-            if (this.currentPlaylist.isEnd) {
+            if (this.m3u8.isEnd) {
                 // 到达直播末尾
                 this.isEnd = true;
             }
             const currentPlaylistChunks = [];
-            this.currentPlaylist.chunks.forEach(chunk => {
+            this.m3u8.chunks.forEach(chunk => {
                 // 去重
                 if (!this.finishedList.includes(chunk)) {
                     this.finishedList.push(chunk);
@@ -146,12 +153,12 @@ export default class LiveDownloader extends Downloader {
                 }
             }));
 
-            this.currentPlaylist = await loadM3U8(this.m3u8Path);
+            this.m3u8 = await loadM3U8(this.m3u8Path);
             if (!this.isStarted) {
                 this.isStarted = true;
                 this.checkQueue();
             }
-            await sleep(Math.min(5000, this.currentPlaylist.getChunkLength() * 1000));
+            await sleep(Math.min(5000, this.m3u8.getChunkLength() * 1000));
         }
     }
 
@@ -160,14 +167,14 @@ export default class LiveDownloader extends Downloader {
             Log.debug(`Downloading ${task.filename}`);
             try {
                 await download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
-                Log.debug(`Download ${task.filename} succeed.`);
+                Log.debug(`Downloading ${task.filename} succeed.`);
                 if (this.isEncrypted) {
                     await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    Log.debug(`Decrypt ${task.filename} succeed`);
+                    Log.debug(`Decrypting ${task.filename} succeed`);
                 }
                 resolve();
             } catch (e) {
-                Log.info(`Download or decrypt ${task.filename} failed. Retry later.`);
+                Log.info(`Downloading or decrypting ${task.filename} failed. Retry later.`);
                 reject(e);
             }
         });
@@ -180,7 +187,11 @@ export default class LiveDownloader extends Downloader {
             this.handleTask(task).then(() => {
                 this.finishedChunks++;
                 this.runningThreads--;
-                Log.info(`Proccess ${task.filename} finished. (${this.finishedChunks} / unknown)`);
+                Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunks} / unknown | Avg Speed: ${
+                    this.calculateSpeedByChunk()
+                }chunks/s or ${
+                    this.calculateSpeedByRatio()
+                }x)`);
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);
