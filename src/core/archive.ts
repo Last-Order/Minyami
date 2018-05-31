@@ -25,10 +25,9 @@ class ArchiveDownloader extends Downloader {
 
     totalChunks: number;
     finishedChunks: number = 0;
-    threads: number = 5;
     runningThreads: number = 0;
+    startedAt: number;
    
-    key: string;
     iv: string;
     prefix: string;
 
@@ -49,6 +48,7 @@ class ArchiveDownloader extends Downloader {
     }
 
     async download() {
+        this.startedAt = new Date().valueOf();
         // parse m3u8
         if (this.m3u8.isEncrypted) {
             // Encrypted
@@ -133,7 +133,11 @@ class ArchiveDownloader extends Downloader {
             this.handleTask(task).then(() => {
                 this.finishedChunks++;
                 this.runningThreads--;
-                Log.info(`Proccess ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}%)`);
+                Log.info(`Proccess ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}% | Avg Speed: ${
+                    (this.finishedChunks / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2)
+                } chunks/s or ${
+                    (this.finishedChunks * this.m3u8.getChunkLength() / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2)
+                }x)`);
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);

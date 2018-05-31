@@ -69,29 +69,29 @@
 
     const mi = () => {
         var content = document.createElement('div');
-      
-        
+
+
         if (!key) {
             let tips = document.createElement('div');
             tips.style.color = "red";
-            tips.innerHTML ='未能获取到 Key 如果该站点需要 Key 请刷新重试；刷新后请等待视频完全加载';
+            tips.innerHTML = '未能获取到 Key 如果该站点需要 Key 请刷新重试；刷新后请等待视频完全加载';
             content.appendChild(tips);
         }
-        
+
         let counter = 1;
-        
+
         for (const i of m3u8List) {
             let listi = document.createElement('div');
             let spani = document.createElement("span");
             spani.innerHTML = i;
             listi.append(spani);
             listi.append(document.createElement('br'));
-            
+
             let input_i = document.createElement('input');
-            input_i.style.width="400px";
+            input_i.style.width = "400px";
             input_i.value = `minyami -d "${i}" ${key && '--key ' + key || ''}`;
             listi.append(input_i);
-            
+
             let button_i = document.createElement('button');
             button_i.innerHTML = "复制";
             button_i.addEventListener('click', e => {
@@ -101,9 +101,9 @@
             listi.append(button_i);
             content.appendChild(listi);
         }
-        buildDialog(content, "Minyami 提取器", {type:"ok"});
+        buildDialog(content, "Minyami 提取器", { type: "ok" });
     }
-    
+
     /**
      * 在页面上创建一个对话框
      * @param {HTMLElement} content 要显示的对话框主要内容
@@ -130,15 +130,15 @@
         option = option || {};
         var oncreated = option.oncreated || function () { };
         var callback = option.callback || function () { };
-      
-        if(document.getElementById("tdialog")!=null){
+
+        if (document.getElementById("tdialog") != null) {
             bodyTag.removeChild(document.getElementById("tdialog"));
             callback("override");
         }
-      
+
         //body
         var bodyTag = document.getElementsByTagName("body")[0];
-      
+
         //外围容器
         var tdialog = document.createElement("div");
         tdialog.style.position = "fixed";
@@ -182,7 +182,7 @@
             t_footer.appendChild(okbutton);
             t_footer.append(" ");
             t_footer.appendChild(cancelbutton);
-        }else{
+        } else {
             var okbutton = document.createElement("button");
             okbutton.innerHTML = option.okText || "确定";
             okbutton.onclick = () => {
@@ -209,7 +209,7 @@
 
     listen();
     window.onload = () => {
-        
+
         switch (location.host) {
             case 'abema.tv': {
                 abema();
@@ -233,3 +233,4 @@
 
 
 })()
+

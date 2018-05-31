@@ -30,11 +30,11 @@ class ArchiveDownloader extends downloader_1.default {
         });
         this.outputPath = './output.mkv';
         this.finishedChunks = 0;
-        this.threads = 5;
         this.runningThreads = 0;
     }
     download() {
         return __awaiter(this, void 0, void 0, function* () {
+            this.startedAt = new Date().valueOf();
             // parse m3u8
             if (this.m3u8.isEncrypted) {
                 // Encrypted
@@ -121,7 +121,7 @@ class ArchiveDownloader extends downloader_1.default {
             this.handleTask(task).then(() => {
                 this.finishedChunks++;
                 this.runningThreads--;
-                log_1.default.info(`Proccess ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}%)`);
+                log_1.default.info(`Proccess ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}% | Avg Speed: ${(this.finishedChunks / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2)} chunks/s or ${(this.finishedChunks * this.m3u8.getChunkLength() / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2)}x)`);
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);
