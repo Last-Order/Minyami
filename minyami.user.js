@@ -6,7 +6,9 @@
 // @match https://freshlive.tv/*
 // @grant none
 // ==/UserScript==
-(() => {
+(async () => {
+    const nextTick = () => new Promise(resolve => setTimeout(resolve, 0));
+    const sleep = (delay) => new Promise(resolve => setTimeout(resolve, delay));
     class M3U8 {
         constructor(m3u8Content) {
             this.m3u8Content = m3u8Content;
@@ -34,7 +36,6 @@
             this.addEventListener('load', function () {
                 if (this.readyState === 4 && this.responseURL.includes('.m3u8')) {
                     const m3u8 = new M3U8(this.responseText);
-                    console.log(m3u8);
                     if (m3u8.isPlaylist) {
                         m3u8List = m3u8List.concat(m3u8.playlists.map(playlist => {
                             const url = new URL(this.responseURL)
@@ -48,23 +49,37 @@
                         m3u8List = Array.from(new Set(m3u8List)); // 去重
                     }
                 }
+
+                switch (location.host) {
+                    case 'abema.tv': {
+                        abema(this);
+                        break;
+                    }
+                }
             });
             open.apply(this, arguments);
         };
     }
 
-    const abema = function () {
+    /**
+     * Get key for Abema!
+     */
+    const abema = (xhr) => {
         const maps = {};
-
-        XMLHttpRequest.prototype = new Proxy(XMLHttpRequest.prototype, {
-            set: function (obj, prop, value) {
-                if (prop === 'proxy' && maps.proxy) {
-                    key = Object.values(JSON.parse(JSON.stringify(new Uint8Array(maps.proxy.response)))).map(i => i.toString(16).length === 1 ? '0' + i.toString(16) : i.toString(16)).join('');
+        if (xhr.readyState === 4 && xhr.responseURL.startsWith('https://abema.tv/xhrp.js')) {
+            const maps = {};
+            XMLHttpRequest.prototype = new Proxy(XMLHttpRequest.prototype, {
+                set: function (obj, prop, value) {
+                    maps[prop] = value;
+                    if (maps.proxy  && maps.proxy.response) {
+                        console.log(maps.proxy.response);
+                        const aKey = Array.from(new Uint8Array(maps.proxy.response)).map(i => i.toString(16).length === 1 ? '0' + i.toString(16) : i.toString(16)).join('');
+                        key = aKey
+                    }
+                    return Reflect.set(...arguments);
                 }
-                maps[prop] = value;
-                return Reflect.set(...arguments);
-            }
-        });
+            });
+        }
     }
 
     const mi = () => {
@@ -208,14 +223,8 @@
 
 
     listen();
-    window.onload = () => {
 
-        switch (location.host) {
-            case 'abema.tv': {
-                abema();
-                break;
-            }
-        }
+    window.onload = () => {
         document.body.onkeyup = (e) => {
             if (e.keyCode === 13) {
                 if (flag) {
