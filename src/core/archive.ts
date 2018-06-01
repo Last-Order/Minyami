@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import Log from '../utils/log';
 import { download, decrypt, mergeVideo } from '../utils/media';
 import axios from 'axios';
-import { exec } from '../utils/system';
+import { exec, deleteDirectory } from '../utils/system';
 import M3U8 from './m3u8';
 import Downloader, { DownloaderConfig } from './downloader';
 const path = require('path');
@@ -150,7 +150,7 @@ class ArchiveDownloader extends Downloader {
             mergeVideo(this.outputFileList, this.outputPath).then(async () => {
                 Log.info('End of merging.');
                 Log.info('Starting cleaning temporary files.');
-                await exec(`rm -rf ${this.tempPath}`);
+                await deleteDirectory(this.tempPath);
                 Log.info(`All finished. Check your file at [${this.outputPath}] .`);
             });
         }
