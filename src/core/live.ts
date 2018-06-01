@@ -3,7 +3,7 @@ import M3U8 from "./m3u8";
 import { loadM3U8 } from "../utils/m3u8";
 import Log from "../utils/log";
 import { download, decrypt, mergeVideo } from "../utils/media";
-import { exec, sleep } from "../utils/system";
+import { exec, sleep, deleteDirectory } from "../utils/system";
 const path = require('path');
 const fs = require('fs');
 
@@ -207,7 +207,7 @@ export default class LiveDownloader extends Downloader {
             mergeVideo(this.outputFileList, this.outputPath).then(async () => {
                 Log.info('End of merging.');
                 Log.info('Starting cleaning temporary files.');
-                await exec(`rm -rf ${this.tempPath}`);
+                await deleteDirectory(this.tempPath);
                 Log.info(`All finished. Check your file at [${this.outputPath}] .`);
             });
         }

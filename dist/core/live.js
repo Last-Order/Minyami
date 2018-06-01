@@ -200,7 +200,7 @@ class LiveDownloader extends downloader_1.default {
             media_1.mergeVideo(this.outputFileList, this.outputPath).then(() => __awaiter(this, void 0, void 0, function* () {
                 log_1.default.info('End of merging.');
                 log_1.default.info('Starting cleaning temporary files.');
-                yield system_1.exec(`rm -rf ${this.tempPath}`);
+                yield system_1.deleteDirectory(this.tempPath);
                 log_1.default.info(`All finished. Check your file at [${this.outputPath}] .`);
             }));
         }

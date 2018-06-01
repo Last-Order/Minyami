@@ -13,8 +13,9 @@ const erii_1 = require("erii");
 const archive_1 = require("./core/archive");
 const live_1 = require("./core/live");
 const fs = require('fs');
+const path = require('path');
 erii_1.default.setMetaInfo({
-    version: JSON.parse(fs.readFileSync('./package.json').toString())['version'],
+    version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json')).toString())['version'],
     name: 'Minyami / A lovely video downloader'
 });
 erii_1.default.bind({

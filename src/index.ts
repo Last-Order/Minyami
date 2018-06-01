@@ -4,9 +4,10 @@ import ArchiveDownloader from './core/archive';
 import Log from './utils/log';
 import LiveDownloader from './core/live';
 const fs = require('fs');
+const path = require('path');
 
 Erii.setMetaInfo({
-    version: JSON.parse(fs.readFileSync('./package.json').toString())['version'],
+    version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json')).toString())['version'],
     name: 'Minyami / A lovely video downloader'
 });
 Erii.bind({
