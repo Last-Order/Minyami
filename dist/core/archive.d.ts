@@ -24,6 +24,13 @@ declare class ArchiveDownloader extends Downloader {
     constructor(m3u8Path: string, {threads, output, key}?: DownloaderConfig);
     download(): Promise<void>;
     handleTask(task: Chunk): Promise<{}>;
+    /**
+     * calculate ETA
+     */
+    getETA(): string;
+    /**
+     * Check task queue
+     */
     checkQueue(): void;
 }
 export default ArchiveDownloader;

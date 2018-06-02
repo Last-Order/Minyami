@@ -113,6 +113,25 @@ class ArchiveDownloader extends downloader_1.default {
             }
         }));
     }
+    /**
+     * calculate ETA
+     */
+    getETA() {
+        const usedTime = new Date().valueOf() - this.startedAt;
+        const remainingTimeInSeconds = Math.round(((usedTime / this.finishedChunks * this.totalChunks) - usedTime) / 1000);
+        if (remainingTimeInSeconds < 60) {
+            return `${remainingTimeInSeconds}s`;
+        }
+        else if (remainingTimeInSeconds < 3600) {
+            return `${Math.floor(remainingTimeInSeconds / 60)}m ${remainingTimeInSeconds % 60}s`;
+        }
+        else {
+            return `${Math.floor(remainingTimeInSeconds / 3600)}h ${Math.floor((remainingTimeInSeconds % 3600) / 60)}m ${remainingTimeInSeconds % 60}s`;
+        }
+    }
+    /**
+     * Check task queue
+     */
     checkQueue() {
         if (this.chunks.length > 0 && this.runningThreads < this.threads) {
             const task = this.chunks.shift();
@@ -120,7 +139,7 @@ class ArchiveDownloader extends downloader_1.default {
             this.handleTask(task).then(() => {
                 this.finishedChunks++;
                 this.runningThreads--;
-                log_1.default.info(`Proccessing ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}% | Avg Speed: ${this.calculateSpeedByChunk()} chunks/s or ${this.calculateSpeedByRatio()}x)`);
+                log_1.default.info(`Proccessing ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}% | Avg Speed: ${this.calculateSpeedByChunk()} chunks/s or ${this.calculateSpeedByRatio()}x | ETA: ${this.getETA()})`);
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);
