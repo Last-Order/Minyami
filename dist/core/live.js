@@ -111,6 +111,19 @@ class LiveDownloader extends downloader_1.default {
                     const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
                     this.prefix = parser.default.prefix;
                 }
+                else if (this.m3u8Path.includes('openrec')) {
+                    // Openrec
+                    log_1.default.info('Site comfirmed: OPENREC.');
+                    const parser = yield Promise.resolve().then(() => require('./parsers/openrec'));
+                    const parseResult = parser.default.parse({
+                        options: {
+                            m3u8Url: this.m3u8Path
+                        }
+                    });
+                    this.prefix = parseResult.prefix;
+                }
+                else {
+                }
             }
             yield this.cycling();
         });
@@ -137,7 +150,7 @@ class LiveDownloader extends downloader_1.default {
                 const currentUndownloadedChunks = currentPlaylistChunks.map(chunk => {
                     return {
                         url: this.prefix + chunk,
-                        filename: chunk.match(/\/([^\/]+?\.ts)/)[1]
+                        filename: chunk.match(/\/*([^\/]+?\.ts)/)[1]
                     };
                 });
                 // 加入待完成的任务列表
@@ -188,6 +201,7 @@ class LiveDownloader extends downloader_1.default {
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);
+                console.log(task, this.m3u8);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();

@@ -47,6 +47,7 @@ function download(url, path) {
                 url,
                 method: 'GET',
                 responseType: 'stream',
+                timeout: 60000
             });
             response.data.pipe(fs.createWriteStream(path));
             response.data.on('end', () => {

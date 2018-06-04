@@ -74,7 +74,12 @@ erii_1.default.addOption({
     argument: {
         name: 'path',
         description: '(Optional) Output file path, default to ./output.mkv',
-        validate: (path) => path.endsWith('.mkv')
+        validate: (path, logger) => {
+            if (!path.endsWith('.mkv')) {
+                logger('Output filename must ends with .mkv.');
+            }
+            return path.endsWith('.mkv');
+        }
     },
 });
 erii_1.default.addOption({

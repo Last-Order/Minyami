@@ -4,6 +4,7 @@
 // @namespace Violentmonkey Scripts
 // @match https://abema.tv/*
 // @match https://freshlive.tv/*
+// @match https://www.openrec.tv/*
 // @grant none
 // ==/UserScript==
 (async () => {

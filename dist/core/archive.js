@@ -72,15 +72,29 @@ class ArchiveDownloader extends downloader_1.default {
                 // Not encrypted
                 if (this.m3u8Path.includes('freshlive')) {
                     // FreshTV
+                    log_1.default.info('Site comfirmed: FreshTV.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
                     this.prefix = parser.default.prefix;
+                }
+                else if (this.m3u8Path.includes('openrec')) {
+                    // Openrec
+                    log_1.default.info('Site comfirmed: OPENREC.');
+                    const parser = yield Promise.resolve().then(() => require('./parsers/openrec'));
+                    const parseResult = parser.default.parse({
+                        options: {
+                            m3u8Url: this.m3u8Path
+                        }
+                    });
+                    this.prefix = parseResult.prefix;
+                }
+                else {
                 }
             }
             log_1.default.info(`Start downloading with ${this.threads} thread(s).`);
             this.chunks = this.m3u8.chunks.map(chunk => {
                 return {
                     url: this.prefix + chunk,
-                    filename: chunk.match(/\/([^\/]+?\.ts)/)[1]
+                    filename: chunk.match(/\/*([^\/]+?\.ts)/)[1]
                 };
             });
             this.totalChunks = this.chunks.length;
@@ -143,6 +157,7 @@ class ArchiveDownloader extends downloader_1.default {
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);
+                console.log(task);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();

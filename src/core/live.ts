@@ -114,6 +114,18 @@ export default class LiveDownloader extends Downloader {
                 Log.info('Site comfirmed: FreshTV.');
                 const parser = await import('./parsers/freshtv');
                 this.prefix = parser.default.prefix;
+            } else if (this.m3u8Path.includes('openrec')) {
+                // Openrec
+                Log.info('Site comfirmed: OPENREC.');
+                const parser = await import('./parsers/openrec');
+                const parseResult = parser.default.parse({
+                    options: {
+                        m3u8Url: this.m3u8Path
+                    }
+                });
+                this.prefix = parseResult.prefix;
+            } else {
+
             }
         }
         await this.cycling();
@@ -140,7 +152,7 @@ export default class LiveDownloader extends Downloader {
             const currentUndownloadedChunks = currentPlaylistChunks.map(chunk => {
                 return {
                     url: this.prefix + chunk,
-                    filename: chunk.match(/\/([^\/]+?\.ts)/)[1]
+                    filename: chunk.match(/\/*([^\/]+?\.ts)/)[1]
                 }
             });
             // 加入待完成的任务列表
@@ -195,6 +207,7 @@ export default class LiveDownloader extends Downloader {
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);
+                console.log(task, this.m3u8);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();
