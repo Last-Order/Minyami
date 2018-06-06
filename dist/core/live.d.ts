@@ -1,9 +1,5 @@
-import Downloader, { DownloaderConfig } from "./downloader";
+import Downloader, { DownloaderConfig, Chunk } from "./downloader";
 import M3U8 from "./m3u8";
-export interface Chunk {
-    url: string;
-    filename: string;
-}
 /**
  * Live Downloader
  */
@@ -18,7 +14,6 @@ export default class LiveDownloader extends Downloader {
     isEnd: boolean;
     isStarted: boolean;
     forceStop: boolean;
-    iv: string;
     prefix: string;
     /**
      *
@@ -26,9 +21,8 @@ export default class LiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path: string, {threads, output, key}?: DownloaderConfig);
+    constructor(m3u8Path: string, {threads, output, key, verbose}?: DownloaderConfig);
     download(): Promise<void>;
     cycling(): Promise<void>;
-    handleTask(task: Chunk): Promise<{}>;
     checkQueue(): void;
 }

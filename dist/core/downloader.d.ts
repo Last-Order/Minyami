@@ -3,6 +3,11 @@ export interface DownloaderConfig {
     threads?: number;
     output?: string;
     key?: string;
+    verbose?: boolean;
+}
+export interface Chunk {
+    url: string;
+    filename: string;
 }
 declare class Downloader {
     tempPath: string;
@@ -11,6 +16,8 @@ declare class Downloader {
     outputPath: string;
     threads: number;
     key: string;
+    iv: string;
+    verbose: boolean;
     startedAt: number;
     finishedChunks: number;
     /**
@@ -19,8 +26,9 @@ declare class Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path: string, {threads, output, key}?: DownloaderConfig);
+    constructor(m3u8Path: string, {threads, output, key, verbose}?: DownloaderConfig);
     init(): Promise<void>;
+    handleTask(task: Chunk): Promise<{}>;
     calculateSpeedByChunk(): string;
     calculateSpeedByRatio(): string;
 }

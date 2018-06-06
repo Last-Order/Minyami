@@ -1,4 +1,4 @@
-import Downloader, { DownloaderConfig } from "./downloader";
+import Downloader, { DownloaderConfig, Chunk } from "./downloader";
 import M3U8 from "./m3u8";
 import { loadM3U8 } from "../utils/m3u8";
 import Log from "../utils/log";
@@ -6,11 +6,6 @@ import { download, decrypt, mergeVideo } from "../utils/media";
 import { exec, sleep, deleteDirectory } from "../utils/system";
 const path = require('path');
 const fs = require('fs');
-
-export interface Chunk {
-    url: string;
-    filename: string;
-}
 
 /**
  * Live Downloader
@@ -29,7 +24,6 @@ export default class LiveDownloader extends Downloader {
     isStarted: boolean = false;
     forceStop: boolean = false;
 
-    iv: string;
     prefix: string;
 
     /**
@@ -38,13 +32,14 @@ export default class LiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key, verbose }: DownloaderConfig = {
         threads: 5
     }) {
         super(m3u8Path, {
             threads,
             output,
-            key
+            key,
+            verbose
         });
     }
 
@@ -172,24 +167,6 @@ export default class LiveDownloader extends Downloader {
             }
             await sleep(Math.min(5000, this.m3u8.getChunkLength() * 1000));
         }
-    }
-
-    handleTask(task: Chunk) {
-        return new Promise(async (resolve, reject) => {
-            Log.debug(`Downloading ${task.filename}`);
-            try {
-                await download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
-                Log.debug(`Downloading ${task.filename} succeed.`);
-                if (this.isEncrypted) {
-                    await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    Log.debug(`Decrypting ${task.filename} succeed`);
-                }
-                resolve();
-            } catch (e) {
-                Log.info(`Downloading or decrypting ${task.filename} failed. Retry later.`);
-                reject(e);
-            }
-        });
     }
 
     checkQueue() {

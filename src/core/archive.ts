@@ -4,15 +4,8 @@ import { download, decrypt, mergeVideo } from '../utils/media';
 import axios from 'axios';
 import { exec, deleteDirectory } from '../utils/system';
 import M3U8 from './m3u8';
-import Downloader, { DownloaderConfig } from './downloader';
+import Downloader, { DownloaderConfig, Chunk } from './downloader';
 const path = require('path');
-
-
-
-export interface Chunk {
-    url: string;
-    filename: string;
-}
 
 class ArchiveDownloader extends Downloader {
     tempPath: string;
@@ -26,7 +19,6 @@ class ArchiveDownloader extends Downloader {
     totalChunks: number;
     runningThreads: number = 0;
    
-    iv: string;
     prefix: string;
 
     /**
@@ -35,13 +27,14 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key, verbose }: DownloaderConfig = {
         threads: 5
     }) {
         super(m3u8Path, {
             threads,
             output,
-            key
+            key,
+            verbose
         });
     }
 
@@ -119,24 +112,7 @@ class ArchiveDownloader extends Downloader {
         this.checkQueue();
     }
 
-    handleTask(task: Chunk) {
-        return new Promise(async (resolve, reject) => {
-            Log.debug(`Downloading ${task.filename}`);
-            try {
-                await download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
-                Log.debug(`Downloading ${task.filename} succeed.`);
-                if (this.m3u8.isEncrypted) {
-                    await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    Log.debug(`Decrypting ${task.filename} succeed`);
-                }
-                resolve();
-            } catch (e) {
-                Log.info(`Downloading or decrypting ${task.filename} failed. Retry later.`);
-                reject(e);
-            }            
-        });
-    }
-
+   
     /**
      * calculate ETA
      */

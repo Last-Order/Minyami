@@ -1,9 +1,5 @@
 import M3U8 from './m3u8';
-import Downloader, { DownloaderConfig } from './downloader';
-export interface Chunk {
-    url: string;
-    filename: string;
-}
+import Downloader, { DownloaderConfig, Chunk } from './downloader';
 declare class ArchiveDownloader extends Downloader {
     tempPath: string;
     outputPath: string;
@@ -13,7 +9,6 @@ declare class ArchiveDownloader extends Downloader {
     outputFileList: string[];
     totalChunks: number;
     runningThreads: number;
-    iv: string;
     prefix: string;
     /**
      *
@@ -21,9 +16,8 @@ declare class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path: string, {threads, output, key}?: DownloaderConfig);
+    constructor(m3u8Path: string, {threads, output, key, verbose}?: DownloaderConfig);
     download(): Promise<void>;
-    handleTask(task: Chunk): Promise<{}>;
     /**
      * calculate ETA
      */

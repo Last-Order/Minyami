@@ -20,13 +20,14 @@ class ArchiveDownloader extends downloader_1.default {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key } = {
+    constructor(m3u8Path, { threads, output, key, verbose } = {
         threads: 5
     }) {
         super(m3u8Path, {
             threads,
             output,
-            key
+            key,
+            verbose
         });
         this.outputPath = './output.mkv';
         this.runningThreads = 0;
@@ -108,24 +109,6 @@ class ArchiveDownloader extends downloader_1.default {
             });
             this.checkQueue();
         });
-    }
-    handleTask(task) {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            log_1.default.debug(`Downloading ${task.filename}`);
-            try {
-                yield media_1.download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
-                log_1.default.debug(`Downloading ${task.filename} succeed.`);
-                if (this.m3u8.isEncrypted) {
-                    yield media_1.decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    log_1.default.debug(`Decrypting ${task.filename} succeed`);
-                }
-                resolve();
-            }
-            catch (e) {
-                log_1.default.info(`Downloading or decrypting ${task.filename} failed. Retry later.`);
-                reject(e);
-            }
-        }));
     }
     /**
      * calculate ETA
