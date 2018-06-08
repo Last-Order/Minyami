@@ -5,6 +5,7 @@
 // @match https://abema.tv/*
 // @match https://freshlive.tv/*
 // @match https://www.openrec.tv/*
+// @match https://www.showroom-live.com/*
 // @grant none
 // ==/UserScript==
 (async () => {

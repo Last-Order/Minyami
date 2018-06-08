@@ -123,6 +123,17 @@ class LiveDownloader extends downloader_1.default {
                     });
                     this.prefix = parseResult.prefix;
                 }
+                else if (this.m3u8Path.includes('showroom')) {
+                    // SHOWROOM
+                    log_1.default.info('Site comfirmed: SHOWROOM.');
+                    const parser = yield Promise.resolve().then(() => require('./parsers/showroom'));
+                    const parseResult = parser.default.parse({
+                        options: {
+                            m3u8Url: this.m3u8Path
+                        }
+                    });
+                    this.prefix = parseResult.prefix;
+                }
                 else {
                 }
             }

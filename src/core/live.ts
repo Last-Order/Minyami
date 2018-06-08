@@ -119,6 +119,16 @@ export default class LiveDownloader extends Downloader {
                     }
                 });
                 this.prefix = parseResult.prefix;
+            } else if (this.m3u8Path.includes('showroom')) {
+                // SHOWROOM
+                Log.info('Site comfirmed: SHOWROOM.');
+                const parser = await import('./parsers/showroom');
+                const parseResult = parser.default.parse({
+                    options: {
+                        m3u8Url: this.m3u8Path
+                    }
+                });
+                this.prefix = parseResult.prefix;
             } else {
 
             }
