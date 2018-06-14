@@ -20,6 +20,8 @@ declare class Downloader {
     verbose: boolean;
     startedAt: number;
     finishedChunks: number;
+    retry: number;
+    timeout: number;
     /**
      *
      * @param m3u8Path

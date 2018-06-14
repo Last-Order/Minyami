@@ -33,6 +33,9 @@ class Downloader {
     startedAt: number;
     finishedChunks: number = 0;
 
+    retry: number = 1;
+    timeout: number = 60000;
+
     /**
      * 
      * @param m3u8Path 
@@ -66,7 +69,7 @@ class Downloader {
         if (!fs.existsSync(this.tempPath)) {
             fs.mkdirSync(this.tempPath);
         }
-        this.m3u8 = await loadM3U8(this.m3u8Path);
+        this.m3u8 = await loadM3U8(this.m3u8Path, this.retry, this.timeout);
     }
 
     handleTask(task: Chunk) {

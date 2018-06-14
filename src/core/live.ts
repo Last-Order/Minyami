@@ -26,6 +26,8 @@ export default class LiveDownloader extends Downloader {
 
     prefix: string;
 
+    retry = 3;
+
     /**
      * 
      * @param m3u8Path 
@@ -71,8 +73,10 @@ export default class LiveDownloader extends Downloader {
         });
 
 
-        this.m3u8 = await loadM3U8(this.m3u8Path);
+        this.m3u8 = await loadM3U8(this.m3u8Path, this.retry, this.timeout);
         this.playlists.push(this.m3u8);
+        this.timeout = this.m3u8.getChunkLength() * this.m3u8.chunks.length * 1000;
+
         if (this.m3u8.isEncrypted) {
             this.isEncrypted = true;
             const key = this.m3u8.getKey();
@@ -170,7 +174,7 @@ export default class LiveDownloader extends Downloader {
                 }
             }));
 
-            this.m3u8 = await loadM3U8(this.m3u8Path);
+            this.m3u8 = await loadM3U8(this.m3u8Path, this.retry, this.timeout);
             if (!this.isStarted) {
                 this.isStarted = true;
                 this.checkQueue();

@@ -15,6 +15,7 @@ export default class LiveDownloader extends Downloader {
     isStarted: boolean;
     forceStop: boolean;
     prefix: string;
+    retry: number;
     /**
      *
      * @param m3u8Path

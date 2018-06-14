@@ -90,7 +90,7 @@ class ArchiveDownloader extends Downloader {
                 });
                 this.prefix = parseResult.prefix;
             } else {
-
+                Log.error('Unsupported site.');
             }
         }
 

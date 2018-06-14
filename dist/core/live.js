@@ -43,6 +43,7 @@ class LiveDownloader extends downloader_1.default {
         this.isEnd = false;
         this.isStarted = false;
         this.forceStop = false;
+        this.retry = 3;
     }
     download() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -70,8 +71,9 @@ class LiveDownloader extends downloader_1.default {
                     process.exit();
                 }
             });
-            this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path);
+            this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retry, this.timeout);
             this.playlists.push(this.m3u8);
+            this.timeout = this.m3u8.getChunkLength() * this.m3u8.chunks.length * 1000;
             if (this.m3u8.isEncrypted) {
                 this.isEncrypted = true;
                 const key = this.m3u8.getKey();
@@ -175,7 +177,7 @@ class LiveDownloader extends downloader_1.default {
                         return path.resolve(this.tempPath, `./${chunk.filename}`);
                     }
                 }));
-                this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path);
+                this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retry, this.timeout);
                 if (!this.isStarted) {
                     this.isStarted = true;
                     this.checkQueue();

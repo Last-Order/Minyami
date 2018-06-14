@@ -12,18 +12,31 @@ const fs = require('fs');
 const m3u8_1 = require("../core/m3u8");
 const log_1 = require("./log");
 const axios_1 = require("axios");
-function loadM3U8(path) {
+function loadM3U8(path, retries = 1, timeout = 60000) {
     return __awaiter(this, void 0, void 0, function* () {
         let m3u8Content;
         if (path.startsWith('http')) {
             log_1.default.info('Start fetching M3U8 file.');
-            try {
-                const response = yield axios_1.default.get(path);
-                log_1.default.info('M3U8 file fetched.');
-                m3u8Content = response.data;
-            }
-            catch (e) {
-                log_1.default.error('Fail to fetch M3U8 file.');
+            while (retries >= 0) {
+                try {
+                    const response = yield axios_1.default.get(path, {
+                        timeout
+                    });
+                    log_1.default.info('M3U8 file fetched.');
+                    m3u8Content = response.data;
+                    break;
+                }
+                catch (e) {
+                    log_1.default.warning(`Fail to fetch M3U8 file: [${e.code || 'UNKNOWN'}]`);
+                    log_1.default.warning('If you are downloading a live stream, this may result in a broken output video.');
+                    retries--;
+                    if (retries >= 0) {
+                        log_1.default.info('Try again.');
+                    }
+                    else {
+                        log_1.default.error('Max retries exceeded. Abort.');
+                    }
+                }
             }
         }
         else {

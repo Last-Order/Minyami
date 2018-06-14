@@ -8,6 +8,10 @@ class Log {
         console.info(chalk.blue(`[MINYAMI][INFO] ${message}`));
     }
 
+    static warning(message: string) {
+        console.warn(chalk.yellow(`[MINYAMI][WARN] ${message}`));
+    }
+
     static error(message: string) {
         console.info(chalk.red(`[MINYAMI][ERROR] ${message}`));
         process.exit();

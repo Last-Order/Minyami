@@ -89,6 +89,7 @@ class ArchiveDownloader extends downloader_1.default {
                     this.prefix = parseResult.prefix;
                 }
                 else {
+                    log_1.default.error('Unsupported site.');
                 }
             }
             log_1.default.info(`Start downloading with ${this.threads} thread(s).`);

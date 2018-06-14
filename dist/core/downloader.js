@@ -27,6 +27,8 @@ class Downloader {
         this.threads = 5;
         this.verbose = false;
         this.finishedChunks = 0;
+        this.retry = 1;
+        this.timeout = 60000;
         if (threads) {
             this.threads = threads;
         }
@@ -47,7 +49,7 @@ class Downloader {
             if (!fs.existsSync(this.tempPath)) {
                 fs.mkdirSync(this.tempPath);
             }
-            this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path);
+            this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retry, this.timeout);
         });
     }
     handleTask(task) {
