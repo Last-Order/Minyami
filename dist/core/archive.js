@@ -67,6 +67,7 @@ class ArchiveDownloader extends downloader_1.default {
                     log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
                 }
                 else {
+                    log_1.default.error('Unsupported site.');
                 }
             }
             else {
@@ -155,7 +156,10 @@ class ArchiveDownloader extends downloader_1.default {
                 log_1.default.info('Starting cleaning temporary files.');
                 yield system_1.deleteDirectory(this.tempPath);
                 log_1.default.info(`All finished. Check your file at [${this.outputPath}] .`);
-            }));
+            })).catch(e => {
+                console.log(e);
+                log_1.default.error('Fail to merge video. Please merge video chunks manually.');
+            });
         }
     }
 }

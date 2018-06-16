@@ -213,6 +213,9 @@ export default class LiveDownloader extends Downloader {
                 Log.info('Starting cleaning temporary files.');
                 await deleteDirectory(this.tempPath);
                 Log.info(`All finished. Check your file at [${this.outputPath}] .`);
+            }).catch(e => {
+                console.log(e);
+                Log.error('Fail to merge video. Please merge video chunks manually.');
             });
         }
 

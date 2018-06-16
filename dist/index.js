@@ -11,9 +11,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const erii_1 = require("erii");
 const archive_1 = require("./core/archive");
+const log_1 = require("./utils/log");
 const live_1 = require("./core/live");
+const system_1 = require("./utils/system");
 const fs = require('fs');
 const path = require('path');
+// Check dependencies
+system_1.exec('mkvmerge').then(() => {
+}).catch(e => {
+    log_1.default.error('Missing dependence: mkvmerge');
+});
+system_1.exec('openssl').then(() => {
+}).catch(e => {
+    log_1.default.error('Missing dependence: openssl');
+});
 erii_1.default.setMetaInfo({
     version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json')).toString())['version'],
     name: 'Minyami / A lovely video downloader'

@@ -70,7 +70,7 @@ class ArchiveDownloader extends Downloader {
                 [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
                 Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
             } else {
-
+                Log.error('Unsupported site.');
             }
         } else {
             // Not encrypted
@@ -162,6 +162,9 @@ class ArchiveDownloader extends Downloader {
                 Log.info('Starting cleaning temporary files.');
                 await deleteDirectory(this.tempPath);
                 Log.info(`All finished. Check your file at [${this.outputPath}] .`);
+            }).catch(e => {
+                console.log(e);
+                Log.error('Fail to merge video. Please merge video chunks manually.');
             });
         }
     }

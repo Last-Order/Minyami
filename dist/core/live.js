@@ -212,7 +212,10 @@ class LiveDownloader extends downloader_1.default {
                 log_1.default.info('Starting cleaning temporary files.');
                 yield system_1.deleteDirectory(this.tempPath);
                 log_1.default.info(`All finished. Check your file at [${this.outputPath}] .`);
-            }));
+            })).catch(e => {
+                console.log(e);
+                log_1.default.error('Fail to merge video. Please merge video chunks manually.');
+            });
         }
         if (this.chunks.length === 0 && this.runningThreads === 0 && !this.isEnd) {
             // 空闲状态 一秒后再检查待完成任务列表

@@ -3,8 +3,23 @@ import Erii from 'erii';
 import ArchiveDownloader from './core/archive';
 import Log from './utils/log';
 import LiveDownloader from './core/live';
+import { exec } from './utils/system';
 const fs = require('fs');
 const path = require('path');
+
+// Check dependencies
+
+exec('mkvmerge').then(() => {
+    
+}).catch(e => {
+    Log.error('Missing dependence: mkvmerge');
+});
+
+exec('openssl').then(() => {
+
+}).catch(e => {
+    Log.error('Missing dependence: openssl');
+});
 
 Erii.setMetaInfo({
     version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json')).toString())['version'],
