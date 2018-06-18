@@ -17,12 +17,10 @@ const system_1 = require("./utils/system");
 const fs = require('fs');
 const path = require('path');
 // Check dependencies
-system_1.exec('mkvmerge').then(() => {
-}).catch(e => {
+system_1.exec('mkvmerge --version').catch(e => {
     log_1.default.error('Missing dependence: mkvmerge');
 });
-system_1.exec('openssl').then(() => {
-}).catch(e => {
+system_1.exec('openssl --version').catch(e => {
     log_1.default.error('Missing dependence: openssl');
 });
 erii_1.default.setMetaInfo({
