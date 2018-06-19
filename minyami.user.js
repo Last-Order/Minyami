@@ -38,8 +38,11 @@
             this.addEventListener('load', function () {
                 if (this.readyState === 4 && this.responseURL.includes('.m3u8')) {
                     const m3u8 = new M3U8(this.responseText);
+                    if (!m3u8List[location.href]) {
+                        m3u8List[location.href] = [];
+                    }
                     if (m3u8.isPlaylist) {
-                        m3u8List = m3u8List.concat(m3u8.playlists.map(playlist => {
+                        m3u8List[location.href] = m3u8List[location.href].concat(m3u8.playlists.map(playlist => {
                             const url = new URL(this.responseURL)
                             const params = url.pathname.split('/');
                             params[params.length - 1] = playlist;
@@ -48,7 +51,7 @@
                             }
                             return `${url.protocol}//${url.host}${params.join('/')}`;
                         }));
-                        m3u8List = Array.from(new Set(m3u8List)); // 去重
+                        m3u8List[location.href] = Array.from(new Set(m3u8List[location.href])); // 去重
                     }
                 }
 
@@ -97,7 +100,7 @@
 
         let counter = 1;
 
-        for (const i of m3u8List) {
+        for (const i of m3u8List[location.href]) {
             let listi = document.createElement('div');
             let spani = document.createElement("span");
             spani.innerHTML = i;
@@ -218,7 +221,7 @@
         oncreated();
     }
 
-    let m3u8List = [];
+    let m3u8List = {};
     let key = undefined;
     let iv = undefined;
     let flag = false;
