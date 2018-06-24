@@ -12,7 +12,7 @@ exec('mkvmerge --version').catch(e => {
     Log.error('Missing dependence: mkvmerge');
 });
 
-exec('openssl --version').catch(e => {
+exec('openssl version').catch(e => {
     Log.error('Missing dependence: openssl');
 });
 
