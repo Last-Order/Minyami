@@ -29,7 +29,6 @@ class ArchiveDownloader extends downloader_1.default {
             key,
             verbose
         });
-        this.outputPath = './output.mkv';
         this.runningThreads = 0;
     }
     download() {

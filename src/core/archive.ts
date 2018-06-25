@@ -9,7 +9,6 @@ const path = require('path');
 
 class ArchiveDownloader extends Downloader {
     tempPath: string;
-    outputPath: string = './output.mkv';
     m3u8Path: string;
     m3u8: M3U8;
 

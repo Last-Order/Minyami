@@ -2,7 +2,6 @@ import M3U8 from './m3u8';
 import Downloader, { DownloaderConfig, Chunk } from './downloader';
 declare class ArchiveDownloader extends Downloader {
     tempPath: string;
-    outputPath: string;
     m3u8Path: string;
     m3u8: M3U8;
     chunks: Chunk[];
