@@ -20,12 +20,13 @@ Erii.setMetaInfo({
     version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json')).toString())['version'],
     name: 'Minyami / A lovely video downloader'
 });
+
 Erii.bind({
     name: ['help', 'h'],
     description: 'Show help documentation',
     argument: {
         name: 'command',
-        description: 'query help of a specified command',
+        description: 'Show help of a specified command',
     }
 }, (ctx) => {
     ctx.showHelp();

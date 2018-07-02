@@ -23,12 +23,12 @@ class Downloader {
     constructor(m3u8Path, { threads, output, key, verbose } = {
         threads: 5
     }) {
-        this.outputPath = './output.mkv';
-        this.threads = 5;
-        this.verbose = false;
-        this.finishedChunks = 0;
-        this.retry = 1;
-        this.timeout = 60000;
+        this.outputPath = './output.mkv'; // 输出目录
+        this.threads = 5; // 并发数量
+        this.verbose = false; // 调试输出
+        this.finishedChunks = 0; // 已完成的块数量
+        this.retry = 1; // 重试数量
+        this.timeout = 60000; // 超时时间
         if (threads) {
             this.threads = threads;
         }
@@ -44,6 +44,9 @@ class Downloader {
         this.m3u8Path = m3u8Path;
         this.tempPath = path.resolve(__dirname, '../../temp');
     }
+    /**
+     * 初始化 读取m3u8内容
+     */
     init() {
         return __awaiter(this, void 0, void 0, function* () {
             if (!fs.existsSync(this.tempPath)) {
@@ -52,6 +55,10 @@ class Downloader {
             this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retry, this.timeout);
         });
     }
+    /**
+     * 处理块下载任务
+     * @param task 块下载任务
+     */
     handleTask(task) {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             this.verbose && log_1.default.debug(`Downloading ${task.filename}`);
@@ -70,9 +77,15 @@ class Downloader {
             }
         }));
     }
+    /**
+     * 计算以块计算的下载速度
+     */
     calculateSpeedByChunk() {
         return (this.finishedChunks / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
     }
+    /**
+     * 计算以视频长度为基准下载速度倍率
+     */
     calculateSpeedByRatio() {
         return (this.finishedChunks * this.m3u8.getChunkLength() / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
     }

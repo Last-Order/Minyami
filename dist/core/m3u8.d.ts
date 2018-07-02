@@ -19,5 +19,8 @@ export default class M3U8 {
      * 获得加密IV
      */
     getIV(): string;
+    /**
+     * 获得块长度
+     */
     getChunkLength(): number;
 }

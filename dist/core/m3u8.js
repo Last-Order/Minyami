@@ -28,6 +28,9 @@ class M3U8 {
     getIV() {
         return this.isEncrypted && this.m3u8Content.match(/IV=0x(.+)/)[1];
     }
+    /**
+     * 获得块长度
+     */
     getChunkLength() {
         return parseFloat(this.m3u8Content.match(/#EXTINF:(.+),/)[1]);
     }

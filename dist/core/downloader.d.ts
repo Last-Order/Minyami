@@ -29,9 +29,22 @@ declare class Downloader {
      * @param config.threads 线程数量
      */
     constructor(m3u8Path: string, {threads, output, key, verbose}?: DownloaderConfig);
+    /**
+     * 初始化 读取m3u8内容
+     */
     init(): Promise<void>;
+    /**
+     * 处理块下载任务
+     * @param task 块下载任务
+     */
     handleTask(task: Chunk): Promise<{}>;
+    /**
+     * 计算以块计算的下载速度
+     */
     calculateSpeedByChunk(): string;
+    /**
+     * 计算以视频长度为基准下载速度倍率
+     */
     calculateSpeedByRatio(): string;
 }
 export default Downloader;

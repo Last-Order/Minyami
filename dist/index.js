@@ -32,7 +32,7 @@ erii_1.default.bind({
     description: 'Show help documentation',
     argument: {
         name: 'command',
-        description: 'query help of a specified command',
+        description: 'Show help of a specified command',
     }
 }, (ctx) => {
     ctx.showHelp();
