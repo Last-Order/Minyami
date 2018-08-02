@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const system_1 = require("./system");
 const axios_1 = require("axios");
-const fs = require('fs');
+const fs = require("fs");
 /**
  * 合并视频文件
  * @param fileList 文件列表
@@ -35,6 +35,20 @@ function mergeVideo(fileList = [], output = "./output.mkv") {
     });
 }
 exports.mergeVideo = mergeVideo;
+function mergeVideoNew(fileList = [], output = "./output.ts") {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (fileList.length === 0) {
+            return;
+        }
+        // create output file
+        const fd = fs.openSync(output, 'w');
+        fs.closeSync(fd);
+        for (const file of fileList) {
+            fs.appendFileSync(output, fs.readFileSync(file));
+        }
+    });
+}
+exports.mergeVideoNew = mergeVideoNew;
 /**
  * 下载文件
  * @param url

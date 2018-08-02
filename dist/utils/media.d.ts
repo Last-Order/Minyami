@@ -4,6 +4,7 @@
  * @param output 输出路径
  */
 export declare function mergeVideo(fileList?: any[], output?: string): Promise<void>;
+export declare function mergeVideoNew(fileList?: any[], output?: string): Promise<void>;
 /**
  * 下载文件
  * @param url

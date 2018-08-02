@@ -22,7 +22,7 @@ export default class LiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path: string, {threads, output, key, verbose}?: DownloaderConfig);
+    constructor(m3u8Path: string, {threads, output, key, verbose, nomux}?: DownloaderConfig);
     download(): Promise<void>;
     cycling(): Promise<void>;
     checkQueue(): void;

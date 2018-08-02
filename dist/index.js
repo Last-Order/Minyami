@@ -84,10 +84,10 @@ erii_1.default.addOption({
         name: 'path',
         description: '(Optional) Output file path, default to ./output.mkv',
         validate: (path, logger) => {
-            if (!path.endsWith('.mkv')) {
-                logger('Output filename must ends with .mkv.');
+            if (!path.endsWith('.mkv') && !path.endsWith('.ts')) {
+                logger('Output filename must ends with .mkv or .ts.');
             }
-            return path.endsWith('.mkv');
+            return (!path.endsWith('.mkv') && !path.endsWith('.ts'));
         }
     },
 });
@@ -104,6 +104,11 @@ erii_1.default.addOption({
     name: ['live'],
     command: 'download',
     description: 'Download live'
+});
+erii_1.default.addOption({
+    name: ['nomux'],
+    command: 'download',
+    description: 'Merge chunks without remuxing'
 });
 erii_1.default.default(() => {
     erii_1.default.showHelp();

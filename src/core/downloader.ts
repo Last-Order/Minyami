@@ -11,6 +11,7 @@ export interface DownloaderConfig {
     output?: string;
     key?: string;
     verbose?: boolean;
+    nomux?: boolean;
 }
 
 export interface Chunk {
@@ -29,6 +30,7 @@ class Downloader {
     iv: string; // IV
 
     verbose: boolean = false; // 调试输出
+    nomux: boolean = false; // 仅合并分段不remux
 
     startedAt: number; // 开始下载时间
     finishedChunks: number = 0; // 已完成的块数量
@@ -42,11 +44,16 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key, verbose }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key, verbose, nomux }: DownloaderConfig = {
         threads: 5
     }) {
         if (threads) {
             this.threads = threads;
+        }
+
+        if (nomux) {
+            this.nomux = nomux;
+            this.outputPath = 'output.ts';
         }
 
         if (output) {
@@ -59,7 +66,7 @@ class Downloader {
 
         if (verbose) {
             this.verbose = verbose;
-        }
+        }        
 
         this.m3u8Path = m3u8Path;
         this.tempPath = path.resolve(__dirname, '../../temp');

@@ -2,7 +2,7 @@ import Downloader, { DownloaderConfig, Chunk } from "./downloader";
 import M3U8 from "./m3u8";
 import { loadM3U8 } from "../utils/m3u8";
 import Log from "../utils/log";
-import { download, decrypt, mergeVideo } from "../utils/media";
+import { download, decrypt, mergeVideo, mergeVideoNew } from "../utils/media";
 import { exec, sleep, deleteDirectory } from "../utils/system";
 const path = require('path');
 const fs = require('fs');
@@ -34,14 +34,15 @@ export default class LiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key, verbose }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key, verbose, nomux }: DownloaderConfig = {
         threads: 5
     }) {
         super(m3u8Path, {
             threads,
             output,
             key,
-            verbose
+            verbose,
+            nomux
         });
     }
 
@@ -208,7 +209,8 @@ export default class LiveDownloader extends Downloader {
         if (this.chunks.length === 0 && this.runningThreads === 0 && this.isEnd) {
             // 结束状态 合并文件
             Log.info(`${this.finishedChunks} chunks downloaded. Start merging chunks.`);
-            mergeVideo(this.outputFileList, this.outputPath).then(async () => {
+            const muxer = this.nomux ? mergeVideoNew : mergeVideo;
+            muxer(this.outputFileList, this.outputPath).then(async () => {
                 Log.info('End of merging.');
                 Log.info('Starting cleaning temporary files.');
                 await deleteDirectory(this.tempPath);

@@ -20,14 +20,15 @@ class ArchiveDownloader extends downloader_1.default {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key, verbose } = {
+    constructor(m3u8Path, { threads, output, key, verbose, nomux } = {
         threads: 5
     }) {
         super(m3u8Path, {
             threads,
             output,
             key,
-            verbose
+            verbose,
+            nomux
         });
         this.runningThreads = 0;
     }
@@ -150,7 +151,8 @@ class ArchiveDownloader extends downloader_1.default {
         }
         if (this.chunks.length === 0 && this.runningThreads === 0) {
             log_1.default.info('All chunks downloaded. Start merging chunks.');
-            media_1.mergeVideo(this.outputFileList, this.outputPath).then(() => __awaiter(this, void 0, void 0, function* () {
+            const muxer = this.nomux ? media_1.mergeVideoNew : media_1.mergeVideo;
+            muxer(this.outputFileList, this.outputPath).then(() => __awaiter(this, void 0, void 0, function* () {
                 log_1.default.info('End of merging.');
                 log_1.default.info('Starting cleaning temporary files.');
                 yield system_1.deleteDirectory(this.tempPath);

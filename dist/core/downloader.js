@@ -20,17 +20,22 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key, verbose } = {
+    constructor(m3u8Path, { threads, output, key, verbose, nomux } = {
         threads: 5
     }) {
         this.outputPath = './output.mkv'; // 输出目录
         this.threads = 5; // 并发数量
         this.verbose = false; // 调试输出
+        this.nomux = false; // 仅合并分段不remux
         this.finishedChunks = 0; // 已完成的块数量
         this.retry = 1; // 重试数量
         this.timeout = 60000; // 超时时间
         if (threads) {
             this.threads = threads;
+        }
+        if (nomux) {
+            this.nomux = nomux;
+            this.outputPath = 'output.ts';
         }
         if (output) {
             this.outputPath = output;

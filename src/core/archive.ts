@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import Log from '../utils/log';
-import { download, decrypt, mergeVideo } from '../utils/media';
+import { download, decrypt, mergeVideo, mergeVideoNew } from '../utils/media';
 import axios from 'axios';
 import { exec, deleteDirectory } from '../utils/system';
 import M3U8 from './m3u8';
@@ -17,7 +17,7 @@ class ArchiveDownloader extends Downloader {
 
     totalChunks: number;
     runningThreads: number = 0;
-   
+
     prefix: string;
 
     /**
@@ -26,14 +26,15 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key, verbose }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key, verbose, nomux }: DownloaderConfig = {
         threads: 5
     }) {
         super(m3u8Path, {
             threads,
             output,
             key,
-            verbose
+            verbose,
+            nomux
         });
     }
 
@@ -111,7 +112,7 @@ class ArchiveDownloader extends Downloader {
         this.checkQueue();
     }
 
-   
+
     /**
      * calculate ETA
      */
@@ -139,11 +140,11 @@ class ArchiveDownloader extends Downloader {
                 this.runningThreads--;
                 Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}% | Avg Speed: ${
                     this.calculateSpeedByChunk()
-                } chunks/s or ${
+                    } chunks/s or ${
                     this.calculateSpeedByRatio()
-                }x | ETA: ${
+                    }x | ETA: ${
                     this.getETA()
-                })`);
+                    })`);
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);
@@ -156,7 +157,8 @@ class ArchiveDownloader extends Downloader {
         }
         if (this.chunks.length === 0 && this.runningThreads === 0) {
             Log.info('All chunks downloaded. Start merging chunks.');
-            mergeVideo(this.outputFileList, this.outputPath).then(async () => {
+            const muxer = this.nomux ? mergeVideoNew : mergeVideo;
+            muxer(this.outputFileList, this.outputPath).then(async () => {
                 Log.info('End of merging.');
                 Log.info('Starting cleaning temporary files.');
                 await deleteDirectory(this.tempPath);

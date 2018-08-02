@@ -1,6 +1,6 @@
 import { exec } from './system';
 import axios from 'axios';
-const fs = require('fs');
+import * as fs from 'fs';
 
 /**
  * 合并视频文件
@@ -26,6 +26,20 @@ export async function mergeVideo(fileList = [], output = "./output.mkv") {
     await exec('mkvmerge @temp.json');
 
     fs.unlinkSync('./temp.json');
+}
+
+export async function mergeVideoNew(fileList = [], output = "./output.ts") {
+    if (fileList.length === 0) {
+        return;
+    }
+
+    // create output file
+    const fd = fs.openSync(output, 'w');
+    fs.closeSync(fd);
+
+    for (const file of fileList) {
+        fs.appendFileSync(output, fs.readFileSync(file));
+    }
 }
 
 /**
