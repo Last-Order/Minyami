@@ -6,6 +6,7 @@
 // @match https://freshlive.tv/*
 // @match https://www.openrec.tv/*
 // @match https://www.showroom-live.com/*
+// @match http://www.sonymusic.co.jp/*
 // @grant none
 // ==/UserScript==
 (async () => {
@@ -43,7 +44,10 @@
                     }
                     if (m3u8.isPlaylist) {
                         m3u8List[location.href] = m3u8List[location.href].concat(m3u8.playlists.map(playlist => {
-                            const url = new URL(this.responseURL)
+                            if (playlist.startsWith('http')) {
+                                return playlist;
+                            }
+                            const url = new URL(this.responseURL);
                             const params = url.pathname.split('/');
                             params[params.length - 1] = playlist;
                             if (playlist.startsWith('/')) {
@@ -94,7 +98,7 @@
         if (!key) {
             let tips = document.createElement('div');
             tips.style.color = "red";
-            tips.innerHTML = '未能获取到 Key 如果该站点需要 Key 请刷新重试；刷新后请等待视频完全加载';
+            tips.innerHTML = '未能获取到 Key 如果该站点需要 Key 请刷新重试；刷新后请等待视频完全加载 / Fail to get decrypt key for this page. If a decrypt key is necessary for this site, please refresh and try again after the video is completely loaded.';
             content.appendChild(tips);
         }
 
@@ -113,7 +117,7 @@
             listi.append(input_i);
 
             let button_i = document.createElement('button');
-            button_i.innerHTML = "复制";
+            button_i.innerHTML = "复制 / Copy";
             button_i.addEventListener('click', e => {
                 input_i.select();
                 document.execCommand('copy');
@@ -121,7 +125,7 @@
             listi.append(button_i);
             content.appendChild(listi);
         }
-        buildDialog(content, "Minyami 提取器", { type: "ok" });
+        buildDialog(content, "Minyami 提取器 / Minyami Extractor", { type: "ok" });
     }
 
     /**

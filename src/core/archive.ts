@@ -89,6 +89,15 @@ class ArchiveDownloader extends Downloader {
                     }
                 });
                 this.prefix = parseResult.prefix;
+            } else if (this.m3u8Path.includes('brightcove')){
+                Log.info('Site comfirmed: Sony Music.');
+                const parser = await import('./parsers/sonymusic');
+                const parseResult = parser.default.parse({
+                    options: {
+                        m3u8Url: this.m3u8Path
+                    }
+                });
+                this.prefix = parseResult.prefix;
             } else {
                 Log.error('Unsupported site.');
             }
