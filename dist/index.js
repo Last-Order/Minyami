@@ -84,7 +84,6 @@ erii_1.default.addOption({
         name: 'path',
         description: '(Optional) Output file path, default to ./output.mkv',
         validate: (path, logger) => {
-            console.log(path);
             if (!path.endsWith('.mkv') && !path.endsWith('.ts')) {
                 logger('Output filename must ends with .mkv or .ts.');
             }
