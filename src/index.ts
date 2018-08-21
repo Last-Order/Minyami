@@ -85,7 +85,7 @@ Erii.addOption({
             if (!path.endsWith('.mkv') && !path.endsWith('.ts')) {
                 logger('Output filename must ends with .mkv or .ts.');
             }
-            return (!path.endsWith('.mkv') && !path.endsWith('.ts'));
+            return !(!path.endsWith('.mkv') && !path.endsWith('.ts'));
         }
     },
 });
