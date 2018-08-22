@@ -12,6 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const log_1 = require("../utils/log");
 const m3u8_1 = require("../utils/m3u8");
+const system = require("../utils/system");
 const media_1 = require("../utils/media");
 class Downloader {
     /**
@@ -47,7 +48,16 @@ class Downloader {
             this.verbose = verbose;
         }
         this.m3u8Path = m3u8Path;
-        this.tempPath = path.resolve(__dirname, '../../temp');
+        this.tempPath = path.resolve(__dirname, '../../temp_' + new Date().valueOf());
+        if (process.platform === "win32") {
+            var rl = require("readline").createInterface({
+                input: process.stdin,
+                output: process.stdout
+            });
+            rl.on("SIGINT", function () {
+                process.emit("SIGINT");
+            });
+        }
     }
     /**
      * 初始化 读取m3u8内容
@@ -58,6 +68,20 @@ class Downloader {
                 fs.mkdirSync(this.tempPath);
             }
             this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retry, this.timeout);
+        });
+    }
+    /**
+     * 退出前的清理工作
+     */
+    clean() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                log_1.default.info('Starting cleaning temporary files.');
+                yield system.deleteDirectory(this.tempPath);
+            }
+            catch (e) {
+                log_1.default.error('Fail to delete temporary directory.');
+            }
         });
     }
     /**

@@ -40,6 +40,12 @@ class ArchiveDownloader extends Downloader {
 
     async download() {
         this.startedAt = new Date().valueOf();
+
+        process.on("SIGINT", async () => {
+            await this.clean();
+            process.exit();
+        });
+
         // parse m3u8
         if (this.m3u8.isEncrypted) {
             // Encrypted

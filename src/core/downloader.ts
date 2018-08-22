@@ -4,6 +4,7 @@ import axios from 'axios';
 import Log from "../utils/log";
 import M3U8 from "./m3u8";
 import { loadM3U8 } from '../utils/m3u8';
+import * as system from '../utils/system';
 import { download, decrypt } from '../utils/media';
 
 export interface DownloaderConfig {
@@ -69,7 +70,18 @@ class Downloader {
         }        
 
         this.m3u8Path = m3u8Path;
-        this.tempPath = path.resolve(__dirname, '../../temp');
+        this.tempPath = path.resolve(__dirname, '../../temp_' + new Date().valueOf());
+
+        if (process.platform === "win32") {
+            var rl = require("readline").createInterface({
+                input: process.stdin,
+                output: process.stdout
+            });
+
+            rl.on("SIGINT", function () {
+                process.emit("SIGINT");
+            });
+        }
     }
 
     /**
@@ -80,6 +92,18 @@ class Downloader {
             fs.mkdirSync(this.tempPath);
         }
         this.m3u8 = await loadM3U8(this.m3u8Path, this.retry, this.timeout);
+    }
+
+    /**
+     * 退出前的清理工作
+     */
+    async clean() {
+        try {
+            Log.info('Starting cleaning temporary files.');
+            await system.deleteDirectory(this.tempPath);
+        } catch (e) {
+            Log.error('Fail to delete temporary directory.');
+        }
     }
 
     /**

@@ -6,7 +6,7 @@ class Log {
         console.debug(chalk_1.default.gray(`[MINYAMI][DEBUG] ${message}`));
     }
     static info(message) {
-        console.info(chalk_1.default.blue(`[MINYAMI][INFO] ${message}`));
+        console.info(chalk_1.default.white(`[MINYAMI][INFO] ${message}`));
     }
     static warning(message) {
         console.warn(chalk_1.default.yellow(`[MINYAMI][WARN] ${message}`));

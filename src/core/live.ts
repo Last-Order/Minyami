@@ -51,24 +51,15 @@ export default class LiveDownloader extends Downloader {
         if (!fs.existsSync(this.tempPath)) {
             fs.mkdirSync(this.tempPath);
         }
-        if (process.platform === "win32") {
-            var rl = require("readline").createInterface({
-                input: process.stdin,
-                output: process.stdout
-            });
 
-            rl.on("SIGINT", function () {
-                process.emit("SIGINT");
-            });
-        }
-
-        process.on("SIGINT", () => {
+        process.on("SIGINT", async () => {
             if (!this.forceStop) {
                 Log.info('Ctrl+C pressed, waiting for tasks finished.')
                 this.isEnd = true;
                 this.forceStop = true;
             } else {
                 Log.info('Force stop.');
+                await this.clean();
                 process.exit();
             }
         });
@@ -212,8 +203,7 @@ export default class LiveDownloader extends Downloader {
             const muxer = this.nomux ? mergeVideoNew : mergeVideo;
             muxer(this.outputFileList, this.outputPath).then(async () => {
                 Log.info('End of merging.');
-                Log.info('Starting cleaning temporary files.');
-                await deleteDirectory(this.tempPath);
+                await this.clean();
                 Log.info(`All finished. Check your file at [${this.outputPath}] .`);
             }).catch(e => {
                 console.log(e);

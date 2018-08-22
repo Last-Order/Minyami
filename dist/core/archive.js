@@ -35,6 +35,10 @@ class ArchiveDownloader extends downloader_1.default {
     download() {
         return __awaiter(this, void 0, void 0, function* () {
             this.startedAt = new Date().valueOf();
+            process.on("SIGINT", () => __awaiter(this, void 0, void 0, function* () {
+                yield this.clean();
+                process.exit();
+            }));
             // parse m3u8
             if (this.m3u8.isEncrypted) {
                 // Encrypted

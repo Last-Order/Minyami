@@ -8,13 +8,17 @@ const fs = require('fs');
 const path = require('path');
 
 // Check dependencies
-exec('mkvmerge --version').catch(e => {
+exec('mkvmerge --version').then(() => {
+    exec('openssl version').then(() => {
+        Erii.start();
+    }).catch(e => {
+        Log.error('Missing dependence: openssl');
+    });
+}).catch(e => {
     Log.error('Missing dependence: mkvmerge');
 });
 
-exec('openssl version').catch(e => {
-    Log.error('Missing dependence: openssl');
-});
+
 
 Erii.setMetaInfo({
     version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json')).toString())['version'],
@@ -114,6 +118,4 @@ Erii.addOption({
 
 Erii.default(() => {
     Erii.showHelp();
-})
-
-Erii.start();
+});

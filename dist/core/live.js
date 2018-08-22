@@ -52,16 +52,7 @@ class LiveDownloader extends downloader_1.default {
             if (!fs.existsSync(this.tempPath)) {
                 fs.mkdirSync(this.tempPath);
             }
-            if (process.platform === "win32") {
-                var rl = require("readline").createInterface({
-                    input: process.stdin,
-                    output: process.stdout
-                });
-                rl.on("SIGINT", function () {
-                    process.emit("SIGINT");
-                });
-            }
-            process.on("SIGINT", () => {
+            process.on("SIGINT", () => __awaiter(this, void 0, void 0, function* () {
                 if (!this.forceStop) {
                     log_1.default.info('Ctrl+C pressed, waiting for tasks finished.');
                     this.isEnd = true;
@@ -69,9 +60,10 @@ class LiveDownloader extends downloader_1.default {
                 }
                 else {
                     log_1.default.info('Force stop.');
+                    yield this.clean();
                     process.exit();
                 }
-            });
+            }));
             this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retry, this.timeout);
             this.playlists.push(this.m3u8);
             this.timeout = this.m3u8.getChunkLength() * this.m3u8.chunks.length * 1000;
@@ -211,8 +203,7 @@ class LiveDownloader extends downloader_1.default {
             const muxer = this.nomux ? media_1.mergeVideoNew : media_1.mergeVideo;
             muxer(this.outputFileList, this.outputPath).then(() => __awaiter(this, void 0, void 0, function* () {
                 log_1.default.info('End of merging.');
-                log_1.default.info('Starting cleaning temporary files.');
-                yield system_1.deleteDirectory(this.tempPath);
+                yield this.clean();
                 log_1.default.info(`All finished. Check your file at [${this.outputPath}] .`);
             })).catch(e => {
                 console.log(e);

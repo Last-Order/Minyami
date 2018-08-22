@@ -5,7 +5,7 @@ class Log {
     }
 
     static info(message: string) {
-        console.info(chalk.blue(`[MINYAMI][INFO] ${message}`));
+        console.info(chalk.white(`[MINYAMI][INFO] ${message}`));
     }
 
     static warning(message: string) {

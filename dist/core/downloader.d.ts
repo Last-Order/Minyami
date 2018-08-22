@@ -36,6 +36,10 @@ declare class Downloader {
      */
     init(): Promise<void>;
     /**
+     * 退出前的清理工作
+     */
+    clean(): Promise<void>;
+    /**
      * 处理块下载任务
      * @param task 块下载任务
      */
