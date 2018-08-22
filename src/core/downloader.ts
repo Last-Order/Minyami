@@ -13,6 +13,7 @@ export interface DownloaderConfig {
     key?: string;
     verbose?: boolean;
     nomux?: boolean;
+    retries?: number;
 }
 
 export interface Chunk {
@@ -36,7 +37,7 @@ class Downloader {
     startedAt: number; // 开始下载时间
     finishedChunks: number = 0; // 已完成的块数量
 
-    retry: number = 1; // 重试数量
+    retries: number = 1; // 重试数量
     timeout: number = 60000; // 超时时间
 
     /**
@@ -45,7 +46,7 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key, verbose, nomux }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key, verbose, nomux, retries }: DownloaderConfig = {
         threads: 5
     }) {
         if (threads) {
@@ -69,6 +70,10 @@ class Downloader {
             this.verbose = verbose;
         }        
 
+        if (retries) {
+            this.retries = retries;
+        }
+
         this.m3u8Path = m3u8Path;
         this.tempPath = path.resolve(__dirname, '../../temp_' + new Date().valueOf());
 
@@ -91,7 +96,18 @@ class Downloader {
         if (!fs.existsSync(this.tempPath)) {
             fs.mkdirSync(this.tempPath);
         }
-        this.m3u8 = await loadM3U8(this.m3u8Path, this.retry, this.timeout);
+
+        await this.loadM3U8();
+    }
+
+    async loadM3U8() {
+        try {
+            this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout);
+        } catch (e) {
+            console.log(e);
+            await this.clean();
+            Log.error('Aborted due to critical error.');
+        }
     }
 
     /**

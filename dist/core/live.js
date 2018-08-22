@@ -9,7 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const downloader_1 = require("./downloader");
-const m3u8_1 = require("../utils/m3u8");
 const log_1 = require("../utils/log");
 const media_1 = require("../utils/media");
 const system_1 = require("../utils/system");
@@ -25,7 +24,7 @@ class LiveDownloader extends downloader_1.default {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key, verbose, nomux } = {
+    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries } = {
         threads: 5
     }) {
         super(m3u8Path, {
@@ -33,7 +32,8 @@ class LiveDownloader extends downloader_1.default {
             output,
             key,
             verbose,
-            nomux
+            nomux,
+            retries
         });
         this.outputFileList = [];
         this.finishedList = [];
@@ -44,7 +44,10 @@ class LiveDownloader extends downloader_1.default {
         this.isEnd = false;
         this.isStarted = false;
         this.forceStop = false;
-        this.retry = 3;
+        this.retries = 3;
+        if (retries) {
+            this.retries = retries;
+        }
     }
     download() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -64,7 +67,7 @@ class LiveDownloader extends downloader_1.default {
                     process.exit();
                 }
             }));
-            this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retry, this.timeout);
+            yield this.loadM3U8();
             this.playlists.push(this.m3u8);
             this.timeout = this.m3u8.getChunkLength() * this.m3u8.chunks.length * 1000;
             if (this.m3u8.isEncrypted) {
@@ -170,7 +173,7 @@ class LiveDownloader extends downloader_1.default {
                         return path.resolve(this.tempPath, `./${chunk.filename}`);
                     }
                 }));
-                this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retry, this.timeout);
+                yield this.loadM3U8();
                 if (!this.isStarted) {
                     this.isStarted = true;
                     this.checkQueue();

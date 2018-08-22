@@ -26,7 +26,7 @@ export default class LiveDownloader extends Downloader {
 
     prefix: string;
 
-    retry = 3;
+    retries = 3;
 
     /**
      * 
@@ -34,7 +34,7 @@ export default class LiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key, verbose, nomux }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key, verbose, nomux, retries }: DownloaderConfig = {
         threads: 5
     }) {
         super(m3u8Path, {
@@ -42,8 +42,12 @@ export default class LiveDownloader extends Downloader {
             output,
             key,
             verbose,
-            nomux
+            nomux,
+            retries
         });
+        if (retries) {
+            this.retries = retries;
+        }
     }
 
     async download() {
@@ -64,8 +68,8 @@ export default class LiveDownloader extends Downloader {
             }
         });
 
+        await this.loadM3U8();
 
-        this.m3u8 = await loadM3U8(this.m3u8Path, this.retry, this.timeout);
         this.playlists.push(this.m3u8);
         this.timeout = this.m3u8.getChunkLength() * this.m3u8.chunks.length * 1000;
 
@@ -166,7 +170,8 @@ export default class LiveDownloader extends Downloader {
                 }
             }));
 
-            this.m3u8 = await loadM3U8(this.m3u8Path, this.retry, this.timeout);
+            await this.loadM3U8();
+          
             if (!this.isStarted) {
                 this.isStarted = true;
                 this.checkQueue();

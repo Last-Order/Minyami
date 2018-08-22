@@ -5,6 +5,7 @@ export interface DownloaderConfig {
     key?: string;
     verbose?: boolean;
     nomux?: boolean;
+    retries?: number;
 }
 export interface Chunk {
     url: string;
@@ -22,7 +23,7 @@ declare class Downloader {
     nomux: boolean;
     startedAt: number;
     finishedChunks: number;
-    retry: number;
+    retries: number;
     timeout: number;
     /**
      *
@@ -30,11 +31,12 @@ declare class Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path: string, {threads, output, key, verbose, nomux}?: DownloaderConfig);
+    constructor(m3u8Path: string, {threads, output, key, verbose, nomux, retries}?: DownloaderConfig);
     /**
      * 初始化 读取m3u8内容
      */
     init(): Promise<void>;
+    loadM3U8(): Promise<void>;
     /**
      * 退出前的清理工作
      */

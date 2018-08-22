@@ -22,7 +22,8 @@ export async function loadM3U8(path: string, retries: number = 1, timeout = 6000
                 if (retries >= 0) {
                     Log.info('Try again.');
                 } else {
-                    Log.error('Max retries exceeded. Abort.');
+                    Log.warning('Max retries exceeded. Abort.');
+                    throw new Error('Max retries exceeded.');
                 }
             }
         }

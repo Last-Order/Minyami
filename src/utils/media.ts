@@ -21,11 +21,10 @@ export async function mergeVideo(fileList = [], output = "./output.mkv") {
         "-q"
     ]);
 
-    fs.writeFileSync('./temp.json', JSON.stringify(parameters));
-
-    await exec('mkvmerge @temp.json');
-
-    fs.unlinkSync('./temp.json');
+    const tempFilename = `temp_${new Date().valueOf()}.json`;
+    fs.writeFileSync(`./${tempFilename}`, JSON.stringify(parameters));
+    await exec(`mkvmerge @${tempFilename}`);
+    fs.unlinkSync(`./${tempFilename}`);
 }
 
 export async function mergeVideoNew(fileList = [], output = "./output.ts") {

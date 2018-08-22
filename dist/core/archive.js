@@ -20,7 +20,7 @@ class ArchiveDownloader extends downloader_1.default {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key, verbose, nomux } = {
+    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries } = {
         threads: 5
     }) {
         super(m3u8Path, {
@@ -28,7 +28,8 @@ class ArchiveDownloader extends downloader_1.default {
             output,
             key,
             verbose,
-            nomux
+            nomux,
+            retries
         });
         this.runningThreads = 0;
     }

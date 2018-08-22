@@ -21,7 +21,7 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key, verbose, nomux } = {
+    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries } = {
         threads: 5
     }) {
         this.outputPath = './output.mkv'; // 输出目录
@@ -29,7 +29,7 @@ class Downloader {
         this.verbose = false; // 调试输出
         this.nomux = false; // 仅合并分段不remux
         this.finishedChunks = 0; // 已完成的块数量
-        this.retry = 1; // 重试数量
+        this.retries = 1; // 重试数量
         this.timeout = 60000; // 超时时间
         if (threads) {
             this.threads = threads;
@@ -46,6 +46,9 @@ class Downloader {
         }
         if (verbose) {
             this.verbose = verbose;
+        }
+        if (retries) {
+            this.retries = retries;
         }
         this.m3u8Path = m3u8Path;
         this.tempPath = path.resolve(__dirname, '../../temp_' + new Date().valueOf());
@@ -67,7 +70,19 @@ class Downloader {
             if (!fs.existsSync(this.tempPath)) {
                 fs.mkdirSync(this.tempPath);
             }
-            this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retry, this.timeout);
+            yield this.loadM3U8();
+        });
+    }
+    loadM3U8() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retries, this.timeout);
+            }
+            catch (e) {
+                console.log(e);
+                yield this.clean();
+                log_1.default.error('Aborted due to critical error.');
+            }
         });
     }
     /**

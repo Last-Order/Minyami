@@ -16,6 +16,9 @@ const live_1 = require("./core/live");
 const system_1 = require("./utils/system");
 const fs = require('fs');
 const path = require('path');
+process.on('unhandledRejection', error => {
+    console.log(error);
+});
 // Check dependencies
 system_1.exec('mkvmerge --version').then(() => {
     system_1.exec('openssl version').then(() => {
@@ -75,7 +78,17 @@ erii_1.default.addOption({
     description: 'Threads limit',
     argument: {
         name: 'limit',
-        description: '(Optional) Limit of threads, default to 5',
+        description: '(Optional) Limit of threads, defaults to 5',
+        validate: 'isInt'
+    }
+});
+erii_1.default.addOption({
+    name: ['retries'],
+    command: 'download',
+    description: 'Retry limit',
+    argument: {
+        name: 'limit',
+        description: '(Optional) Limit of retry times',
         validate: 'isInt'
     }
 });
@@ -85,7 +98,7 @@ erii_1.default.addOption({
     description: 'Output path',
     argument: {
         name: 'path',
-        description: '(Optional) Output file path, default to ./output.mkv',
+        description: '(Optional) Output file path, defaults to ./output.mkv',
         validate: (path, logger) => {
             if (!path.endsWith('.mkv') && !path.endsWith('.ts')) {
                 logger('Output filename must ends with .mkv or .ts.');

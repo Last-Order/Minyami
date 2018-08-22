@@ -34,7 +34,8 @@ function loadM3U8(path, retries = 1, timeout = 60000) {
                         log_1.default.info('Try again.');
                     }
                     else {
-                        log_1.default.error('Max retries exceeded. Abort.');
+                        log_1.default.warning('Max retries exceeded. Abort.');
+                        throw new Error('Max retries exceeded.');
                     }
                 }
             }

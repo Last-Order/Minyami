@@ -29,9 +29,10 @@ function mergeVideo(fileList = [], output = "./output.mkv") {
             output,
             "-q"
         ]);
-        fs.writeFileSync('./temp.json', JSON.stringify(parameters));
-        yield system_1.exec('mkvmerge @temp.json');
-        fs.unlinkSync('./temp.json');
+        const tempFilename = `temp_${new Date().valueOf()}.json`;
+        fs.writeFileSync(`./${tempFilename}`, JSON.stringify(parameters));
+        yield system_1.exec(`mkvmerge @${tempFilename}`);
+        fs.unlinkSync(`./${tempFilename}`);
     });
 }
 exports.mergeVideo = mergeVideo;

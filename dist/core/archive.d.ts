@@ -15,7 +15,7 @@ declare class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path: string, {threads, output, key, verbose, nomux}?: DownloaderConfig);
+    constructor(m3u8Path: string, {threads, output, key, verbose, nomux, retries}?: DownloaderConfig);
     download(): Promise<void>;
     /**
      * calculate ETA

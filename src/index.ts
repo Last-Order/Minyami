@@ -6,7 +6,9 @@ import LiveDownloader from './core/live';
 import { exec } from './utils/system';
 const fs = require('fs');
 const path = require('path');
-
+process.on('unhandledRejection', error => {
+    console.log(error);
+  });
 // Check dependencies
 exec('mkvmerge --version').then(() => {
     exec('openssl version').then(() => {
@@ -73,10 +75,21 @@ Erii.addOption({
     description: 'Threads limit',
     argument: {
         name: 'limit',
-        description: '(Optional) Limit of threads, default to 5',
+        description: '(Optional) Limit of threads, defaults to 5',
         validate: 'isInt'
     }
 });
+
+Erii.addOption({
+    name: ['retries'],
+    command: 'download',
+    description: 'Retry limit',
+    argument: {
+        name: 'limit',
+        description: '(Optional) Limit of retry times',
+        validate: 'isInt'
+    }
+})
 
 Erii.addOption({
     name: ['output', 'o'],
@@ -84,7 +97,7 @@ Erii.addOption({
     description: 'Output path',
     argument: {
         name: 'path',
-        description: '(Optional) Output file path, default to ./output.mkv',
+        description: '(Optional) Output file path, defaults to ./output.mkv',
         validate: (path: string, logger) => {
             if (!path.endsWith('.mkv') && !path.endsWith('.ts')) {
                 logger('Output filename must ends with .mkv or .ts.');
