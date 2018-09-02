@@ -113,7 +113,7 @@
 
             let input_i = document.createElement('input');
             input_i.style.width = "400px";
-            input_i.value = `minyami -d "${i}" ${key && '--key ' + key || ''}`;
+            input_i.value = `minyami -d "${i}"${key && ' --key ' + key || ''} --output "${document.title}.mkv"`;
             listi.append(input_i);
 
             let button_i = document.createElement('button');

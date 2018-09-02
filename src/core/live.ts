@@ -1,9 +1,8 @@
 import Downloader, { DownloaderConfig, Chunk } from "./downloader";
 import M3U8 from "./m3u8";
-import { loadM3U8 } from "../utils/m3u8";
 import Log from "../utils/log";
-import { download, decrypt, mergeVideo, mergeVideoNew } from "../utils/media";
-import { exec, sleep, deleteDirectory } from "../utils/system";
+import { mergeVideo, mergeVideoNew } from "../utils/media";
+import { sleep } from "../utils/system";
 const path = require('path');
 const fs = require('fs');
 

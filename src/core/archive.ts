@@ -1,8 +1,6 @@
-import * as fs from 'fs';
 import Log from '../utils/log';
-import { download, decrypt, mergeVideo, mergeVideoNew } from '../utils/media';
-import axios from 'axios';
-import { exec, deleteDirectory } from '../utils/system';
+import { mergeVideo, mergeVideoNew } from '../utils/media';
+import { deleteDirectory } from '../utils/system';
 import M3U8 from './m3u8';
 import Downloader, { DownloaderConfig, Chunk } from './downloader';
 const path = require('path');
