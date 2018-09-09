@@ -1,6 +1,5 @@
 const path = require('path');
 const fs = require('fs');
-import axios from 'axios';
 import Log from "../utils/log";
 import M3U8 from "./m3u8";
 import { loadM3U8 } from '../utils/m3u8';
@@ -14,6 +13,7 @@ export interface DownloaderConfig {
     verbose?: boolean;
     nomux?: boolean;
     retries?: number;
+    proxy?: string;
 }
 
 export interface Chunk {
@@ -40,13 +40,17 @@ class Downloader {
     retries: number = 1; // 重试数量
     timeout: number = 60000; // 超时时间
 
+    proxy: string = '';
+    proxyHost: string = '';
+    proxyPort: number = 0;
+
     /**
      * 
      * @param m3u8Path 
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key, verbose, nomux, retries }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key, verbose, nomux, retries, proxy }: DownloaderConfig = {
         threads: 5
     }) {
         if (threads) {
@@ -72,6 +76,13 @@ class Downloader {
 
         if (retries) {
             this.retries = retries;
+        }
+
+        if (proxy) {
+            const splitedProxyString: string[] = proxy.split(':');
+            this.proxy = proxy;
+            this.proxyHost = splitedProxyString.slice(0, splitedProxyString.length - 1).join('');
+            this.proxyPort = parseInt(splitedProxyString[splitedProxyString.length - 1]);
         }
 
         this.m3u8Path = m3u8Path;
@@ -102,7 +113,12 @@ class Downloader {
 
     async loadM3U8() {
         try {
-            this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout);
+            this.m3u8 = await loadM3U8(
+                this.m3u8Path, 
+                this.retries, 
+                this.timeout, 
+                this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
+            );
         } catch (e) {
             console.log(e);
             await this.clean();
@@ -130,7 +146,11 @@ class Downloader {
         return new Promise(async (resolve, reject) => {
             this.verbose && Log.debug(`Downloading ${task.filename}`);
             try {
-                await download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
+                await download(
+                    task.url, 
+                    path.resolve(this.tempPath, `./${task.filename}`),
+                    this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
+                );
                 this.verbose && Log.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);

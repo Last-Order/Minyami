@@ -24,7 +24,7 @@ class LiveDownloader extends downloader_1.default {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries } = {
+    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries, proxy } = {
         threads: 5
     }) {
         super(m3u8Path, {
@@ -33,7 +33,8 @@ class LiveDownloader extends downloader_1.default {
             key,
             verbose,
             nomux,
-            retries
+            retries,
+            proxy
         });
         this.outputFileList = [];
         this.finishedList = [];
@@ -62,7 +63,7 @@ class LiveDownloader extends downloader_1.default {
                     this.forceStop = true;
                 }
                 else {
-                    log_1.default.info('Force stop.');
+                    log_1.default.info('Force stop.'); // TODO: reject all download promises
                     yield this.clean();
                     process.exit();
                 }
@@ -133,6 +134,8 @@ class LiveDownloader extends downloader_1.default {
                     this.prefix = parseResult.prefix;
                 }
                 else {
+                    yield this.clean();
+                    log_1.default.error('Unsupported site.');
                 }
             }
             yield this.cycling();

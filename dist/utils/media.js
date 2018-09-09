@@ -11,6 +11,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const system_1 = require("./system");
 const axios_1 = require("axios");
 const fs = require("fs");
+const SocksProxyAgent = require('socks-proxy-agent');
 /**
  * 合并视频文件
  * @param fileList 文件列表
@@ -55,14 +56,15 @@ exports.mergeVideoNew = mergeVideoNew;
  * @param url
  * @param path
  */
-function download(url, path) {
+function download(url, path, proxy = undefined) {
     return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
         try {
             const response = yield axios_1.default({
                 url,
                 method: 'GET',
                 responseType: 'stream',
-                timeout: 60000
+                timeout: 60000,
+                httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined
             });
             response.data.pipe(fs.createWriteStream(path));
             response.data.on('end', () => {

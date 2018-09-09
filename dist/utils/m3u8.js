@@ -12,7 +12,8 @@ const fs = require('fs');
 const m3u8_1 = require("../core/m3u8");
 const log_1 = require("./log");
 const axios_1 = require("axios");
-function loadM3U8(path, retries = 1, timeout = 60000) {
+const SocksProxyAgent = require('socks-proxy-agent');
+function loadM3U8(path, retries = 1, timeout = 60000, proxy = undefined) {
     return __awaiter(this, void 0, void 0, function* () {
         let m3u8Content;
         if (path.startsWith('http')) {
@@ -20,7 +21,8 @@ function loadM3U8(path, retries = 1, timeout = 60000) {
             while (retries >= 0) {
                 try {
                     const response = yield axios_1.default.get(path, {
-                        timeout
+                        timeout,
+                        httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined
                     });
                     log_1.default.info('M3U8 file fetched.');
                     m3u8Content = response.data;

@@ -127,6 +127,16 @@ Erii.addOption({
     name: ['nomux'],
     command: 'download',
     description: 'Merge chunks without remuxing'
+});
+
+Erii.addOption({
+    name: ['proxy'],
+    command: 'download',
+    description: 'Download via Socks proxy',
+    argument: {
+        name: 'socks-proxy',
+        description: 'Set Socks Proxy in [<host>:<port>] format. eg. --proxy "127.0.0.1:1080".'
+    }
 })
 
 Erii.default(() => {

@@ -1,6 +1,8 @@
 import { exec } from './system';
 import axios from 'axios';
+import { AxiosProxyConfig } from 'axios';
 import * as fs from 'fs';
+const SocksProxyAgent = require('socks-proxy-agent');
 
 /**
  * 合并视频文件
@@ -46,14 +48,16 @@ export async function mergeVideoNew(fileList = [], output = "./output.ts") {
  * @param url 
  * @param path 
  */
-export function download(url: string, path: string) {
+export function download(url: string, path: string, proxy: AxiosProxyConfig = undefined) {
+   
     return new Promise(async (resolve, reject) => {
         try {
             const response = await axios({
                 url,
                 method: 'GET',
                 responseType: 'stream',
-                timeout: 60000
+                timeout: 60000,
+                httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined
             });
             response.data.pipe(fs.createWriteStream(path));
             response.data.on('end', () => {

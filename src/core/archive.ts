@@ -24,7 +24,7 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key, verbose, nomux, retries }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key, verbose, nomux, retries, proxy }: DownloaderConfig = {
         threads: 5
     }) {
         super(m3u8Path, {
@@ -33,7 +33,8 @@ class ArchiveDownloader extends Downloader {
             key,
             verbose,
             nomux,
-            retries
+            retries,
+            proxy
         });
     }
 
@@ -104,6 +105,7 @@ class ArchiveDownloader extends Downloader {
                 });
                 this.prefix = parseResult.prefix;
             } else {
+                await this.clean();
                 Log.error('Unsupported site.');
             }
         }

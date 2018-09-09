@@ -33,7 +33,7 @@ export default class LiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key, verbose, nomux, retries }: DownloaderConfig = {
+    constructor(m3u8Path: string, { threads, output, key, verbose, nomux, retries, proxy }: DownloaderConfig = {
         threads: 5
     }) {
         super(m3u8Path, {
@@ -42,7 +42,8 @@ export default class LiveDownloader extends Downloader {
             key,
             verbose,
             nomux,
-            retries
+            retries,
+            proxy
         });
         if (retries) {
             this.retries = retries;
@@ -61,7 +62,7 @@ export default class LiveDownloader extends Downloader {
                 this.isEnd = true;
                 this.forceStop = true;
             } else {
-                Log.info('Force stop.');
+                Log.info('Force stop.'); // TODO: reject all download promises
                 await this.clean();
                 process.exit();
             }
@@ -129,7 +130,8 @@ export default class LiveDownloader extends Downloader {
                 });
                 this.prefix = parseResult.prefix;
             } else {
-
+                await this.clean();
+                Log.error('Unsupported site.')
             }
         }
         await this.cycling();

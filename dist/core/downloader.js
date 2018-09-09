@@ -21,7 +21,7 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries } = {
+    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries, proxy } = {
         threads: 5
     }) {
         this.outputPath = './output.mkv'; // 输出目录
@@ -31,6 +31,9 @@ class Downloader {
         this.finishedChunks = 0; // 已完成的块数量
         this.retries = 1; // 重试数量
         this.timeout = 60000; // 超时时间
+        this.proxy = '';
+        this.proxyHost = '';
+        this.proxyPort = 0;
         if (threads) {
             this.threads = threads;
         }
@@ -49,6 +52,12 @@ class Downloader {
         }
         if (retries) {
             this.retries = retries;
+        }
+        if (proxy) {
+            const splitedProxyString = proxy.split(':');
+            this.proxy = proxy;
+            this.proxyHost = splitedProxyString.slice(0, splitedProxyString.length - 1).join('');
+            this.proxyPort = parseInt(splitedProxyString[splitedProxyString.length - 1]);
         }
         this.m3u8Path = m3u8Path;
         this.tempPath = path.resolve(__dirname, '../../temp_' + new Date().valueOf());
@@ -76,7 +85,7 @@ class Downloader {
     loadM3U8() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retries, this.timeout);
+                this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retries, this.timeout, this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined);
             }
             catch (e) {
                 console.log(e);
@@ -107,7 +116,7 @@ class Downloader {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             this.verbose && log_1.default.debug(`Downloading ${task.filename}`);
             try {
-                yield media_1.download(task.url, path.resolve(this.tempPath, `./${task.filename}`));
+                yield media_1.download(task.url, path.resolve(this.tempPath, `./${task.filename}`), this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined);
                 this.verbose && log_1.default.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     yield media_1.decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
