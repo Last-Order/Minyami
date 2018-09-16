@@ -133,6 +133,17 @@ class LiveDownloader extends downloader_1.default {
                     });
                     this.prefix = parseResult.prefix;
                 }
+                else if (this.m3u8Path.includes('dmc.nico')) {
+                    // NicoNico
+                    log_1.default.info('Site comfirmed: NicoNico.');
+                    const parser = yield Promise.resolve().then(() => require('./parsers/nico'));
+                    const parseResult = parser.default.parse({
+                        options: {
+                            m3u8Url: this.m3u8Path
+                        }
+                    });
+                    this.prefix = parseResult.prefix;
+                }
                 else {
                     yield this.clean();
                     log_1.default.error('Unsupported site.');

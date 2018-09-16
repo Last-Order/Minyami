@@ -104,6 +104,20 @@ class ArchiveDownloader extends Downloader {
                     }
                 });
                 this.prefix = parseResult.prefix;
+            } else if (this.m3u8Path.includes('dmc.nico')) {
+                // NicoNico
+                Log.info('Site comfirmed: NicoNico.');
+                Log.info('请保持播放页面不要关闭');
+                Log.info('Please do not close the video page.');
+                const parser = await import('./parsers/nico');
+                const parseResult = parser.default.parse({
+                    options: {
+                        m3u8Url: this.m3u8Path,
+                        m3u8: this.m3u8
+                    }
+                });
+                this.prefix = parseResult.prefix;
+                this.m3u8 = parseResult.m3u8;
             } else {
                 await this.clean();
                 Log.error('Unsupported site.');

@@ -129,6 +129,16 @@ export default class LiveDownloader extends Downloader {
                     }
                 });
                 this.prefix = parseResult.prefix;
+            } else if (this.m3u8Path.includes('dmc.nico')) {
+                // NicoNico
+                Log.info('Site comfirmed: NicoNico.');
+                const parser = await import('./parsers/nico');
+                const parseResult = parser.default.parse({
+                    options: {
+                        m3u8Url: this.m3u8Path
+                    }
+                });
+                this.prefix = parseResult.prefix;
             } else {
                 await this.clean();
                 Log.error('Unsupported site.')
@@ -172,7 +182,7 @@ export default class LiveDownloader extends Downloader {
             }));
 
             await this.loadM3U8();
-          
+
             if (!this.isStarted) {
                 this.isStarted = true;
                 this.checkQueue();
@@ -190,9 +200,9 @@ export default class LiveDownloader extends Downloader {
                 this.runningThreads--;
                 Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunks} / unknown | Avg Speed: ${
                     this.calculateSpeedByChunk()
-                }chunks/s or ${
+                    }chunks/s or ${
                     this.calculateSpeedByRatio()
-                }x)`);
+                    }x)`);
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);

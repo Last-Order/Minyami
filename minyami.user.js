@@ -7,6 +7,7 @@
 // @match https://www.openrec.tv/*
 // @match https://www.showroom-live.com/*
 // @match http://www.sonymusic.co.jp/*
+// @match http://live2.nicovideo.jp/watch/*
 // @grant none
 // ==/UserScript==
 (async () => {
