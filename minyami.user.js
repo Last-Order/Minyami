@@ -75,16 +75,16 @@
      * Get key for Abema!
      */
     const abema = (xhr) => {
-        const maps = {};
         if (xhr.readyState === 4 && xhr.responseURL.startsWith('https://abema.tv/xhrp.js')) {
             const maps = {};
             XMLHttpRequest.prototype = new Proxy(XMLHttpRequest.prototype, {
-                set: function (obj, prop, value) {
-                    maps[prop] = value;
-                    if (maps.proxy  && maps.proxy.response) {
-                        console.log(maps.proxy.response);
-                        const aKey = Array.from(new Uint8Array(maps.proxy.response)).map(i => i.toString(16).length === 1 ? '0' + i.toString(16) : i.toString(16)).join('');
-                        key = aKey
+                set: async function (obj, prop, value) {
+                    if (arguments[3].proxy) {
+                      while (!arguments[3].proxy.response) {
+                        await sleep(100);
+                      }
+                      const aKey = Array.from(new Uint8Array(arguments[3].proxy.response)).map(i => i.toString(16).length === 1 ? '0' + i.toString(16) : i.toString(16)).join('');
+                      key = aKey
                     }
                     return Reflect.set(...arguments);
                 }
