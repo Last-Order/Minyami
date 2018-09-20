@@ -51,9 +51,7 @@ class ArchiveDownloader extends Downloader {
             // Encrypted
             const key = this.m3u8.getKey();
             const iv = this.m3u8.getIV();
-            if (!key || !iv) {
-                Log.error('Unsupported site.');
-            }
+
             if (key.startsWith('abemafresh')) {
                 Log.info('Site comfirmed: FreshTV.');
                 const parser = await import('./parsers/freshtv');
@@ -75,7 +73,28 @@ class ArchiveDownloader extends Downloader {
                 });
                 [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
                 Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+            } else if (this.m3u8Path.includes('bchvod')) {
+                Log.info('Site comfirmed: B-ch.');
+                const parser = await import('./parsers/bch');
+                try {
+                    const parseResult = await parser.default.parse({
+                        key,
+                        options: {
+                            m3u8: this.m3u8,
+                            proxy: {
+                                host: this.proxyHost,
+                                port: this.proxyPort
+                            }
+                        }
+                    });
+                    [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
+                    Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                } catch (e) {
+                    await this.clean();
+                    Log.error('Fail to retrieve the key from server.');
+                }
             } else {
+                await this.clean();
                 Log.error('Unsupported site.');
             }
         } else {
@@ -95,7 +114,7 @@ class ArchiveDownloader extends Downloader {
                     }
                 });
                 this.prefix = parseResult.prefix;
-            } else if (this.m3u8Path.includes('brightcove')){
+            } else if (this.m3u8Path.includes('brightcove')) {
                 Log.info('Site comfirmed: Sony Music.');
                 const parser = await import('./parsers/sonymusic');
                 const parseResult = parser.default.parse({

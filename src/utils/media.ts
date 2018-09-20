@@ -1,5 +1,5 @@
 import { exec } from './system';
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import { AxiosProxyConfig } from 'axios';
 import * as fs from 'fs';
 const SocksProxyAgent = require('socks-proxy-agent');
@@ -49,7 +49,6 @@ export async function mergeVideoNew(fileList = [], output = "./output.ts") {
  * @param path 
  */
 export function download(url: string, path: string, proxy: AxiosProxyConfig = undefined) {
-   
     return new Promise(async (resolve, reject) => {
         try {
             const response = await axios({
@@ -57,7 +56,10 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
                 method: 'GET',
                 responseType: 'stream',
                 timeout: 60000,
-                httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined
+                httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
+                headers:{
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'
+                }
             });
             response.data.pipe(fs.createWriteStream(path));
             response.data.on('end', () => {
@@ -67,6 +69,25 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
             reject(e);
         }
     })
+}
+
+/**
+ * Raw Request
+ * @param url 
+ * @param proxy 
+ */
+export async function requestRaw(url: string, proxy: AxiosProxyConfig = undefined, options: AxiosRequestConfig = {}) {
+    return await axios({
+        url,
+        method: 'GET',
+        responseType: 'stream',
+        timeout: 60000,
+        httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
+        headers:{
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'
+        },
+        ...options
+    });
 }
 /**
  * 解密文件

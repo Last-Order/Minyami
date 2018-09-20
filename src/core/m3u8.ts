@@ -33,7 +33,7 @@ export default class M3U8 {
      * 获得加密IV
      */
     getIV() {
-        return this.isEncrypted && this.m3u8Content.match(/IV=0x(.+)/)[1];
+        return this.isEncrypted && this.m3u8Content.match(/IV=0x(.+)/) && this.m3u8Content.match(/IV=0x(.+)/)[1];
     }
 
     /**

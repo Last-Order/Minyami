@@ -46,9 +46,6 @@ class ArchiveDownloader extends downloader_1.default {
                 // Encrypted
                 const key = this.m3u8.getKey();
                 const iv = this.m3u8.getIV();
-                if (!key || !iv) {
-                    log_1.default.error('Unsupported site.');
-                }
                 if (key.startsWith('abemafresh')) {
                     log_1.default.info('Site comfirmed: FreshTV.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
@@ -72,7 +69,30 @@ class ArchiveDownloader extends downloader_1.default {
                     [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
                     log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
                 }
+                else if (this.m3u8Path.includes('bchvod')) {
+                    log_1.default.info('Site comfirmed: B-ch.');
+                    const parser = yield Promise.resolve().then(() => require('./parsers/bch'));
+                    try {
+                        const parseResult = yield parser.default.parse({
+                            key,
+                            options: {
+                                m3u8: this.m3u8,
+                                proxy: {
+                                    host: this.proxyHost,
+                                    port: this.proxyPort
+                                }
+                            }
+                        });
+                        [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
+                        log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                    }
+                    catch (e) {
+                        yield this.clean();
+                        log_1.default.error('Fail to retrieve the key from server.');
+                    }
+                }
                 else {
+                    yield this.clean();
                     log_1.default.error('Unsupported site.');
                 }
             }

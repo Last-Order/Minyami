@@ -1,4 +1,5 @@
 import M3U8 from "../m3u8";
+import { AxiosProxyConfig } from "axios";
 
 export interface ParserOptions {
     key?: string;
@@ -10,6 +11,7 @@ export interface ParserAdditionalOptions {
     key?: string;
     m3u8Url?: string;
     m3u8?: M3U8;
+    proxy?: AxiosProxyConfig;
 }
 
 export interface ParserResult {

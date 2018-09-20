@@ -64,7 +64,10 @@ function download(url, path, proxy = undefined) {
                 method: 'GET',
                 responseType: 'stream',
                 timeout: 60000,
-                httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined
+                httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'
+                }
             });
             response.data.pipe(fs.createWriteStream(path));
             response.data.on('end', () => {
@@ -77,6 +80,19 @@ function download(url, path, proxy = undefined) {
     }));
 }
 exports.download = download;
+/**
+ * Raw Request
+ * @param url
+ * @param proxy
+ */
+function requestRaw(url, proxy = undefined, options = {}) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield axios_1.default(Object.assign({ url, method: 'GET', responseType: 'stream', timeout: 60000, httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined, headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'
+            } }, options));
+    });
+}
+exports.requestRaw = requestRaw;
 /**
  * 解密文件
  * @param input

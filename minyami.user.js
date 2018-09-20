@@ -1,5 +1,8 @@
 // ==UserScript==
 // @name Minyami 网页提取器
+// @version 1.1.11
+// @downloadURL https://github.com/Last-Order/Minyami/raw/master/minyami.user.js
+// @updateURL https://github.com/Last-Order/Minyami/raw/master/minyami.user.js
 // @run-at document-start
 // @namespace Violentmonkey Scripts
 // @match https://abema.tv/*
@@ -8,6 +11,7 @@
 // @match https://www.showroom-live.com/*
 // @match http://www.sonymusic.co.jp/*
 // @match http://live2.nicovideo.jp/watch/*
+// @match https://www.b-ch.com/ttl/*
 // @grant none
 // ==/UserScript==
 (async () => {
@@ -107,6 +111,7 @@
 
         for (const i of m3u8List[location.href]) {
             let listi = document.createElement('div');
+            listi.style.textAlign = 'left';
             let spani = document.createElement("span");
             spani.innerHTML = i;
             listi.append(spani);
@@ -186,6 +191,7 @@
         t_title.innerHTML = title;
         //内容框
         var t_content = document.createElement("div");
+        t_content.style.padding = "1rem 0";
         t_content.append(content);
         //底部框
         var t_footer = document.createElement("div");
@@ -252,4 +258,3 @@
 
 
 })()
-
