@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name Minyami 网页提取器
-// @version 1.1.11
+// @version 1.1.12
 // @downloadURL https://github.com/Last-Order/Minyami/raw/master/minyami.user.js
 // @updateURL https://github.com/Last-Order/Minyami/raw/master/minyami.user.js
 // @run-at document-start
@@ -171,7 +171,7 @@
 
         //外围容器
         var tdialog = document.createElement("div");
-        tdialog.style.position = "fixed";
+        tdialog.style.position = "absolute";
         tdialog.style.width = option.width || "450px";
         tdialog.style.left = option.left || "0";
         tdialog.style.right = option.right || "0";
