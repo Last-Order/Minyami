@@ -257,7 +257,7 @@ class ArchiveDownloader extends Downloader {
         this.outputPath = previousTask.outputPath;
         this.threads = previousTask.threads;
         this.key = previousTask.key;
-        this.iv = previousTask.key;
+        this.iv = previousTask.iv;
         this.verbose = previousTask.verbose;
         this.nomux = previousTask.nomux;
         this.startedAt = new Date().valueOf();
