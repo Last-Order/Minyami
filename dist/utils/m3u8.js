@@ -33,7 +33,7 @@ function loadM3U8(path, retries = 1, timeout = 60000, proxy = undefined) {
                 }
                 catch (e) {
                     log_1.default.warning(`Fail to fetch M3U8 file: [${e.code ||
-                        e.response ? `${e.response.status} ${e.response.statusText}` : undefined
+                        (e.response ? `${e.response.status} ${e.response.statusText}` : undefined)
                         || 'UNKNOWN'}]`);
                     log_1.default.warning('If you are downloading a live stream, this may result in a broken output video.');
                     retries--;

@@ -1,3 +1,5 @@
 /node_modules/
 /temp/
+/temp_*/
+tasks.json
 output.mkv

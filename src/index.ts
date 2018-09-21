@@ -64,6 +64,19 @@ Erii.bind({
     }
 });
 
+Erii.bind({
+    name: ['resume', 'r'],
+    description: 'Resume a download. (Archive)',
+    argument: {
+        name: 'input_path',
+        description: 'm3u8 file path'
+    }
+}, async (ctx, options) => {
+    const path = ctx.getArgument().toString();
+    const downloader = new ArchiveDownloader();
+    downloader.resume(path);
+})
+
 Erii.addOption({
     name: ['verbose', 'debug'],
     description: 'Debug output'

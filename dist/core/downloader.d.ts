@@ -18,12 +18,14 @@ declare class Downloader {
     m3u8: M3U8;
     outputPath: string;
     threads: number;
+    chunks: Chunk[];
+    pickedChunks: Chunk[];
     key: string;
     iv: string;
     verbose: boolean;
     nomux: boolean;
     startedAt: number;
-    finishedChunks: number;
+    finishedChunksCount: number;
     retries: number;
     timeout: number;
     proxy: string;

@@ -68,6 +68,18 @@ erii_1.default.bind({
         yield downloader.download();
     }
 }));
+erii_1.default.bind({
+    name: ['resume', 'r'],
+    description: 'Resume a download. (Archive)',
+    argument: {
+        name: 'input_path',
+        description: 'm3u8 file path'
+    }
+}, (ctx, options) => __awaiter(this, void 0, void 0, function* () {
+    const path = ctx.getArgument().toString();
+    const downloader = new archive_1.default();
+    downloader.resume(path);
+}));
 erii_1.default.addOption({
     name: ['verbose', 'debug'],
     description: 'Debug output'

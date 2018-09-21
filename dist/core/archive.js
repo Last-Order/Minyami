@@ -12,6 +12,8 @@ const log_1 = require("../utils/log");
 const media_1 = require("../utils/media");
 const system_1 = require("../utils/system");
 const downloader_1 = require("./downloader");
+const fs = require("fs");
+const task_1 = require("../utils/task");
 const path = require('path');
 class ArchiveDownloader extends downloader_1.default {
     /**
@@ -32,15 +34,15 @@ class ArchiveDownloader extends downloader_1.default {
             retries,
             proxy
         });
+        this.chunks = [];
+        this.pickedChunks = [];
         this.runningThreads = 0;
     }
-    download() {
+    /**
+     * Parse M3U8 Information
+     */
+    parse() {
         return __awaiter(this, void 0, void 0, function* () {
-            this.startedAt = new Date().valueOf();
-            process.on("SIGINT", () => __awaiter(this, void 0, void 0, function* () {
-                yield this.clean();
-                process.exit();
-            }));
             // parse m3u8
             if (this.m3u8.isEncrypted) {
                 // Encrypted
@@ -133,18 +135,33 @@ class ArchiveDownloader extends downloader_1.default {
                     const parser = yield Promise.resolve().then(() => require('./parsers/nico'));
                     const parseResult = parser.default.parse({
                         options: {
-                            m3u8Url: this.m3u8Path,
-                            m3u8: this.m3u8
+                            downloader: this,
+                            m3u8Url: this.m3u8Path
                         }
                     });
                     this.prefix = parseResult.prefix;
-                    this.m3u8 = parseResult.m3u8;
                 }
                 else {
                     yield this.clean();
                     log_1.default.error('Unsupported site.');
                 }
             }
+        });
+    }
+    download() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Record start time to calculate speed.
+            this.startedAt = new Date().valueOf();
+            // Allocate temporary directory.
+            this.tempPath = path.resolve(__dirname, '../../temp_' + new Date().valueOf());
+            if (!fs.existsSync(this.tempPath)) {
+                fs.mkdirSync(this.tempPath);
+            }
+            process.on("SIGINT", () => __awaiter(this, void 0, void 0, function* () {
+                yield this.clean();
+                process.exit();
+            }));
+            yield this.parse();
             log_1.default.info(`Start downloading with ${this.threads} thread(s).`);
             this.chunks = this.m3u8.chunks.map(chunk => {
                 return {
@@ -152,7 +169,7 @@ class ArchiveDownloader extends downloader_1.default {
                     filename: chunk.match(/\/*([^\/]+?\.ts)/)[1]
                 };
             });
-            this.totalChunks = this.chunks.length;
+            this.totalChunksCount = this.chunks.length;
             this.outputFileList = this.chunks.map(chunk => {
                 if (this.m3u8.isEncrypted) {
                     return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
@@ -169,7 +186,7 @@ class ArchiveDownloader extends downloader_1.default {
      */
     getETA() {
         const usedTime = new Date().valueOf() - this.startedAt;
-        const remainingTimeInSeconds = Math.round(((usedTime / this.finishedChunks * this.totalChunks) - usedTime) / 1000);
+        const remainingTimeInSeconds = Math.round(((usedTime / this.finishedChunksCount * this.totalChunksCount) - usedTime) / 1000);
         if (remainingTimeInSeconds < 60) {
             return `${remainingTimeInSeconds}s`;
         }
@@ -186,11 +203,12 @@ class ArchiveDownloader extends downloader_1.default {
     checkQueue() {
         if (this.chunks.length > 0 && this.runningThreads < this.threads) {
             const task = this.chunks.shift();
+            this.pickedChunks.push(task);
             this.runningThreads++;
             this.handleTask(task).then(() => {
-                this.finishedChunks++;
+                this.finishedChunksCount++;
                 this.runningThreads--;
-                log_1.default.info(`Proccessing ${task.filename} finished. (${this.finishedChunks} / ${this.totalChunks} or ${(this.finishedChunks / this.totalChunks * 100).toFixed(2)}% | Avg Speed: ${this.calculateSpeedByChunk()} chunks/s or ${this.calculateSpeedByRatio()}x | ETA: ${this.getETA()})`);
+                log_1.default.info(`Proccessing ${task.filename} finished. (${this.finishedChunksCount} / ${this.totalChunksCount} or ${(this.finishedChunksCount / this.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${this.calculateSpeedByChunk()} chunks/s or ${this.calculateSpeedByRatio()}x | ETA: ${this.getETA()})`);
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);
@@ -208,12 +226,89 @@ class ArchiveDownloader extends downloader_1.default {
                 log_1.default.info('End of merging.');
                 log_1.default.info('Starting cleaning temporary files.');
                 yield system_1.deleteDirectory(this.tempPath);
+                task_1.deleteTask(this.m3u8Path.split('?')[0]);
                 log_1.default.info(`All finished. Check your file at [${this.outputPath}] .`);
             })).catch(e => {
                 console.log(e);
                 log_1.default.error('Fail to merge video. Please merge video chunks manually.');
             });
         }
+    }
+    resume(taskId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const previousTask = task_1.getTask(taskId.split('?')[0]);
+            if (!previousTask) {
+                log_1.default.error('Can\'t find a task to resume.');
+            }
+            log_1.default.info('Previous task found. Resuming.');
+            process.on("SIGINT", () => __awaiter(this, void 0, void 0, function* () {
+                yield this.clean();
+                process.exit();
+            }));
+            this.m3u8Path = taskId;
+            // Load M3U8
+            yield this.loadM3U8();
+            // Resume status
+            this.tempPath = previousTask.tempPath;
+            this.outputPath = previousTask.outputPath;
+            this.threads = previousTask.threads;
+            this.key = previousTask.key;
+            this.iv = previousTask.key;
+            this.verbose = previousTask.verbose;
+            this.nomux = previousTask.nomux;
+            this.startedAt = new Date().valueOf();
+            this.finishedChunksCount = 0;
+            this.totalChunksCount = previousTask.totalChunksCount - previousTask.finishedChunksCount;
+            this.retries = previousTask.retries;
+            this.timeout = previousTask.timeout;
+            this.proxy = previousTask.proxy;
+            this.proxyHost = previousTask.proxyHost;
+            this.proxyPort = previousTask.proxyPort;
+            this.chunks = previousTask.chunks;
+            this.outputFileList = previousTask.outputFileList;
+            yield this.parse();
+            log_1.default.info(`Start downloading with ${this.threads} thread(s).`);
+            this.checkQueue();
+        });
+    }
+    /**
+    * 退出前的清理工作
+    */
+    clean() {
+        return __awaiter(this, void 0, void 0, function* () {
+            log_1.default.info('Saving task status.');
+            task_1.saveTask({
+                id: this.m3u8Path.split('?')[0],
+                tempPath: this.tempPath,
+                m3u8Path: this.m3u8Path,
+                outputPath: this.outputPath,
+                threads: this.threads,
+                key: this.key,
+                iv: this.iv,
+                verbose: this.verbose,
+                nomux: this.nomux,
+                startedAt: this.startedAt,
+                finishedChunksCount: this.finishedChunksCount,
+                totalChunksCount: this.totalChunksCount,
+                retries: this.retries,
+                timeout: this.timeout,
+                proxy: this.proxy,
+                proxyHost: this.proxyHost,
+                proxyPort: this.proxyPort,
+                chunks: [
+                    ...this.chunks,
+                    ...this.pickedChunks.slice(this.pickedChunks.length - this.runningThreads)
+                ],
+                outputFileList: this.outputFileList
+            });
+            try {
+                log_1.default.info('Starting cleaning temporary files.');
+                // await deleteDirectory(this.tempPath);
+            }
+            catch (e) {
+                log_1.default.error('Fail to delete temporary directory.');
+            }
+        });
     }
 }
 exports.default = ArchiveDownloader;

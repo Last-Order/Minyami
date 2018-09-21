@@ -1,5 +1,5 @@
 import { exec } from './system';
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { AxiosProxyConfig } from 'axios';
 import * as fs from 'fs';
 const SocksProxyAgent = require('socks-proxy-agent');
@@ -76,7 +76,7 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
  * @param url 
  * @param proxy 
  */
-export async function requestRaw(url: string, proxy: AxiosProxyConfig = undefined, options: AxiosRequestConfig = {}) {
+export async function requestRaw(url: string, proxy: AxiosProxyConfig = undefined, options: AxiosRequestConfig = {}): Promise<AxiosResponse> {
     return await axios({
         url,
         method: 'GET',

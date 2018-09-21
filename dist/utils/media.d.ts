@@ -1,3 +1,4 @@
+import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { AxiosProxyConfig } from 'axios';
 /**
  * 合并视频文件
@@ -12,6 +13,12 @@ export declare function mergeVideoNew(fileList?: any[], output?: string): Promis
  * @param path
  */
 export declare function download(url: string, path: string, proxy?: AxiosProxyConfig): Promise<{}>;
+/**
+ * Raw Request
+ * @param url
+ * @param proxy
+ */
+export declare function requestRaw(url: string, proxy?: AxiosProxyConfig, options?: AxiosRequestConfig): Promise<AxiosResponse>;
 /**
  * 解密文件
  * @param input

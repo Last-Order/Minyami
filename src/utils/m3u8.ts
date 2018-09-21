@@ -23,7 +23,7 @@ export async function loadM3U8(path: string, retries: number = 1, timeout = 6000
                 break;
             } catch (e) {
                 Log.warning(`Fail to fetch M3U8 file: [${e.code || 
-                        e.response ? `${e.response.status} ${e.response.statusText}` : undefined
+                        (e.response ? `${e.response.status} ${e.response.statusText}` : undefined)
                     || 'UNKNOWN'}]`);
                 Log.warning('If you are downloading a live stream, this may result in a broken output video.');
                 retries--;

@@ -51,7 +51,11 @@ export default class LiveDownloader extends Downloader {
     }
 
     async download() {
+        // Record start time to calculate speed.
         this.startedAt = new Date().valueOf();
+        // Allocate temporary directory.
+        this.tempPath = path.resolve(__dirname, '../../temp_' + new Date().valueOf());
+        
         if (!fs.existsSync(this.tempPath)) {
             fs.mkdirSync(this.tempPath);
         }
@@ -196,9 +200,9 @@ export default class LiveDownloader extends Downloader {
             const task = this.chunks.shift();
             this.runningThreads++;
             this.handleTask(task).then(() => {
-                this.finishedChunks++;
+                this.finishedChunksCount++;
                 this.runningThreads--;
-                Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunks} / unknown | Avg Speed: ${
+                Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunksCount} / unknown | Avg Speed: ${
                     this.calculateSpeedByChunk()
                     }chunks/s or ${
                     this.calculateSpeedByRatio()
@@ -215,7 +219,7 @@ export default class LiveDownloader extends Downloader {
         }
         if (this.chunks.length === 0 && this.runningThreads === 0 && this.isEnd) {
             // 结束状态 合并文件
-            Log.info(`${this.finishedChunks} chunks downloaded. Start merging chunks.`);
+            Log.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
             const muxer = this.nomux ? mergeVideoNew : mergeVideo;
             muxer(this.outputFileList, this.outputPath).then(async () => {
                 Log.info('End of merging.');

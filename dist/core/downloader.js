@@ -28,7 +28,7 @@ class Downloader {
         this.threads = 5; // 并发数量
         this.verbose = false; // 调试输出
         this.nomux = false; // 仅合并分段不remux
-        this.finishedChunks = 0; // 已完成的块数量
+        this.finishedChunksCount = 0; // 已完成的块数量
         this.retries = 1; // 重试数量
         this.timeout = 60000; // 超时时间
         this.proxy = '';
@@ -60,7 +60,6 @@ class Downloader {
             this.proxyPort = parseInt(splitedProxyString[splitedProxyString.length - 1]);
         }
         this.m3u8Path = m3u8Path;
-        this.tempPath = path.resolve(__dirname, '../../temp_' + new Date().valueOf());
         if (process.platform === "win32") {
             var rl = require("readline").createInterface({
                 input: process.stdin,
@@ -76,9 +75,6 @@ class Downloader {
      */
     init() {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!fs.existsSync(this.tempPath)) {
-                fs.mkdirSync(this.tempPath);
-            }
             yield this.loadM3U8();
         });
     }
@@ -134,13 +130,13 @@ class Downloader {
      * 计算以块计算的下载速度
      */
     calculateSpeedByChunk() {
-        return (this.finishedChunks / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
+        return (this.finishedChunksCount / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
     }
     /**
      * 计算以视频长度为基准下载速度倍率
      */
     calculateSpeedByRatio() {
-        return (this.finishedChunks * this.m3u8.getChunkLength() / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
+        return (this.finishedChunksCount * this.m3u8.getChunkLength() / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
     }
 }
 ;

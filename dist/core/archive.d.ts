@@ -5,8 +5,9 @@ declare class ArchiveDownloader extends Downloader {
     m3u8Path: string;
     m3u8: M3U8;
     chunks: Chunk[];
+    pickedChunks: Chunk[];
     outputFileList: string[];
-    totalChunks: number;
+    totalChunksCount: number;
     runningThreads: number;
     prefix: string;
     /**
@@ -15,7 +16,11 @@ declare class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path: string, {threads, output, key, verbose, nomux, retries, proxy}?: DownloaderConfig);
+    constructor(m3u8Path?: string, {threads, output, key, verbose, nomux, retries, proxy}?: DownloaderConfig);
+    /**
+     * Parse M3U8 Information
+     */
+    parse(): Promise<void>;
     download(): Promise<void>;
     /**
      * calculate ETA
@@ -25,5 +30,10 @@ declare class ArchiveDownloader extends Downloader {
      * Check task queue
      */
     checkQueue(): void;
+    resume(taskId: string): Promise<void>;
+    /**
+    * 退出前的清理工作
+    */
+    clean(): Promise<void>;
 }
 export default ArchiveDownloader;
