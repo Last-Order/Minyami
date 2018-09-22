@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name Minyami 网页提取器
-// @version 1.1.12
+// @version 1.1.13
 // @downloadURL https://github.com/Last-Order/Minyami/raw/master/minyami.user.js
 // @updateURL https://github.com/Last-Order/Minyami/raw/master/minyami.user.js
 // @run-at document-start
@@ -97,8 +97,54 @@
     }
 
     const mi = () => {
-        var content = document.createElement('div');
+        let content = document.createElement('div');
 
+        const clearContent = () => {
+            list.innerHTML = '';
+        }
+
+        const fillContent = () => {
+            for (const i of m3u8List[location.href]) {
+                let listi = document.createElement('div');
+                listi.style.textAlign = 'left';
+                let spani = document.createElement("span");
+                spani.innerHTML = i;
+                listi.append(spani);
+                listi.append(document.createElement('br'));
+    
+                let input_i = document.createElement('input');
+                input_i.style.width = "400px";
+                if (resume) {
+                    input_i.value = `minyami -r ${i}`;
+                } else {
+                    input_i.value = `minyami -d "${i}"${key && ' --key ' + key || ''} --output "${document.title.replace(/[\/\*\\\:|\?<>]/ig, "")}.mkv"`;
+                }
+                listi.append(input_i);
+    
+                let button_i = document.createElement('button');
+                button_i.innerHTML = "复制 / Copy";
+                button_i.addEventListener('click', e => {
+                    input_i.select();
+                    document.execCommand('copy');
+                });
+                listi.append(button_i);
+                list.appendChild(listi);
+            }
+        }
+
+        let option = document.createElement('input');
+        option.type = 'checkbox';
+        option.id = 'minyami-resume-checkbox';
+        let optionLabel = document.createElement('label');
+        optionLabel.htmlFor = 'minyami-resume-checkbox';
+        optionLabel.innerText = 'Resume / 恢复下载';
+        option.addEventListener('click', e => {
+          resume = e.toElement.checked;
+          clearContent();
+          fillContent();
+        })
+        content.append(option);
+        content.append(optionLabel);
 
         if (!key) {
             let tips = document.createElement('div');
@@ -107,30 +153,12 @@
             content.appendChild(tips);
         }
 
-        let counter = 1;
+        const list = document.createElement('div');
+        list.id = 'm3u8-list';
+        content.appendChild(list);
 
-        for (const i of m3u8List[location.href]) {
-            let listi = document.createElement('div');
-            listi.style.textAlign = 'left';
-            let spani = document.createElement("span");
-            spani.innerHTML = i;
-            listi.append(spani);
-            listi.append(document.createElement('br'));
+        fillContent();
 
-            let input_i = document.createElement('input');
-            input_i.style.width = "400px";
-            input_i.value = `minyami -d "${i}"${key && ' --key ' + key || ''} --output "${document.title.replace(/[\/\*\\\:|\?<>]/ig, "")}.mkv"`;
-            listi.append(input_i);
-
-            let button_i = document.createElement('button');
-            button_i.innerHTML = "复制 / Copy";
-            button_i.addEventListener('click', e => {
-                input_i.select();
-                document.execCommand('copy');
-            });
-            listi.append(button_i);
-            content.appendChild(listi);
-        }
         buildDialog(content, "Minyami 提取器 / Minyami Extractor", { type: "ok" });
     }
 
@@ -236,6 +264,7 @@
     let key = undefined;
     let iv = undefined;
     let flag = false;
+    let resume = false;
 
 
     listen();
