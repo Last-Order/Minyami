@@ -225,6 +225,7 @@ class LiveDownloader extends downloader_1.default {
                 log_1.default.info('End of merging.');
                 yield this.clean();
                 log_1.default.info(`All finished. Check your file at [${this.outputPath}] .`);
+                process.exit();
             })).catch(e => {
                 console.log(e);
                 log_1.default.error('Fail to merge video. Please merge video chunks manually.');

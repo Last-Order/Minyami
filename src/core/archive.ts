@@ -232,6 +232,7 @@ class ArchiveDownloader extends Downloader {
                 await deleteDirectory(this.tempPath);
                 deleteTask(this.m3u8Path.split('?')[0]);
                 Log.info(`All finished. Check your file at [${this.outputPath}] .`);
+                process.exit();
             }).catch(e => {
                 console.log(e);
                 Log.error('Fail to merge video. Please merge video chunks manually.');
@@ -289,8 +290,6 @@ class ArchiveDownloader extends Downloader {
             return (!this.finishedFilenames.includes(t.filename));
         });
         Log.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunks.length}`);
-        console.log(this.chunks);
-        console.log(this.finishedFilenames);
         saveTask({
             id: this.m3u8Path.split('?')[0],
             tempPath: this.tempPath,
