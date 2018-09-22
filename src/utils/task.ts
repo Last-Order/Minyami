@@ -30,8 +30,10 @@ export interface MinyamiTask {
     proxyHost: string;
     proxyPort: number;
 
+    allChunks: Chunk[]; // 全部块
     chunks: Chunk[]; // 未下载的块
     outputFileList: string[]; // 输出文件列表
+    finishedFilenames: string[]; // 已完成文件名
 }
 
 /**

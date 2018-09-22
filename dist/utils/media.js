@@ -62,17 +62,15 @@ function download(url, path, proxy = undefined) {
             const response = yield axios_1.default({
                 url,
                 method: 'GET',
-                responseType: 'stream',
+                responseType: 'arraybuffer',
                 timeout: 60000,
                 httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'
                 }
             });
-            response.data.pipe(fs.createWriteStream(path));
-            response.data.on('end', () => {
-                resolve();
-            });
+            fs.writeFileSync(path, response.data);
+            resolve();
         }
         catch (e) {
             reject(e);

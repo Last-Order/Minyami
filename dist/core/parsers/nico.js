@@ -30,6 +30,9 @@ class Parser {
                 // 刷新 Token
                 log_1.default.info('Applying new token to all chunks');
                 const token = options.downloader.m3u8Path.match(/ht2_nicolive=(.+?)&/)[1];
+                for (const chunk of options.downloader.allChunks) {
+                    chunk.url = chunk.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+                }
                 for (const chunk of options.downloader.chunks) {
                     chunk.url = chunk.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
                 }

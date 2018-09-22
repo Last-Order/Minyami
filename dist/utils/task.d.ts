@@ -17,8 +17,10 @@ export interface MinyamiTask {
     proxy: string;
     proxyHost: string;
     proxyPort: number;
+    allChunks: Chunk[];
     chunks: Chunk[];
     outputFileList: string[];
+    finishedFilenames: string[];
 }
 /**
  * Get previous task

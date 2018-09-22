@@ -5,7 +5,9 @@ declare class ArchiveDownloader extends Downloader {
     m3u8Path: string;
     m3u8: M3U8;
     chunks: Chunk[];
+    allChunks: Chunk[];
     pickedChunks: Chunk[];
+    finishedFilenames: string[];
     outputFileList: string[];
     totalChunksCount: number;
     runningThreads: number;

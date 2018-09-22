@@ -28,6 +28,7 @@ class Downloader {
     outputPath: string = './output.mkv'; // 输出目录
     threads: number = 5; // 并发数量
 
+    allChunks: Chunk[];
     chunks: Chunk[];
     pickedChunks: Chunk[];
 
@@ -156,7 +157,7 @@ class Downloader {
                 }
                 resolve();
             } catch (e) {
-                Log.info(`Downloading or decrypting ${task.filename} failed. Retry later.`);
+                Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
                 reject(e);
             }            
         });

@@ -35,7 +35,9 @@ class ArchiveDownloader extends downloader_1.default {
             proxy
         });
         this.chunks = [];
+        this.allChunks = [];
         this.pickedChunks = [];
+        this.finishedFilenames = [];
         this.runningThreads = 0;
     }
     /**
@@ -169,6 +171,7 @@ class ArchiveDownloader extends downloader_1.default {
                     filename: chunk.match(/\/*([^\/]+?\.ts)/)[1]
                 };
             });
+            this.allChunks = [...this.chunks];
             this.totalChunksCount = this.chunks.length;
             this.outputFileList = this.chunks.map(chunk => {
                 if (this.m3u8.isEncrypted) {
@@ -209,10 +212,9 @@ class ArchiveDownloader extends downloader_1.default {
                 this.finishedChunksCount++;
                 this.runningThreads--;
                 log_1.default.info(`Proccessing ${task.filename} finished. (${this.finishedChunksCount} / ${this.totalChunksCount} or ${(this.finishedChunksCount / this.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${this.calculateSpeedByChunk()} chunks/s or ${this.calculateSpeedByRatio()}x | ETA: ${this.getETA()})`);
+                this.finishedFilenames.push(task.filename);
                 this.checkQueue();
             }).catch(e => {
-                console.error(e);
-                console.log(task);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();
@@ -253,7 +255,7 @@ class ArchiveDownloader extends downloader_1.default {
             this.outputPath = previousTask.outputPath;
             this.threads = previousTask.threads;
             this.key = previousTask.key;
-            this.iv = previousTask.key;
+            this.iv = previousTask.iv;
             this.verbose = previousTask.verbose;
             this.nomux = previousTask.nomux;
             this.startedAt = new Date().valueOf();
@@ -264,8 +266,10 @@ class ArchiveDownloader extends downloader_1.default {
             this.proxy = previousTask.proxy;
             this.proxyHost = previousTask.proxyHost;
             this.proxyPort = previousTask.proxyPort;
+            this.allChunks = previousTask.allChunks;
             this.chunks = previousTask.chunks;
             this.outputFileList = previousTask.outputFileList;
+            this.finishedFilenames = previousTask.finishedFilenames;
             yield this.parse();
             log_1.default.info(`Start downloading with ${this.threads} thread(s).`);
             this.checkQueue();
@@ -277,6 +281,12 @@ class ArchiveDownloader extends downloader_1.default {
     clean() {
         return __awaiter(this, void 0, void 0, function* () {
             log_1.default.info('Saving task status.');
+            const unfinishedChunks = this.allChunks.filter(t => {
+                return (!this.finishedFilenames.includes(t.filename));
+            });
+            log_1.default.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunks.length}`);
+            console.log(this.chunks);
+            console.log(this.finishedFilenames);
             task_1.saveTask({
                 id: this.m3u8Path.split('?')[0],
                 tempPath: this.tempPath,
@@ -288,26 +298,19 @@ class ArchiveDownloader extends downloader_1.default {
                 verbose: this.verbose,
                 nomux: this.nomux,
                 startedAt: this.startedAt,
-                finishedChunksCount: this.finishedChunksCount,
+                finishedChunksCount: this.totalChunksCount - unfinishedChunks.length,
                 totalChunksCount: this.totalChunksCount,
                 retries: this.retries,
                 timeout: this.timeout,
                 proxy: this.proxy,
                 proxyHost: this.proxyHost,
                 proxyPort: this.proxyPort,
-                chunks: [
-                    ...this.chunks,
-                    ...this.pickedChunks.slice(this.pickedChunks.length - this.runningThreads)
-                ],
-                outputFileList: this.outputFileList
+                allChunks: this.allChunks,
+                chunks: unfinishedChunks,
+                outputFileList: this.outputFileList,
+                finishedFilenames: this.finishedFilenames
             });
-            try {
-                log_1.default.info('Starting cleaning temporary files.');
-                // await deleteDirectory(this.tempPath);
-            }
-            catch (e) {
-                log_1.default.error('Fail to delete temporary directory.');
-            }
+            log_1.default.info('Please wait.');
         });
     }
 }

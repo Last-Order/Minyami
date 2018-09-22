@@ -121,7 +121,7 @@ class Downloader {
                 resolve();
             }
             catch (e) {
-                log_1.default.info(`Downloading or decrypting ${task.filename} failed. Retry later.`);
+                log_1.default.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
                 reject(e);
             }
         }));

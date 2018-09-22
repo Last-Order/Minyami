@@ -18,6 +18,7 @@ declare class Downloader {
     m3u8: M3U8;
     outputPath: string;
     threads: number;
+    allChunks: Chunk[];
     chunks: Chunk[];
     pickedChunks: Chunk[];
     key: string;
