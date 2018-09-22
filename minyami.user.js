@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name Minyami 网页提取器
-// @version 1.1.13
+// @version 1.1.14
 // @downloadURL https://github.com/Last-Order/Minyami/raw/master/minyami.user.js
 // @updateURL https://github.com/Last-Order/Minyami/raw/master/minyami.user.js
 // @run-at document-start
@@ -115,7 +115,7 @@
                 let input_i = document.createElement('input');
                 input_i.style.width = "400px";
                 if (resume) {
-                    input_i.value = `minyami -r ${i}`;
+                    input_i.value = `minyami -r "${i}"`;
                 } else {
                     input_i.value = `minyami -d "${i}"${key && ' --key ' + key || ''} --output "${document.title.replace(/[\/\*\\\:|\?<>]/ig, "")}.mkv"`;
                 }
