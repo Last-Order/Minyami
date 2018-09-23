@@ -1,5 +1,5 @@
 import M3U8 from './m3u8';
-import Downloader, { DownloaderConfig, Chunk } from './downloader';
+import Downloader, { Chunk, ArchiveDownloaderConfig } from './downloader';
 declare class ArchiveDownloader extends Downloader {
     tempPath: string;
     m3u8Path: string;
@@ -11,6 +11,8 @@ declare class ArchiveDownloader extends Downloader {
     outputFileList: string[];
     totalChunksCount: number;
     runningThreads: number;
+    sliceStart: number;
+    sliceEnd: number;
     prefix: string;
     /**
      *
@@ -18,7 +20,7 @@ declare class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path?: string, {threads, output, key, verbose, nomux, retries, proxy}?: DownloaderConfig);
+    constructor(m3u8Path?: string, {threads, output, key, verbose, nomux, retries, proxy, slice}?: ArchiveDownloaderConfig);
     /**
      * Parse M3U8 Information
      */

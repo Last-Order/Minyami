@@ -14,7 +14,8 @@ const archive_1 = require("./core/archive");
 const log_1 = require("./utils/log");
 const live_1 = require("./core/live");
 const system_1 = require("./utils/system");
-const fs = require('fs');
+const fs = require("fs");
+const time_1 = require("./utils/time");
 const path = require('path');
 process.on('unhandledRejection', error => {
     console.log(error);
@@ -80,6 +81,17 @@ erii_1.default.bind({
     const downloader = new archive_1.default();
     downloader.resume(path);
 }));
+erii_1.default.bind({
+    name: ['clean'],
+    description: 'Clean cache files',
+}, () => {
+    for (const file of fs.readdirSync('.')) {
+        if (file.startsWith('temp_')) {
+            system_1.deleteDirectory(file);
+        }
+    }
+    fs.writeFileSync('./tasks.json', '[]');
+});
 erii_1.default.addOption({
     name: ['verbose', 'debug'],
     description: 'Debug output'
@@ -145,6 +157,32 @@ erii_1.default.addOption({
     argument: {
         name: 'socks-proxy',
         description: 'Set Socks Proxy in [<host>:<port>] format. eg. --proxy "127.0.0.1:1080".'
+    }
+});
+erii_1.default.addOption({
+    name: ['slice'],
+    command: 'download',
+    description: 'Download specified part of the stream',
+    argument: {
+        name: 'range',
+        description: 'Set time range in [<hh:mm:ss>-<hh:mm:ss> format]. eg. --slice "45:00-53:00"',
+        validate: (timeString, logger) => {
+            if (!timeString.includes('-')) {
+                logger(`Invalid time range`);
+                return false;
+            }
+            try {
+                const start = timeString.split('-')[0];
+                const end = timeString.split('-')[1];
+                time_1.timeStringToSeconds(start);
+                time_1.timeStringToSeconds(end);
+                return true;
+            }
+            catch (e) {
+                logger(`Invalid time range`);
+                return false;
+            }
+        }
     }
 });
 erii_1.default.default(() => {

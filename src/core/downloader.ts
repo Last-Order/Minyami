@@ -16,6 +16,10 @@ export interface DownloaderConfig {
     proxy?: string;
 }
 
+export interface ArchiveDownloaderConfig extends DownloaderConfig {
+    slice?: string;
+}
+
 export interface Chunk {
     url: string;
     filename: string;

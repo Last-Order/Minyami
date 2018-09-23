@@ -14,6 +14,7 @@ const system_1 = require("../utils/system");
 const downloader_1 = require("./downloader");
 const fs = require("fs");
 const task_1 = require("../utils/task");
+const time_1 = require("../utils/time");
 const path = require('path');
 class ArchiveDownloader extends downloader_1.default {
     /**
@@ -22,7 +23,7 @@ class ArchiveDownloader extends downloader_1.default {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries, proxy } = {
+    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries, proxy, slice } = {
         threads: 5
     }) {
         super(m3u8Path, {
@@ -39,6 +40,10 @@ class ArchiveDownloader extends downloader_1.default {
         this.pickedChunks = [];
         this.finishedFilenames = [];
         this.runningThreads = 0;
+        if (slice) {
+            this.sliceStart = time_1.timeStringToSeconds(slice.split('-')[0]);
+            this.sliceEnd = time_1.timeStringToSeconds(slice.split('-')[1]);
+        }
     }
     /**
      * Parse M3U8 Information
@@ -171,6 +176,11 @@ class ArchiveDownloader extends downloader_1.default {
                     filename: chunk.match(/\/*([^\/]+?\.ts)/)[1]
                 };
             });
+            if (this.sliceStart && this.sliceEnd) {
+                const startIndex = Math.floor(this.sliceStart / this.m3u8.getChunkLength());
+                const endIndex = Math.floor(this.sliceEnd / this.m3u8.getChunkLength());
+                this.chunks = this.chunks.slice(startIndex, endIndex);
+            }
             this.allChunks = [...this.chunks];
             this.totalChunksCount = this.chunks.length;
             this.outputFileList = this.chunks.map(chunk => {

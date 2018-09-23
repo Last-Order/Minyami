@@ -2,9 +2,10 @@ import Log from '../utils/log';
 import { mergeVideo, mergeVideoNew } from '../utils/media';
 import { deleteDirectory, sleep } from '../utils/system';
 import M3U8 from './m3u8';
-import Downloader, { DownloaderConfig, Chunk } from './downloader';
+import Downloader, { Chunk, ArchiveDownloaderConfig } from './downloader';
 import * as fs from 'fs';
 import { saveTask, deleteTask, getTask } from '../utils/task';
+import { timeStringToSeconds } from '../utils/time';
 const path = require('path');
 
 class ArchiveDownloader extends Downloader {
@@ -21,6 +22,9 @@ class ArchiveDownloader extends Downloader {
     totalChunksCount: number;
     runningThreads: number = 0;
 
+    sliceStart: number;
+    sliceEnd: number;
+
     prefix: string;
 
     /**
@@ -29,7 +33,7 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy }: DownloaderConfig = {
+    constructor(m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy, slice }: ArchiveDownloaderConfig = {
         threads: 5
     }) {
         super(m3u8Path, {
@@ -41,6 +45,10 @@ class ArchiveDownloader extends Downloader {
             retries,
             proxy
         });
+        if (slice) {
+            this.sliceStart = timeStringToSeconds(slice.split('-')[0]);
+            this.sliceEnd = timeStringToSeconds(slice.split('-')[1]);
+        }
     }
 
     /**
@@ -162,12 +170,20 @@ class ArchiveDownloader extends Downloader {
         await this.parse();
 
         Log.info(`Start downloading with ${this.threads} thread(s).`);
+
         this.chunks = this.m3u8.chunks.map(chunk => {
             return {
                 url: this.prefix + chunk,
                 filename: chunk.match(/\/*([^\/]+?\.ts)/)[1]
             };
         });
+
+        if (this.sliceStart && this.sliceEnd) {
+            const startIndex = Math.floor(this.sliceStart / this.m3u8.getChunkLength());
+            const endIndex = Math.floor(this.sliceEnd / this.m3u8.getChunkLength());
+            this.chunks = this.chunks.slice(startIndex, endIndex);
+        }
+
         this.allChunks = [...this.chunks];
         this.totalChunksCount = this.chunks.length;
         this.outputFileList = this.chunks.map(chunk => {

@@ -8,6 +8,9 @@ export interface DownloaderConfig {
     retries?: number;
     proxy?: string;
 }
+export interface ArchiveDownloaderConfig extends DownloaderConfig {
+    slice?: string;
+}
 export interface Chunk {
     url: string;
     filename: string;
