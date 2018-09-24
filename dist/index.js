@@ -85,12 +85,12 @@ erii_1.default.bind({
     name: ['clean'],
     description: 'Clean cache files',
 }, () => {
-    for (const file of fs.readdirSync('.')) {
+    for (const file of fs.readdirSync(path.resolve(__dirname, '../'))) {
         if (file.startsWith('temp_')) {
-            system_1.deleteDirectory(file);
+            system_1.deleteDirectory(path.resolve(__dirname, `../${file}`));
         }
     }
-    fs.writeFileSync('./tasks.json', '[]');
+    fs.writeFileSync(path.resolve(__dirname, '../tasks.json'), '[]');
 });
 erii_1.default.addOption({
     name: ['verbose', 'debug'],

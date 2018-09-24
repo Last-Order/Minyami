@@ -82,12 +82,12 @@ Erii.bind({
     name: ['clean'],
     description: 'Clean cache files',
 }, () => {
-    for (const file of fs.readdirSync('.')) {
+    for (const file of fs.readdirSync(path.resolve(__dirname, '../'))) {
         if (file.startsWith('temp_')) {
-            deleteDirectory(file);
+            deleteDirectory(path.resolve(__dirname, `../${file}`));
         }
     }
-    fs.writeFileSync('./tasks.json', '[]');
+    fs.writeFileSync(path.resolve(__dirname, '../tasks.json'), '[]');
 })
 
 Erii.addOption({

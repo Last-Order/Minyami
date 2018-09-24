@@ -259,8 +259,6 @@ class ArchiveDownloader extends downloader_1.default {
                 process.exit();
             }));
             this.m3u8Path = taskId;
-            // Load M3U8
-            yield this.loadM3U8();
             // Resume status
             this.tempPath = previousTask.tempPath;
             this.outputPath = previousTask.outputPath;
@@ -281,6 +279,8 @@ class ArchiveDownloader extends downloader_1.default {
             this.chunks = previousTask.chunks;
             this.outputFileList = previousTask.outputFileList;
             this.finishedFilenames = previousTask.finishedFilenames;
+            // Load M3U8
+            yield this.loadM3U8();
             yield this.parse();
             log_1.default.info(`Start downloading with ${this.threads} thread(s).`);
             this.checkQueue();
