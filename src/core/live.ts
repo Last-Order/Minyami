@@ -1,6 +1,7 @@
 import Downloader, { DownloaderConfig, Chunk } from "./downloader";
 import M3U8 from "./m3u8";
-import Log from "../utils/log";
+import Logger from '../utils/log';
+let Log = Logger.getInstance();
 import { mergeVideo, mergeVideoNew } from "../utils/media";
 import { sleep } from "../utils/system";
 const path = require('path');
@@ -209,8 +210,10 @@ export default class LiveDownloader extends Downloader {
                     }x)`);
                 this.checkQueue();
             }).catch(e => {
-                console.error(e);
-                console.log(task, this.m3u8);
+                //console.error(e);
+                //console.log(task, this.m3u8);
+                Log.info("" + task + "" + this.m3u8);
+                Log.error("", e);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();
@@ -227,8 +230,8 @@ export default class LiveDownloader extends Downloader {
                 Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
             }).catch(e => {
-                console.log(e);
-                Log.error('Fail to merge video. Please merge video chunks manually.');
+                //console.log(e);
+                Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });
         }
 

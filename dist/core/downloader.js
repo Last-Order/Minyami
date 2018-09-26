@@ -11,6 +11,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const path = require('path');
 const fs = require('fs');
 const log_1 = require("../utils/log");
+let Log = log_1.default.getInstance();
 const m3u8_1 = require("../utils/m3u8");
 const system = require("../utils/system");
 const media_1 = require("../utils/media");
@@ -84,9 +85,9 @@ class Downloader {
                 this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retries, this.timeout, this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined);
             }
             catch (e) {
-                console.log(e);
+                // console.log(e);
                 yield this.clean();
-                log_1.default.error('Aborted due to critical error.');
+                Log.error('Aborted due to critical error.', e);
             }
         });
     }
@@ -96,11 +97,11 @@ class Downloader {
     clean() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                log_1.default.info('Starting cleaning temporary files.');
+                Log.info('Starting cleaning temporary files.');
                 yield system.deleteDirectory(this.tempPath);
             }
             catch (e) {
-                log_1.default.error('Fail to delete temporary directory.');
+                Log.error('Fail to delete temporary directory.');
             }
         });
     }
@@ -110,18 +111,18 @@ class Downloader {
      */
     handleTask(task) {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            this.verbose && log_1.default.debug(`Downloading ${task.filename}`);
+            this.verbose && Log.debug(`Downloading ${task.filename}`);
             try {
                 yield media_1.download(task.url, path.resolve(this.tempPath, `./${task.filename}`), this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined);
-                this.verbose && log_1.default.debug(`Downloading ${task.filename} succeed.`);
+                this.verbose && Log.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     yield media_1.decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    this.verbose && log_1.default.debug(`Decrypting ${task.filename} succeed`);
+                    this.verbose && Log.debug(`Decrypting ${task.filename} succeed`);
                 }
                 resolve();
             }
             catch (e) {
-                log_1.default.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
+                Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
                 reject(e);
             }
         }));

@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
-import Log from "../utils/log";
+import Logger from '../utils/log';
+let Log = Logger.getInstance();
 import M3U8 from "./m3u8";
 import { loadM3U8 } from '../utils/m3u8';
 import * as system from '../utils/system';
@@ -123,9 +124,9 @@ class Downloader {
                 this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
             );
         } catch (e) {
-            console.log(e);
+            // console.log(e);
             await this.clean();
-            Log.error('Aborted due to critical error.');
+            Log.error('Aborted due to critical error.', e);
         }
     }
 

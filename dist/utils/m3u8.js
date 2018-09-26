@@ -10,14 +10,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require('fs');
 const m3u8_1 = require("../core/m3u8");
-const log_1 = require("./log");
+const log_1 = require("../utils/log");
+let Log = log_1.default.getInstance();
 const axios_1 = require("axios");
 const SocksProxyAgent = require('socks-proxy-agent');
 function loadM3U8(path, retries = 1, timeout = 60000, proxy = undefined) {
     return __awaiter(this, void 0, void 0, function* () {
         let m3u8Content;
         if (path.startsWith('http')) {
-            log_1.default.info('Start fetching M3U8 file.');
+            Log.info('Start fetching M3U8 file.');
             while (retries >= 0) {
                 try {
                     const response = yield axios_1.default.get(path, {
@@ -27,21 +28,21 @@ function loadM3U8(path, retries = 1, timeout = 60000, proxy = undefined) {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'
                         }
                     });
-                    log_1.default.info('M3U8 file fetched.');
+                    Log.info('M3U8 file fetched.');
                     m3u8Content = response.data;
                     break;
                 }
                 catch (e) {
-                    log_1.default.warning(`Fail to fetch M3U8 file: [${e.code ||
+                    Log.warning(`Fail to fetch M3U8 file: [${e.code ||
                         (e.response ? `${e.response.status} ${e.response.statusText}` : undefined)
                         || 'UNKNOWN'}]`);
-                    log_1.default.warning('If you are downloading a live stream, this may result in a broken output video.');
+                    Log.warning('If you are downloading a live stream, this may result in a broken output video.');
                     retries--;
                     if (retries >= 0) {
-                        log_1.default.info('Try again.');
+                        Log.info('Try again.');
                     }
                     else {
-                        log_1.default.warning('Max retries exceeded. Abort.');
+                        Log.warning('Max retries exceeded. Abort.');
                         throw new Error('Max retries exceeded.');
                     }
                 }
@@ -50,9 +51,9 @@ function loadM3U8(path, retries = 1, timeout = 60000, proxy = undefined) {
         else {
             // is a local file path
             if (!fs.existsSync(path)) {
-                log_1.default.error(`File '${path}' not found.`);
+                Log.error(`File '${path}' not found.`);
             }
-            log_1.default.info('Loading M3U8 file.');
+            Log.info('Loading M3U8 file.');
             m3u8Content = fs.readFileSync(path).toString();
         }
         return new m3u8_1.default(m3u8Content);

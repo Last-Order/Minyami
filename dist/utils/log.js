@@ -1,20 +1,34 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const chalk_1 = require("chalk");
-class Log {
-    static debug(message) {
+class Logger {
+    static getInstance() {
+        if (!this.instance) {
+            throw new Error("Please initalize an instance of Logger first.");
+        }
+        return this.instance;
+    }
+    static setInstance(logger) {
+        this.instance = logger;
+    }
+}
+class ConsoleLogger extends Logger {
+    debug(message) {
         console.debug(chalk_1.default.gray(`[MINYAMI][DEBUG] ${message}`));
     }
-    static info(message) {
+    info(message) {
         console.info(chalk_1.default.white(`[MINYAMI][INFO] ${message}`));
     }
-    static warning(message) {
+    warning(message) {
         console.warn(chalk_1.default.yellow(`[MINYAMI][WARN] ${message}`));
     }
-    static error(message) {
+    error(message, error = undefined) {
+        if (error != undefined)
+            console.log(error);
         console.info(chalk_1.default.red(`[MINYAMI][ERROR] ${message}`));
         process.exit();
     }
 }
-exports.default = Log;
+exports.ConsoleLogger = ConsoleLogger;
+exports.default = Logger;
 //# sourceMappingURL=log.js.map

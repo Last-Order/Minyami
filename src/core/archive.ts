@@ -1,4 +1,5 @@
-import Log from '../utils/log';
+import Logger from '../utils/log';
+let Log = Logger.getInstance();
 import { mergeVideo, mergeVideoNew } from '../utils/media';
 import { deleteDirectory, sleep } from '../utils/system';
 import M3U8 from './m3u8';
@@ -250,8 +251,8 @@ class ArchiveDownloader extends Downloader {
                 Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
             }).catch(e => {
-                console.log(e);
-                Log.error('Fail to merge video. Please merge video chunks manually.');
+                //console.log(e);
+                Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });
         }
     }

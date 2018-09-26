@@ -1,15 +1,24 @@
 #!/usr/bin/env node
+import Logger, { ConsoleLogger } from './utils/log';
+// Build Logger for all global components.
+let log: Logger = new ConsoleLogger();
+Logger.setInstance(log);
+
+
 import Erii from 'erii';
 import ArchiveDownloader from './core/archive';
-import Log from './utils/log';
 import LiveDownloader from './core/live';
 import { exec, deleteDirectory } from './utils/system';
 import * as fs from 'fs';
 import { timeStringToSeconds } from './utils/time';
 const path = require('path');
 process.on('unhandledRejection', error => {
-    console.log(error);
+    log.info(error);
   });
+
+//Use Logger
+let Log = Logger.getInstance();
+
 // Check dependencies
 exec('mkvmerge --version').then(() => {
     exec('openssl version').then(() => {

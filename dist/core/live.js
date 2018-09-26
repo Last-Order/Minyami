@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const downloader_1 = require("./downloader");
 const log_1 = require("../utils/log");
+let Log = log_1.default.getInstance();
 const media_1 = require("../utils/media");
 const system_1 = require("../utils/system");
 const path = require('path');
@@ -61,12 +62,12 @@ class LiveDownloader extends downloader_1.default {
             }
             process.on("SIGINT", () => __awaiter(this, void 0, void 0, function* () {
                 if (!this.forceStop) {
-                    log_1.default.info('Ctrl+C pressed, waiting for tasks finished.');
+                    Log.info('Ctrl+C pressed, waiting for tasks finished.');
                     this.isEnd = true;
                     this.forceStop = true;
                 }
                 else {
-                    log_1.default.info('Force stop.'); // TODO: reject all download promises
+                    Log.info('Force stop.'); // TODO: reject all download promises
                     yield this.clean();
                     process.exit();
                 }
@@ -79,7 +80,7 @@ class LiveDownloader extends downloader_1.default {
                 const key = this.m3u8.getKey();
                 const iv = this.m3u8.getIV();
                 if (key.startsWith('abematv-license')) {
-                    log_1.default.info('Site comfirmed: AbemaTV');
+                    Log.info('Site comfirmed: AbemaTV');
                     const parser = yield Promise.resolve().then(() => require('./parsers/abema'));
                     const parseResult = parser.default.parse({
                         key,
@@ -89,20 +90,20 @@ class LiveDownloader extends downloader_1.default {
                         }
                     });
                     [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                    log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                    Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
                 }
                 else if (key.startsWith('abemafresh')) {
-                    log_1.default.info('Site comfirmed: FreshTV.');
+                    Log.info('Site comfirmed: FreshTV.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
                     const parseResult = parser.default.parse({
                         key,
                         iv
                     });
                     [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                    log_1.default.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                    Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
                 }
                 else {
-                    log_1.default.error('Unknown site.');
+                    Log.error('Unknown site.');
                 }
             }
             else {
@@ -110,13 +111,13 @@ class LiveDownloader extends downloader_1.default {
                 // Not encrypted
                 if (this.m3u8Path.includes('freshlive')) {
                     // FreshTV
-                    log_1.default.info('Site comfirmed: FreshTV.');
+                    Log.info('Site comfirmed: FreshTV.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
                     this.prefix = parser.default.prefix;
                 }
                 else if (this.m3u8Path.includes('openrec')) {
                     // Openrec
-                    log_1.default.info('Site comfirmed: OPENREC.');
+                    Log.info('Site comfirmed: OPENREC.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/openrec'));
                     const parseResult = parser.default.parse({
                         options: {
@@ -127,7 +128,7 @@ class LiveDownloader extends downloader_1.default {
                 }
                 else if (this.m3u8Path.includes('showroom')) {
                     // SHOWROOM
-                    log_1.default.info('Site comfirmed: SHOWROOM.');
+                    Log.info('Site comfirmed: SHOWROOM.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/showroom'));
                     const parseResult = parser.default.parse({
                         options: {
@@ -138,7 +139,7 @@ class LiveDownloader extends downloader_1.default {
                 }
                 else if (this.m3u8Path.includes('dmc.nico')) {
                     // NicoNico
-                    log_1.default.info('Site comfirmed: NicoNico.');
+                    Log.info('Site comfirmed: NicoNico.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/nico'));
                     const parseResult = parser.default.parse({
                         options: {
@@ -149,7 +150,7 @@ class LiveDownloader extends downloader_1.default {
                 }
                 else {
                     yield this.clean();
-                    log_1.default.error('Unsupported site.');
+                    Log.error('Unsupported site.');
                 }
             }
             yield this.cycling();
@@ -206,11 +207,13 @@ class LiveDownloader extends downloader_1.default {
             this.handleTask(task).then(() => {
                 this.finishedChunksCount++;
                 this.runningThreads--;
-                log_1.default.info(`Proccessing ${task.filename} finished. (${this.finishedChunksCount} / unknown | Avg Speed: ${this.calculateSpeedByChunk()}chunks/s or ${this.calculateSpeedByRatio()}x)`);
+                Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunksCount} / unknown | Avg Speed: ${this.calculateSpeedByChunk()}chunks/s or ${this.calculateSpeedByRatio()}x)`);
                 this.checkQueue();
             }).catch(e => {
-                console.error(e);
-                console.log(task, this.m3u8);
+                //console.error(e);
+                //console.log(task, this.m3u8);
+                Log.info("" + task + "" + this.m3u8);
+                Log.error("", e);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();
@@ -219,16 +222,16 @@ class LiveDownloader extends downloader_1.default {
         }
         if (this.chunks.length === 0 && this.runningThreads === 0 && this.isEnd) {
             // 结束状态 合并文件
-            log_1.default.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
+            Log.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
             const muxer = this.nomux ? media_1.mergeVideoNew : media_1.mergeVideo;
             muxer(this.outputFileList, this.outputPath).then(() => __awaiter(this, void 0, void 0, function* () {
-                log_1.default.info('End of merging.');
+                Log.info('End of merging.');
                 yield this.clean();
-                log_1.default.info(`All finished. Check your file at [${this.outputPath}] .`);
+                Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
             })).catch(e => {
-                console.log(e);
-                log_1.default.error('Fail to merge video. Please merge video chunks manually.');
+                //console.log(e);
+                Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });
         }
         if (this.chunks.length === 0 && this.runningThreads === 0 && !this.isEnd) {
