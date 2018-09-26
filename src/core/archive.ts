@@ -224,13 +224,22 @@ class ArchiveDownloader extends Downloader {
             this.handleTask(task).then(() => {
                 this.finishedChunksCount++;
                 this.runningThreads--;
-                Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunksCount} / ${this.totalChunksCount} or ${(this.finishedChunksCount / this.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${
-                    this.calculateSpeedByChunk()
+                let infoObj = {
+                    taskname: task.filename,
+                    finishedChunksCount: this.finishedChunksCount,
+                    totalChunksCount: this.totalChunksCount,
+                    chunkSpeed: this.calculateSpeedByChunk(),
+                    ratioSpeed: this.calculateSpeedByRatio(),
+                    eta: this.getETA()
+                }
+
+                Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / ${this.totalChunksCount} or ${(infoObj.finishedChunksCount / infoObj.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${
+                    infoObj.chunkSpeed
                     } chunks/s or ${
-                    this.calculateSpeedByRatio()
+                    infoObj.ratioSpeed
                     }x | ETA: ${
-                    this.getETA()
-                    })`);
+                    infoObj.eta
+                    })`, infoObj);
                 this.finishedFilenames.push(task.filename);
                 this.checkQueue();
             }).catch(e => {
