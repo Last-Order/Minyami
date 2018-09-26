@@ -1,4 +1,5 @@
-import Log from '../utils/log';
+import Logger from '../utils/log';
+let Log = Logger.getInstance();
 import { mergeVideo, mergeVideoNew } from '../utils/media';
 import { deleteDirectory, sleep } from '../utils/system';
 import M3U8 from './m3u8';
@@ -223,13 +224,22 @@ class ArchiveDownloader extends Downloader {
             this.handleTask(task).then(() => {
                 this.finishedChunksCount++;
                 this.runningThreads--;
-                Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunksCount} / ${this.totalChunksCount} or ${(this.finishedChunksCount / this.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${
-                    this.calculateSpeedByChunk()
+                let infoObj = {
+                    taskname: task.filename,
+                    finishedChunksCount: this.finishedChunksCount,
+                    totalChunksCount: this.totalChunksCount,
+                    chunkSpeed: this.calculateSpeedByChunk(),
+                    ratioSpeed: this.calculateSpeedByRatio(),
+                    eta: this.getETA()
+                }
+
+                Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / ${this.totalChunksCount} or ${(infoObj.finishedChunksCount / infoObj.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${
+                    infoObj.chunkSpeed
                     } chunks/s or ${
-                    this.calculateSpeedByRatio()
+                    infoObj.ratioSpeed
                     }x | ETA: ${
-                    this.getETA()
-                    })`);
+                    infoObj.eta
+                    })`, infoObj);
                 this.finishedFilenames.push(task.filename);
                 this.checkQueue();
             }).catch(e => {
@@ -250,8 +260,8 @@ class ArchiveDownloader extends Downloader {
                 Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
             }).catch(e => {
-                console.log(e);
-                Log.error('Fail to merge video. Please merge video chunks manually.');
+                //console.log(e);
+                Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });
         }
     }

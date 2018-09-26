@@ -1,6 +1,7 @@
 const fs = require('fs');
 import M3U8 from "../core/m3u8";
-import Log from "./log";
+import Logger from '../utils/log';
+let Log = Logger.getInstance();
 import axios from 'axios';
 import { AxiosProxyConfig } from 'axios';
 const SocksProxyAgent = require('socks-proxy-agent');

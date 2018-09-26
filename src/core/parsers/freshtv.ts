@@ -1,5 +1,6 @@
 import { ParserOptions, ParserResult } from "./types";
-import Log from "../../utils/log";
+import Logger from '../../utils/log';
+let Log = Logger.getInstance();
 
 const cryptojs = require('crypto-js');
 export default class Parser {

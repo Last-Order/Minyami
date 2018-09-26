@@ -20,7 +20,7 @@ declare class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path?: string, {threads, output, key, verbose, nomux, retries, proxy, slice}?: ArchiveDownloaderConfig);
+    constructor(m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy, slice }?: ArchiveDownloaderConfig);
     /**
      * Parse M3U8 Information
      */

@@ -9,26 +9,31 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const log_1 = require("./utils/log");
+// Build Logger for all global components.
+let log = new log_1.ConsoleLogger();
+log_1.default.setInstance(log);
 const erii_1 = require("erii");
 const archive_1 = require("./core/archive");
-const log_1 = require("./utils/log");
 const live_1 = require("./core/live");
 const system_1 = require("./utils/system");
 const fs = require("fs");
 const time_1 = require("./utils/time");
 const path = require('path');
 process.on('unhandledRejection', error => {
-    console.log(error);
+    log.info(error);
 });
+//Use Logger
+let Log = log_1.default.getInstance();
 // Check dependencies
 system_1.exec('mkvmerge --version').then(() => {
     system_1.exec('openssl version').then(() => {
         erii_1.default.start();
     }).catch(e => {
-        log_1.default.error('Missing dependence: openssl');
+        Log.error('Missing dependence: openssl');
     });
 }).catch(e => {
-    log_1.default.error('Missing dependence: mkvmerge');
+    Log.error('Missing dependence: mkvmerge');
 });
 erii_1.default.setMetaInfo({
     version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json')).toString())['version'],

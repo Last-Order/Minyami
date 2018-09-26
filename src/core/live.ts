@@ -1,6 +1,7 @@
 import Downloader, { DownloaderConfig, Chunk } from "./downloader";
 import M3U8 from "./m3u8";
-import Log from "../utils/log";
+import Logger from '../utils/log';
+let Log = Logger.getInstance();
 import { mergeVideo, mergeVideoNew } from "../utils/media";
 import { sleep } from "../utils/system";
 const path = require('path');
@@ -202,15 +203,24 @@ export default class LiveDownloader extends Downloader {
             this.handleTask(task).then(() => {
                 this.finishedChunksCount++;
                 this.runningThreads--;
-                Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunksCount} / unknown | Avg Speed: ${
-                    this.calculateSpeedByChunk()
+                let infoObj = {
+                    taskname: task.filename,
+                    finishedChunksCount: this.finishedChunksCount,
+                    chunkSpeed: this.calculateSpeedByChunk(),
+                    ratioSpeed: this.calculateSpeedByRatio()
+                }
+
+                Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / unknown | Avg Speed: ${
+                    infoObj.chunkSpeed
                     }chunks/s or ${
-                    this.calculateSpeedByRatio()
-                    }x)`);
+                    infoObj.ratioSpeed
+                    }x)`, infoObj);
                 this.checkQueue();
             }).catch(e => {
-                console.error(e);
-                console.log(task, this.m3u8);
+                //console.error(e);
+                //console.log(task, this.m3u8);
+                Log.info(JSON.stringify(task) + " " + JSON.stringify(this.m3u8));
+                Log.error("Something happenned.", e);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();
@@ -227,8 +237,8 @@ export default class LiveDownloader extends Downloader {
                 Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
             }).catch(e => {
-                console.log(e);
-                Log.error('Fail to merge video. Please merge video chunks manually.');
+                //console.log(e);
+                Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });
         }
 
