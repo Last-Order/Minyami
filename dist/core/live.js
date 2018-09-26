@@ -207,13 +207,19 @@ class LiveDownloader extends downloader_1.default {
             this.handleTask(task).then(() => {
                 this.finishedChunksCount++;
                 this.runningThreads--;
-                Log.info(`Proccessing ${task.filename} finished. (${this.finishedChunksCount} / unknown | Avg Speed: ${this.calculateSpeedByChunk()}chunks/s or ${this.calculateSpeedByRatio()}x)`);
+                let infoObj = {
+                    taskname: task.filename,
+                    finishedChunksCount: this.finishedChunksCount,
+                    chunkSpeed: this.calculateSpeedByChunk(),
+                    ratioSpeed: this.calculateSpeedByRatio()
+                };
+                Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / unknown | Avg Speed: ${infoObj.chunkSpeed}chunks/s or ${infoObj.ratioSpeed}x)`, infoObj);
                 this.checkQueue();
             }).catch(e => {
                 //console.error(e);
                 //console.log(task, this.m3u8);
-                Log.info("" + task + "" + this.m3u8);
-                Log.error("", e);
+                Log.info(JSON.stringify(task) + " " + JSON.stringify(this.m3u8));
+                Log.error("Something happenned.", e);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();

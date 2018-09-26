@@ -16,14 +16,14 @@ class ConsoleLogger extends Logger {
     debug(message) {
         console.debug(chalk_1.default.gray(`[MINYAMI][DEBUG] ${message}`));
     }
-    info(message) {
+    info(message, infoObj = undefined) {
         console.info(chalk_1.default.white(`[MINYAMI][INFO] ${message}`));
     }
     warning(message) {
         console.warn(chalk_1.default.yellow(`[MINYAMI][WARN] ${message}`));
     }
     error(message, error = undefined) {
-        if (error != undefined)
+        if (error !== undefined)
             console.log(error);
         console.info(chalk_1.default.red(`[MINYAMI][ERROR] ${message}`));
         process.exit();
