@@ -1,7 +1,7 @@
 import Downloader, { DownloaderConfig, Chunk } from "./downloader";
 import M3U8 from "./m3u8";
 import Log from "../utils/log";
-import { mergeVideo, mergeVideoNew } from "../utils/media";
+import { mergeVideo, mergeVideoNew, download, decrypt } from "../utils/media";
 import { sleep } from "../utils/system";
 const path = require('path');
 const fs = require('fs');
@@ -170,15 +170,26 @@ export default class LiveDownloader extends Downloader {
                 }
             })
             const currentUndownloadedChunks = currentPlaylistChunks.map(chunk => {
+                // TODO: Hot fix of Abema Live 
+                if (chunk.includes('linear-abematv')) {
+                    if (chunk.includes('tsad')) {
+                        return {
+                            url: this.prefix + chunk,
+                            filename: chunk.match(/\/*([^\/]+?\.ts)/)[1],
+                            isEncrypted: false
+                        } as Chunk;
+                    }
+                }
                 return {
                     url: this.prefix + chunk,
-                    filename: chunk.match(/\/*([^\/]+?\.ts)/)[1]
-                }
+                    filename: chunk.match(/\/*([^\/]+?\.ts)/)[1],
+                    isEncrypted: this.m3u8.isEncrypted
+                } as Chunk;
             });
             // 加入待完成的任务列表
             this.chunks.push(...currentUndownloadedChunks);
             this.outputFileList.push(...currentUndownloadedChunks.map(chunk => {
-                if (this.isEncrypted) {
+                if (this.m3u8.isEncrypted) {
                     return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
                 } else {
                     return path.resolve(this.tempPath, `./${chunk.filename}`);
@@ -193,6 +204,33 @@ export default class LiveDownloader extends Downloader {
             }
             await sleep(Math.min(5000, this.m3u8.getChunkLength() * 1000));
         }
+    }
+
+      /**
+     * 处理块下载任务
+     * @override
+     * @param task 块下载任务
+     */
+    handleTask(task: Chunk) {
+        return new Promise(async (resolve, reject) => {
+            this.verbose && Log.debug(`Downloading ${task.filename}`);
+            try {
+                await download(
+                    task.url, 
+                    path.resolve(this.tempPath, `./${task.filename}`),
+                    this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
+                );
+                this.verbose && Log.debug(`Downloading ${task.filename} succeed.`);
+                if (task.isEncrypted) {
+                    await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
+                    this.verbose && Log.debug(`Decrypting ${task.filename} succeed`);
+                }
+                resolve();
+            } catch (e) {
+                Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
+                reject(e);
+            }            
+        });
     }
 
     checkQueue() {
@@ -210,7 +248,7 @@ export default class LiveDownloader extends Downloader {
                 this.checkQueue();
             }).catch(e => {
                 console.error(e);
-                console.log(task, this.m3u8);
+                console.log(task);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();

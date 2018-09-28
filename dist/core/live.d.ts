@@ -25,5 +25,11 @@ export default class LiveDownloader extends Downloader {
     constructor(m3u8Path: string, {threads, output, key, verbose, nomux, retries, proxy}?: DownloaderConfig);
     download(): Promise<void>;
     cycling(): Promise<void>;
+    /**
+   * 处理块下载任务
+   * @override
+   * @param task 块下载任务
+   */
+    handleTask(task: Chunk): Promise<{}>;
     checkQueue(): void;
 }

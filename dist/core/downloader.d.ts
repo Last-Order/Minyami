@@ -14,6 +14,7 @@ export interface ArchiveDownloaderConfig extends DownloaderConfig {
 export interface Chunk {
     url: string;
     filename: string;
+    isEncrypted?: boolean;
 }
 declare class Downloader {
     tempPath: string;

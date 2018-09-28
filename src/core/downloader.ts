@@ -23,6 +23,7 @@ export interface ArchiveDownloaderConfig extends DownloaderConfig {
 export interface Chunk {
     url: string;
     filename: string;
+    isEncrypted?: boolean;
 }
 
 class Downloader {
