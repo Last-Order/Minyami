@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import Log from './log';
+import Logger from '../utils/log';
+let Log = Logger.getInstance();
 import { Chunk } from '../core/downloader';
 import M3U8 from '../core/m3u8';
 

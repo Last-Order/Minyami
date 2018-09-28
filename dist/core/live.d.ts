@@ -26,10 +26,10 @@ export default class LiveDownloader extends Downloader {
     download(): Promise<void>;
     cycling(): Promise<void>;
     /**
-   * 处理块下载任务
-   * @override
-   * @param task 块下载任务
-   */
+     * 处理块下载任务
+     * @override
+     * @param task 块下载任务
+     */
     handleTask(task: Chunk): Promise<{}>;
     checkQueue(): void;
 }

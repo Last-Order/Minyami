@@ -9,11 +9,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const log_1 = require("../../utils/log");
+let Log = log_1.default.getInstance();
 const media_1 = require("../../utils/media");
 class Parser {
     static parse({ key = '', iv = '', options }) {
         return __awaiter(this, void 0, void 0, function* () {
-            log_1.default.info('Retrieving key from server.');
+            Log.info('Retrieving key from server.');
             const response = yield media_1.requestRaw(key, options.proxy, {
                 responseType: 'arraybuffer'
             });
