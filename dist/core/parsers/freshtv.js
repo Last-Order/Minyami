@@ -1,12 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const log_1 = require("../../utils/log");
-let Log = log_1.default.getInstance();
 const cryptojs = require('crypto-js');
 class Parser {
     static parse({ key = '', iv = '', }) {
         if (!key || !iv) {
-            Log.error('Key or iv missing.');
+            throw new Error('Key or iv missing.');
         }
         const abemafresh = [1413502068, 2104980084, 1144534056, 1967279194, 2051549272, 860632952, 1464353903, 1212380503];
         const part1 = key.split('/')[3];

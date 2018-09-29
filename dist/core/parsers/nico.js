@@ -1,11 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const log_1 = require("../../utils/log");
-let Log = log_1.default.getInstance();
 class Parser {
     static parse({ key = '', iv = '', options }) {
         if (!options.m3u8Url) {
-            Log.error('Missing m3u8 url for Niconico.');
+            throw new Error('Missing m3u8 url for Niconico.');
         }
         const prefix = options.m3u8Url.match(/^(.+\/)/)[1];
         const leftPad = (str) => {
@@ -29,7 +27,6 @@ class Parser {
             }
             else {
                 // 刷新 Token
-                Log.info('Applying new token to all chunks');
                 const token = options.downloader.m3u8Path.match(/ht2_nicolive=(.+?)&/)[1];
                 for (const chunk of options.downloader.allChunks) {
                     chunk.url = chunk.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);

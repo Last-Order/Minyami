@@ -1,3 +1,4 @@
+import Logger from '../utils/log';
 import M3U8 from "./m3u8";
 export interface DownloaderConfig {
     threads?: number;
@@ -17,6 +18,7 @@ export interface Chunk {
     isEncrypted?: boolean;
 }
 declare class Downloader {
+    Log: Logger;
     tempPath: string;
     m3u8Path: string;
     m3u8: M3U8;
@@ -42,7 +44,7 @@ declare class Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path: string, {threads, output, key, verbose, nomux, retries, proxy}?: DownloaderConfig);
+    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, nomux, retries, proxy }?: DownloaderConfig);
     /**
      * 初始化 读取m3u8内容
      */

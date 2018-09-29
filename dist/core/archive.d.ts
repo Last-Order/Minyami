@@ -1,3 +1,4 @@
+import Logger from '../utils/log';
 import M3U8 from './m3u8';
 import Downloader, { Chunk, ArchiveDownloaderConfig } from './downloader';
 declare class ArchiveDownloader extends Downloader {
@@ -20,7 +21,7 @@ declare class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path?: string, {threads, output, key, verbose, nomux, retries, proxy, slice}?: ArchiveDownloaderConfig);
+    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy, slice }?: ArchiveDownloaderConfig);
     /**
      * Parse M3U8 Information
      */

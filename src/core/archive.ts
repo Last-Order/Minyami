@@ -1,5 +1,4 @@
 import Logger from '../utils/log';
-let Log = Logger.getInstance();
 import { mergeVideo, mergeVideoNew } from '../utils/media';
 import { deleteDirectory, sleep } from '../utils/system';
 import M3U8 from './m3u8';
@@ -34,10 +33,10 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy, slice }: ArchiveDownloaderConfig = {
+    constructor(log:Logger, m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy, slice }: ArchiveDownloaderConfig = {
         threads: 5
     }) {
-        super(m3u8Path, {
+        super(log, m3u8Path, {
             threads,
             output,
             key,
@@ -63,16 +62,16 @@ class ArchiveDownloader extends Downloader {
             const iv = this.m3u8.getIV();
 
             if (key.startsWith('abemafresh')) {
-                Log.info('Site comfirmed: FreshTV.');
+                this.Log.info('Site comfirmed: FreshTV.');
                 const parser = await import('./parsers/freshtv');
                 const parseResult = parser.default.parse({
                     key,
                     iv
                 });
                 [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
             } else if (key.startsWith('abematv-license')) {
-                Log.info('Site comfirmed: AbemaTV.');
+                this.Log.info('Site comfirmed: AbemaTV.');
                 const parser = await import('./parsers/abema');
                 const parseResult = parser.default.parse({
                     key,
@@ -82,9 +81,9 @@ class ArchiveDownloader extends Downloader {
                     }
                 });
                 [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
             } else if (this.m3u8Path.includes('bchvod')) {
-                Log.info('Site comfirmed: B-ch.');
+                this.Log.info('Site comfirmed: B-ch.');
                 const parser = await import('./parsers/bch');
                 try {
                     const parseResult = await parser.default.parse({
@@ -98,25 +97,25 @@ class ArchiveDownloader extends Downloader {
                         }
                     });
                     [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                    Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                    this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
                 } catch (e) {
                     await this.clean();
-                    Log.error('Fail to retrieve the key from server.');
+                    this.Log.error('Fail to retrieve the key from server.');
                 }
             } else {
                 await this.clean();
-                Log.error('Unsupported site.');
+                this.Log.error('Unsupported site.');
             }
         } else {
             // Not encrypted
             if (this.m3u8Path.includes('freshlive')) {
                 // FreshTV
-                Log.info('Site comfirmed: FreshTV.');
+                this.Log.info('Site comfirmed: FreshTV.');
                 const parser = await import('./parsers/freshtv');
                 this.prefix = parser.default.prefix;
             } else if (this.m3u8Path.includes('openrec')) {
                 // Openrec
-                Log.info('Site comfirmed: OPENREC.');
+                this.Log.info('Site comfirmed: OPENREC.');
                 const parser = await import('./parsers/openrec');
                 const parseResult = parser.default.parse({
                     options: {
@@ -125,7 +124,7 @@ class ArchiveDownloader extends Downloader {
                 });
                 this.prefix = parseResult.prefix;
             } else if (this.m3u8Path.includes('brightcove')) {
-                Log.info('Site comfirmed: Sony Music.');
+                this.Log.info('Site comfirmed: Sony Music.');
                 const parser = await import('./parsers/sonymusic');
                 const parseResult = parser.default.parse({
                     options: {
@@ -135,9 +134,9 @@ class ArchiveDownloader extends Downloader {
                 this.prefix = parseResult.prefix;
             } else if (this.m3u8Path.includes('dmc.nico')) {
                 // NicoNico
-                Log.info('Site comfirmed: NicoNico.');
-                Log.info('请保持播放页面不要关闭');
-                Log.info('Please do not close the video page.');
+                this.Log.info('Site comfirmed: NicoNico.');
+                this.Log.info('请保持播放页面不要关闭');
+                this.Log.info('Please do not close the video page.');
                 const parser = await import('./parsers/nico');
                 const parseResult = parser.default.parse({
                     options: {
@@ -148,7 +147,7 @@ class ArchiveDownloader extends Downloader {
                 this.prefix = parseResult.prefix;
             } else {
                 await this.clean();
-                Log.error('Unsupported site.');
+                this.Log.error('Unsupported site.');
             }
         }
     }
@@ -170,7 +169,7 @@ class ArchiveDownloader extends Downloader {
 
         await this.parse();
 
-        Log.info(`Start downloading with ${this.threads} thread(s).`);
+        this.Log.info(`Start downloading with ${this.threads} thread(s).`);
 
         this.chunks = this.m3u8.chunks.map(chunk => {
             return {
@@ -233,7 +232,7 @@ class ArchiveDownloader extends Downloader {
                     eta: this.getETA()
                 }
 
-                Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / ${this.totalChunksCount} or ${(infoObj.finishedChunksCount / infoObj.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${
+                this.Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / ${this.totalChunksCount} or ${(infoObj.finishedChunksCount / infoObj.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${
                     infoObj.chunkSpeed
                     } chunks/s or ${
                     infoObj.ratioSpeed
@@ -250,18 +249,23 @@ class ArchiveDownloader extends Downloader {
             this.checkQueue();
         }
         if (this.chunks.length === 0 && this.runningThreads === 0) {
-            Log.info('All chunks downloaded. Start merging chunks.');
+            this.Log.info('All chunks downloaded. Start merging chunks.');
             const muxer = this.nomux ? mergeVideoNew : mergeVideo;
             muxer(this.outputFileList, this.outputPath).then(async () => {
-                Log.info('End of merging.');
-                Log.info('Starting cleaning temporary files.');
+                this.Log.info('End of merging.');
+                this.Log.info('Starting cleaning temporary files.');
                 await deleteDirectory(this.tempPath);
-                deleteTask(this.m3u8Path.split('?')[0]);
-                Log.info(`All finished. Check your file at [${this.outputPath}] .`);
+                try {
+                    deleteTask(this.m3u8Path.split('?')[0]);
+                } catch (error) {
+                    this.Log.error('Fail to parse previous tasks, ignored.');
+                }
+                
+                this.Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
             }).catch(e => {
                 //console.log(e);
-                Log.error('Fail to merge video. Please merge video chunks manually.', e);
+                this.Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });
         }
     }
@@ -269,9 +273,9 @@ class ArchiveDownloader extends Downloader {
     async resume(taskId: string) {
         const previousTask = getTask(taskId.split('?')[0]);
         if (!previousTask) {
-            Log.error('Can\'t find a task to resume.');
+            this.Log.error('Can\'t find a task to resume.');
         } 
-        Log.info('Previous task found. Resuming.');
+        this.Log.info('Previous task found. Resuming.');
 
         process.on("SIGINT", async () => {
             await this.clean();
@@ -303,7 +307,7 @@ class ArchiveDownloader extends Downloader {
         await this.loadM3U8();
         await this.parse();
 
-        Log.info(`Start downloading with ${this.threads} thread(s).`);
+        this.Log.info(`Start downloading with ${this.threads} thread(s).`);
         this.checkQueue();
     }
 
@@ -311,35 +315,40 @@ class ArchiveDownloader extends Downloader {
     * 退出前的清理工作
     */
     async clean() {
-        Log.info('Saving task status.');
+        this.Log.info('Saving task status.');
         const unfinishedChunks = this.allChunks.filter(t => {
             return (!this.finishedFilenames.includes(t.filename));
         });
-        Log.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunks.length}`);
-        saveTask({
-            id: this.m3u8Path.split('?')[0],
-            tempPath: this.tempPath,
-            m3u8Path: this.m3u8Path,
-            outputPath: this.outputPath,
-            threads: this.threads,
-            key: this.key,
-            iv: this.iv,
-            verbose: this.verbose,
-            nomux: this.nomux,
-            startedAt: this.startedAt,
-            finishedChunksCount: this.totalChunksCount - unfinishedChunks.length,
-            totalChunksCount: this.totalChunksCount,
-            retries: this.retries,
-            timeout: this.timeout,
-            proxy: this.proxy,
-            proxyHost: this.proxyHost,
-            proxyPort: this.proxyPort,
-            allChunks: this.allChunks,
-            chunks: unfinishedChunks,
-            outputFileList: this.outputFileList,
-            finishedFilenames: this.finishedFilenames
-        });
-        Log.info('Please wait.');
+        this.Log.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunks.length}`);
+
+        try {
+            saveTask({
+                id: this.m3u8Path.split('?')[0],
+                tempPath: this.tempPath,
+                m3u8Path: this.m3u8Path,
+                outputPath: this.outputPath,
+                threads: this.threads,
+                key: this.key,
+                iv: this.iv,
+                verbose: this.verbose,
+                nomux: this.nomux,
+                startedAt: this.startedAt,
+                finishedChunksCount: this.totalChunksCount - unfinishedChunks.length,
+                totalChunksCount: this.totalChunksCount,
+                retries: this.retries,
+                timeout: this.timeout,
+                proxy: this.proxy,
+                proxyHost: this.proxyHost,
+                proxyPort: this.proxyPort,
+                allChunks: this.allChunks,
+                chunks: unfinishedChunks,
+                outputFileList: this.outputFileList,
+                finishedFilenames: this.finishedFilenames
+            });
+        } catch (error) {
+            this.Log.error('Fail to parse previous tasks, ignored.');
+        }
+        this.Log.info('Please wait.');
     }
 }
 

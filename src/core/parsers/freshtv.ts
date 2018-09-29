@@ -1,6 +1,4 @@
 import { ParserOptions, ParserResult } from "./types";
-import Logger from '../../utils/log';
-let Log = Logger.getInstance();
 
 const cryptojs = require('crypto-js');
 export default class Parser {
@@ -10,7 +8,7 @@ export default class Parser {
         iv = '',
     }: ParserOptions): ParserResult {
         if (!key || !iv) {
-            Log.error('Key or iv missing.');
+            throw new Error('Key or iv missing.');
         }
         const abemafresh = [1413502068, 2104980084, 1144534056, 1967279194, 2051549272, 860632952, 1464353903, 1212380503];
 

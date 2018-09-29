@@ -2,15 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const chalk_1 = require("chalk");
 class Logger {
-    static getInstance() {
-        if (!this.instance) {
-            throw new Error("Please initalize an instance of Logger first.");
-        }
-        return this.instance;
-    }
-    static setInstance(logger) {
-        this.instance = logger;
-    }
 }
 class ConsoleLogger extends Logger {
     debug(message) {
