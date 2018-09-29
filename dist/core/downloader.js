@@ -10,8 +10,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const path = require('path');
 const fs = require('fs');
-const log_1 = require("../utils/log");
-let Log = log_1.default.getInstance();
 const m3u8_1 = require("../utils/m3u8");
 const system = require("../utils/system");
 const media_1 = require("../utils/media");
@@ -22,7 +20,7 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries, proxy } = {
+    constructor(log, m3u8Path, { threads, output, key, verbose, nomux, retries, proxy } = {
         threads: 5
     }) {
         this.outputPath = './output.mkv'; // 输出目录
@@ -35,6 +33,7 @@ class Downloader {
         this.proxy = '';
         this.proxyHost = '';
         this.proxyPort = 0;
+        this.Log = log;
         if (threads) {
             this.threads = threads;
         }
@@ -82,12 +81,12 @@ class Downloader {
     loadM3U8() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                this.m3u8 = yield m3u8_1.loadM3U8(this.m3u8Path, this.retries, this.timeout, this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined);
+                this.m3u8 = yield m3u8_1.loadM3U8(this.Log, this.m3u8Path, this.retries, this.timeout, this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined);
             }
             catch (e) {
                 // console.log(e);
                 yield this.clean();
-                Log.error('Aborted due to critical error.', e);
+                this.Log.error('Aborted due to critical error.', e);
             }
         });
     }
@@ -97,11 +96,11 @@ class Downloader {
     clean() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                Log.info('Starting cleaning temporary files.');
+                this.Log.info('Starting cleaning temporary files.');
                 yield system.deleteDirectory(this.tempPath);
             }
             catch (e) {
-                Log.error('Fail to delete temporary directory.');
+                this.Log.error('Fail to delete temporary directory.');
             }
         });
     }
@@ -111,18 +110,18 @@ class Downloader {
      */
     handleTask(task) {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            this.verbose && Log.debug(`Downloading ${task.filename}`);
+            this.verbose && this.Log.debug(`Downloading ${task.filename}`);
             try {
                 yield media_1.download(task.url, path.resolve(this.tempPath, `./${task.filename}`), this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined);
-                this.verbose && Log.debug(`Downloading ${task.filename} succeed.`);
+                this.verbose && this.Log.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     yield media_1.decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    this.verbose && Log.debug(`Decrypting ${task.filename} succeed`);
+                    this.verbose && this.Log.debug(`Decrypting ${task.filename} succeed`);
                 }
                 resolve();
             }
             catch (e) {
-                Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
+                this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
                 reject(e);
             }
         }));

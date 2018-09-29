@@ -1,19 +1,5 @@
 import chalk from 'chalk';
 abstract class Logger {
-    private static instance: Logger;
-
-    public static getInstance(): Logger{
-        if(!this.instance){
-            throw new Error("Please initalize an instance of Logger first.");
-        }
-        return this.instance;
-    }
-
-    public static setInstance(logger: Logger){
-        this.instance = logger;
-    }
-
-
     public abstract debug(message: string);
     public abstract info(message: string, infoObj?: any);
     public abstract warning(message: string);

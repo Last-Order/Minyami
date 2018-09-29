@@ -1,23 +1,19 @@
 #!/usr/bin/env node
 import Logger, { ConsoleLogger } from './utils/log';
-// Build Logger for all global components.
-let log: Logger = new ConsoleLogger();
-Logger.setInstance(log);
-
-
 import Erii from 'erii';
 import ArchiveDownloader from './core/archive';
 import LiveDownloader from './core/live';
 import { exec, deleteDirectory } from './utils/system';
 import * as fs from 'fs';
 import { timeStringToSeconds } from './utils/time';
+
+// Build Logger for all global components.
+let Log: Logger = new ConsoleLogger();
+
 const path = require('path');
 process.on('unhandledRejection', error => {
-    log.info(error);
+    Log.info(error);
   });
-
-//Use Logger
-let Log = Logger.getInstance();
 
 // Check dependencies
 exec('mkvmerge --version').then(() => {
@@ -65,10 +61,10 @@ Erii.bind({
 }, async (ctx, options) => {
     const path = ctx.getArgument().toString();
     if (options.live) {
-        const downloader = new LiveDownloader(path, options);
+        const downloader = new LiveDownloader(Log, path, options);
         await downloader.download();
     } else {
-        const downloader = new ArchiveDownloader(path, options);
+        const downloader = new ArchiveDownloader(Log, path, options);
         await downloader.init();
         await downloader.download();
     }
@@ -83,7 +79,7 @@ Erii.bind({
     }
 }, async (ctx, options) => {
     const path = ctx.getArgument().toString();
-    const downloader = new ArchiveDownloader();
+    const downloader = new ArchiveDownloader(Log);
     downloader.resume(path);
 });
 
