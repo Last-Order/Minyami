@@ -174,15 +174,26 @@ class LiveDownloader extends downloader_1.default {
                     }
                 });
                 const currentUndownloadedChunks = currentPlaylistChunks.map(chunk => {
+                    // TODO: Hot fix of Abema Live 
+                    if (chunk.includes('linear-abematv')) {
+                        if (chunk.includes('tsad')) {
+                            return {
+                                url: this.prefix + chunk,
+                                filename: chunk.match(/\/*([^\/]+?\.ts)/)[1],
+                                isEncrypted: false
+                            };
+                        }
+                    }
                     return {
                         url: this.prefix + chunk,
-                        filename: chunk.match(/\/*([^\/]+?\.ts)/)[1]
+                        filename: chunk.match(/\/*([^\/]+?\.ts)/)[1],
+                        isEncrypted: this.m3u8.isEncrypted
                     };
                 });
                 // 加入待完成的任务列表
                 this.chunks.push(...currentUndownloadedChunks);
                 this.outputFileList.push(...currentUndownloadedChunks.map(chunk => {
-                    if (this.isEncrypted) {
+                    if (this.m3u8.isEncrypted) {
                         return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
                     }
                     else {
@@ -197,6 +208,29 @@ class LiveDownloader extends downloader_1.default {
                 yield system_1.sleep(Math.min(5000, this.m3u8.getChunkLength() * 1000));
             }
         });
+    }
+    /**
+     * 处理块下载任务
+     * @override
+     * @param task 块下载任务
+     */
+    handleTask(task) {
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            this.verbose && this.Log.debug(`Downloading ${task.filename}`);
+            try {
+                yield media_1.download(task.url, path.resolve(this.tempPath, `./${task.filename}`), this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined);
+                this.verbose && this.Log.debug(`Downloading ${task.filename} succeed.`);
+                if (task.isEncrypted) {
+                    yield media_1.decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
+                    this.verbose && this.Log.debug(`Decrypting ${task.filename} succeed`);
+                }
+                resolve();
+            }
+            catch (e) {
+                this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
+                reject(e);
+            }
+        }));
     }
     checkQueue() {
         if (this.chunks.length > 0 && this.runningThreads < this.threads) {
