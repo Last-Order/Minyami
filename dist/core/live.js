@@ -195,6 +195,12 @@ class LiveDownloader extends downloader_1.default {
                 // 加入待完成的任务列表
                 this.chunks.push(...currentUndownloadedChunks);
                 this.outputFileList.push(...currentUndownloadedChunks.map(chunk => {
+                    // TODO: Hot fix of Abema Live 
+                    if (chunk.url.includes('linear-abematv')) {
+                        if (chunk.url.includes('tsad')) {
+                            return path.resolve(this.tempPath, `./${chunk.filename}`);
+                        }
+                    }
                     if (this.m3u8.isEncrypted) {
                         return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
                     }
