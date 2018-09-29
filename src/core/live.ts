@@ -173,11 +173,7 @@ export default class LiveDownloader extends Downloader {
                 // TODO: Hot fix of Abema Live 
                 if (chunk.includes('linear-abematv')) {
                     if (chunk.includes('tsad')) {
-                        return {
-                            url: this.prefix + chunk,
-                            filename: chunk.match(/\/*([^\/]+?\.ts)/)[1],
-                            isEncrypted: false
-                        } as Chunk;
+                        return undefined;
                     }
                 }
                 return {
@@ -187,14 +183,8 @@ export default class LiveDownloader extends Downloader {
                 } as Chunk;
             });
             // 加入待完成的任务列表
-            this.chunks.push(...currentUndownloadedChunks);
-            this.outputFileList.push(...currentUndownloadedChunks.map(chunk => {
-                // TODO: Hot fix of Abema Live 
-                if (chunk.url.includes('linear-abematv')) {
-                    if (chunk.url.includes('tsad')) {
-                        return path.resolve(this.tempPath, `./${chunk.filename}`);
-                    }
-                }
+            this.chunks.push(...currentUndownloadedChunks.filter(c => c !== undefined));
+            this.outputFileList.push(...currentUndownloadedChunks.filter(c => c !== undefined).map(chunk => {
                 if (this.m3u8.isEncrypted) {
                     return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
                 } else {
