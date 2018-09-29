@@ -1,4 +1,5 @@
 # README
+[![Build Status](https://travis-ci.org/Last-Order/Minyami.svg?branch=master)](https://travis-ci.org/Last-Order/Minyami)
 
 ## Dependencies
 
