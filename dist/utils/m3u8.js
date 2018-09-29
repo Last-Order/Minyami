@@ -10,11 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require('fs');
 const m3u8_1 = require("../core/m3u8");
-const log_1 = require("../utils/log");
-let Log = log_1.default.getInstance();
 const axios_1 = require("axios");
 const SocksProxyAgent = require('socks-proxy-agent');
-function loadM3U8(path, retries = 1, timeout = 60000, proxy = undefined) {
+function loadM3U8(Log, path, retries = 1, timeout = 60000, proxy = undefined) {
     return __awaiter(this, void 0, void 0, function* () {
         let m3u8Content;
         if (path.startsWith('http')) {

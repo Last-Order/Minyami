@@ -1,6 +1,4 @@
 import { ParserOptions, ParserResult } from "./types";
-import Logger from '../../utils/log';
-let Log = Logger.getInstance();
 
 export default class Parser {
     static prefix = '';
@@ -10,7 +8,7 @@ export default class Parser {
         options
     }: ParserOptions): ParserResult {
         if (!options.key) {
-            Log.error('To download AbemaTV, you need to set a key manually');
+            throw new Error('To download AbemaTV, you need to set a key manually');
         }
         return {
             key: options.key, 

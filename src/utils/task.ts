@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import Logger from '../utils/log';
-let Log = Logger.getInstance();
 import { Chunk } from '../core/downloader';
 import M3U8 from '../core/m3u8';
 
@@ -75,7 +74,7 @@ export function saveTask(task: MinyamiTask) {
             const previousTasks = JSON.parse(taskFileContent);
             tasks.push(...previousTasks);
         } catch (e) {
-            Log.error('Fail to parse previous tasks, ignored.');
+            throw new Error('Fail to parse previous tasks, ignored. ' + e);
         }
     }
 
@@ -110,7 +109,7 @@ export function deleteTask(taskId: string): boolean {
         const previousTasks = JSON.parse(taskFileContent);
         tasks.push(...previousTasks);
     } catch (e) {
-        Log.error('Fail to parse previous tasks, ignored.');
+        throw new Error('Fail to parse previous tasks, ignored. ' + e);
     }
 
     const index = tasks.findIndex(t => t.id === taskId);

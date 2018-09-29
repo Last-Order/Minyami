@@ -1,7 +1,6 @@
 const path = require('path');
 const fs = require('fs');
 import Logger from '../utils/log';
-let Log = Logger.getInstance();
 import M3U8 from "./m3u8";
 import { loadM3U8 } from '../utils/m3u8';
 import * as system from '../utils/system';
@@ -27,6 +26,8 @@ export interface Chunk {
 }
 
 class Downloader {
+    Log: Logger;
+
     tempPath: string; // 临时文件目录
     m3u8Path: string; // m3u8文件路径
     m3u8: M3U8; // m3u8实体
@@ -59,9 +60,11 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(m3u8Path: string, { threads, output, key, verbose, nomux, retries, proxy }: DownloaderConfig = {
+    constructor(log:Logger, m3u8Path: string, { threads, output, key, verbose, nomux, retries, proxy }: DownloaderConfig = {
         threads: 5
     }) {
+        this.Log = log;
+
         if (threads) {
             this.threads = threads;
         }
@@ -118,6 +121,7 @@ class Downloader {
     async loadM3U8() {
         try {
             this.m3u8 = await loadM3U8(
+                this.Log,
                 this.m3u8Path, 
                 this.retries, 
                 this.timeout, 
@@ -126,7 +130,7 @@ class Downloader {
         } catch (e) {
             // console.log(e);
             await this.clean();
-            Log.error('Aborted due to critical error.', e);
+            this.Log.error('Aborted due to critical error.', e);
         }
     }
 
@@ -135,10 +139,10 @@ class Downloader {
      */
     async clean() {
         try {
-            Log.info('Starting cleaning temporary files.');
+            this.Log.info('Starting cleaning temporary files.');
             await system.deleteDirectory(this.tempPath);
         } catch (e) {
-            Log.error('Fail to delete temporary directory.');
+            this.Log.error('Fail to delete temporary directory.');
         }
     }
 
@@ -148,21 +152,21 @@ class Downloader {
      */
     handleTask(task: Chunk) {
         return new Promise(async (resolve, reject) => {
-            this.verbose && Log.debug(`Downloading ${task.filename}`);
+            this.verbose && this.Log.debug(`Downloading ${task.filename}`);
             try {
                 await download(
                     task.url, 
                     path.resolve(this.tempPath, `./${task.filename}`),
                     this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
                 );
-                this.verbose && Log.debug(`Downloading ${task.filename} succeed.`);
+                this.verbose && this.Log.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    this.verbose && Log.debug(`Decrypting ${task.filename} succeed`);
+                    this.verbose && this.Log.debug(`Decrypting ${task.filename} succeed`);
                 }
                 resolve();
             } catch (e) {
-                Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
+                this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
                 reject(e);
             }            
         });

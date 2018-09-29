@@ -1,7 +1,4 @@
 declare abstract class Logger {
-    private static instance;
-    static getInstance(): Logger;
-    static setInstance(logger: Logger): void;
     abstract debug(message: string): any;
     abstract info(message: string, infoObj?: any): any;
     abstract warning(message: string): any;

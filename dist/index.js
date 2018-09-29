@@ -10,21 +10,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const log_1 = require("./utils/log");
-// Build Logger for all global components.
-let log = new log_1.ConsoleLogger();
-log_1.default.setInstance(log);
 const erii_1 = require("erii");
 const archive_1 = require("./core/archive");
 const live_1 = require("./core/live");
 const system_1 = require("./utils/system");
 const fs = require("fs");
 const time_1 = require("./utils/time");
+// Build Logger for all global components.
+let Log = new log_1.ConsoleLogger();
 const path = require('path');
 process.on('unhandledRejection', error => {
-    log.info(error);
+    Log.info(error);
 });
-//Use Logger
-let Log = log_1.default.getInstance();
 // Check dependencies
 system_1.exec('mkvmerge --version').then(() => {
     system_1.exec('openssl version').then(() => {
@@ -65,11 +62,11 @@ erii_1.default.bind({
 }, (ctx, options) => __awaiter(this, void 0, void 0, function* () {
     const path = ctx.getArgument().toString();
     if (options.live) {
-        const downloader = new live_1.default(path, options);
+        const downloader = new live_1.default(Log, path, options);
         yield downloader.download();
     }
     else {
-        const downloader = new archive_1.default(path, options);
+        const downloader = new archive_1.default(Log, path, options);
         yield downloader.init();
         yield downloader.download();
     }
@@ -83,7 +80,7 @@ erii_1.default.bind({
     }
 }, (ctx, options) => __awaiter(this, void 0, void 0, function* () {
     const path = ctx.getArgument().toString();
-    const downloader = new archive_1.default();
+    const downloader = new archive_1.default(Log);
     downloader.resume(path);
 }));
 erii_1.default.bind({

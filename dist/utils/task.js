@@ -2,8 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 const path = require("path");
-const log_1 = require("../utils/log");
-let Log = log_1.default.getInstance();
 /**
  * Get previous task
  * @param taskId
@@ -43,7 +41,7 @@ function saveTask(task) {
             tasks.push(...previousTasks);
         }
         catch (e) {
-            Log.error('Fail to parse previous tasks, ignored.');
+            throw new Error('Fail to parse previous tasks, ignored. ' + e);
         }
     }
     const index = tasks.findIndex(t => t.id === task.id);
@@ -75,7 +73,7 @@ function deleteTask(taskId) {
         tasks.push(...previousTasks);
     }
     catch (e) {
-        Log.error('Fail to parse previous tasks, ignored.');
+        throw new Error('Fail to parse previous tasks, ignored. ' + e);
     }
     const index = tasks.findIndex(t => t.id === taskId);
     if (index !== -1) {

@@ -1,6 +1,4 @@
 import { ParserOptions, ParserResult } from "./types";
-import Logger from '../../utils/log';
-let Log = Logger.getInstance();
 import { requestRaw } from "../../utils/media";
 
 export default class Parser {
@@ -10,7 +8,6 @@ export default class Parser {
         iv = '',
         options
     }: ParserOptions): Promise<ParserResult> {
-        Log.info('Retrieving key from server.')
         const response = await requestRaw(key, options.proxy, {
             responseType: 'arraybuffer'
         })

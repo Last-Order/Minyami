@@ -8,8 +8,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const log_1 = require("../utils/log");
-let Log = log_1.default.getInstance();
 const media_1 = require("../utils/media");
 const system_1 = require("../utils/system");
 const downloader_1 = require("./downloader");
@@ -24,10 +22,10 @@ class ArchiveDownloader extends downloader_1.default {
      * @param config
      * @param config.threads 线程数量
      */
-    constructor(m3u8Path, { threads, output, key, verbose, nomux, retries, proxy, slice } = {
+    constructor(log, m3u8Path, { threads, output, key, verbose, nomux, retries, proxy, slice } = {
         threads: 5
     }) {
-        super(m3u8Path, {
+        super(log, m3u8Path, {
             threads,
             output,
             key,
@@ -57,17 +55,17 @@ class ArchiveDownloader extends downloader_1.default {
                 const key = this.m3u8.getKey();
                 const iv = this.m3u8.getIV();
                 if (key.startsWith('abemafresh')) {
-                    Log.info('Site comfirmed: FreshTV.');
+                    this.Log.info('Site comfirmed: FreshTV.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
                     const parseResult = parser.default.parse({
                         key,
                         iv
                     });
                     [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                    Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                    this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
                 }
                 else if (key.startsWith('abematv-license')) {
-                    Log.info('Site comfirmed: AbemaTV.');
+                    this.Log.info('Site comfirmed: AbemaTV.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/abema'));
                     const parseResult = parser.default.parse({
                         key,
@@ -77,10 +75,10 @@ class ArchiveDownloader extends downloader_1.default {
                         }
                     });
                     [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                    Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                    this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
                 }
                 else if (this.m3u8Path.includes('bchvod')) {
-                    Log.info('Site comfirmed: B-ch.');
+                    this.Log.info('Site comfirmed: B-ch.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/bch'));
                     try {
                         const parseResult = yield parser.default.parse({
@@ -94,29 +92,29 @@ class ArchiveDownloader extends downloader_1.default {
                             }
                         });
                         [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                        Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                        this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
                     }
                     catch (e) {
                         yield this.clean();
-                        Log.error('Fail to retrieve the key from server.');
+                        this.Log.error('Fail to retrieve the key from server.');
                     }
                 }
                 else {
                     yield this.clean();
-                    Log.error('Unsupported site.');
+                    this.Log.error('Unsupported site.');
                 }
             }
             else {
                 // Not encrypted
                 if (this.m3u8Path.includes('freshlive')) {
                     // FreshTV
-                    Log.info('Site comfirmed: FreshTV.');
+                    this.Log.info('Site comfirmed: FreshTV.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/freshtv'));
                     this.prefix = parser.default.prefix;
                 }
                 else if (this.m3u8Path.includes('openrec')) {
                     // Openrec
-                    Log.info('Site comfirmed: OPENREC.');
+                    this.Log.info('Site comfirmed: OPENREC.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/openrec'));
                     const parseResult = parser.default.parse({
                         options: {
@@ -126,7 +124,7 @@ class ArchiveDownloader extends downloader_1.default {
                     this.prefix = parseResult.prefix;
                 }
                 else if (this.m3u8Path.includes('brightcove')) {
-                    Log.info('Site comfirmed: Sony Music.');
+                    this.Log.info('Site comfirmed: Sony Music.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/sonymusic'));
                     const parseResult = parser.default.parse({
                         options: {
@@ -137,9 +135,9 @@ class ArchiveDownloader extends downloader_1.default {
                 }
                 else if (this.m3u8Path.includes('dmc.nico')) {
                     // NicoNico
-                    Log.info('Site comfirmed: NicoNico.');
-                    Log.info('请保持播放页面不要关闭');
-                    Log.info('Please do not close the video page.');
+                    this.Log.info('Site comfirmed: NicoNico.');
+                    this.Log.info('请保持播放页面不要关闭');
+                    this.Log.info('Please do not close the video page.');
                     const parser = yield Promise.resolve().then(() => require('./parsers/nico'));
                     const parseResult = parser.default.parse({
                         options: {
@@ -151,7 +149,7 @@ class ArchiveDownloader extends downloader_1.default {
                 }
                 else {
                     yield this.clean();
-                    Log.error('Unsupported site.');
+                    this.Log.error('Unsupported site.');
                 }
             }
         });
@@ -170,7 +168,7 @@ class ArchiveDownloader extends downloader_1.default {
                 process.exit();
             }));
             yield this.parse();
-            Log.info(`Start downloading with ${this.threads} thread(s).`);
+            this.Log.info(`Start downloading with ${this.threads} thread(s).`);
             this.chunks = this.m3u8.chunks.map(chunk => {
                 return {
                     url: this.prefix + chunk,
@@ -230,7 +228,7 @@ class ArchiveDownloader extends downloader_1.default {
                     ratioSpeed: this.calculateSpeedByRatio(),
                     eta: this.getETA()
                 };
-                Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / ${this.totalChunksCount} or ${(infoObj.finishedChunksCount / infoObj.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${infoObj.chunkSpeed} chunks/s or ${infoObj.ratioSpeed}x | ETA: ${infoObj.eta})`, infoObj);
+                this.Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / ${this.totalChunksCount} or ${(infoObj.finishedChunksCount / infoObj.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${infoObj.chunkSpeed} chunks/s or ${infoObj.ratioSpeed}x | ETA: ${infoObj.eta})`, infoObj);
                 this.finishedFilenames.push(task.filename);
                 this.checkQueue();
             }).catch(e => {
@@ -241,18 +239,23 @@ class ArchiveDownloader extends downloader_1.default {
             this.checkQueue();
         }
         if (this.chunks.length === 0 && this.runningThreads === 0) {
-            Log.info('All chunks downloaded. Start merging chunks.');
+            this.Log.info('All chunks downloaded. Start merging chunks.');
             const muxer = this.nomux ? media_1.mergeVideoNew : media_1.mergeVideo;
             muxer(this.outputFileList, this.outputPath).then(() => __awaiter(this, void 0, void 0, function* () {
-                Log.info('End of merging.');
-                Log.info('Starting cleaning temporary files.');
+                this.Log.info('End of merging.');
+                this.Log.info('Starting cleaning temporary files.');
                 yield system_1.deleteDirectory(this.tempPath);
-                task_1.deleteTask(this.m3u8Path.split('?')[0]);
-                Log.info(`All finished. Check your file at [${this.outputPath}] .`);
+                try {
+                    task_1.deleteTask(this.m3u8Path.split('?')[0]);
+                }
+                catch (error) {
+                    this.Log.error('Fail to parse previous tasks, ignored.');
+                }
+                this.Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
             })).catch(e => {
                 //console.log(e);
-                Log.error('Fail to merge video. Please merge video chunks manually.', e);
+                this.Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });
         }
     }
@@ -260,9 +263,9 @@ class ArchiveDownloader extends downloader_1.default {
         return __awaiter(this, void 0, void 0, function* () {
             const previousTask = task_1.getTask(taskId.split('?')[0]);
             if (!previousTask) {
-                Log.error('Can\'t find a task to resume.');
+                this.Log.error('Can\'t find a task to resume.');
             }
-            Log.info('Previous task found. Resuming.');
+            this.Log.info('Previous task found. Resuming.');
             process.on("SIGINT", () => __awaiter(this, void 0, void 0, function* () {
                 yield this.clean();
                 process.exit();
@@ -291,7 +294,7 @@ class ArchiveDownloader extends downloader_1.default {
             // Load M3U8
             yield this.loadM3U8();
             yield this.parse();
-            Log.info(`Start downloading with ${this.threads} thread(s).`);
+            this.Log.info(`Start downloading with ${this.threads} thread(s).`);
             this.checkQueue();
         });
     }
@@ -300,35 +303,40 @@ class ArchiveDownloader extends downloader_1.default {
     */
     clean() {
         return __awaiter(this, void 0, void 0, function* () {
-            Log.info('Saving task status.');
+            this.Log.info('Saving task status.');
             const unfinishedChunks = this.allChunks.filter(t => {
                 return (!this.finishedFilenames.includes(t.filename));
             });
-            Log.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunks.length}`);
-            task_1.saveTask({
-                id: this.m3u8Path.split('?')[0],
-                tempPath: this.tempPath,
-                m3u8Path: this.m3u8Path,
-                outputPath: this.outputPath,
-                threads: this.threads,
-                key: this.key,
-                iv: this.iv,
-                verbose: this.verbose,
-                nomux: this.nomux,
-                startedAt: this.startedAt,
-                finishedChunksCount: this.totalChunksCount - unfinishedChunks.length,
-                totalChunksCount: this.totalChunksCount,
-                retries: this.retries,
-                timeout: this.timeout,
-                proxy: this.proxy,
-                proxyHost: this.proxyHost,
-                proxyPort: this.proxyPort,
-                allChunks: this.allChunks,
-                chunks: unfinishedChunks,
-                outputFileList: this.outputFileList,
-                finishedFilenames: this.finishedFilenames
-            });
-            Log.info('Please wait.');
+            this.Log.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunks.length}`);
+            try {
+                task_1.saveTask({
+                    id: this.m3u8Path.split('?')[0],
+                    tempPath: this.tempPath,
+                    m3u8Path: this.m3u8Path,
+                    outputPath: this.outputPath,
+                    threads: this.threads,
+                    key: this.key,
+                    iv: this.iv,
+                    verbose: this.verbose,
+                    nomux: this.nomux,
+                    startedAt: this.startedAt,
+                    finishedChunksCount: this.totalChunksCount - unfinishedChunks.length,
+                    totalChunksCount: this.totalChunksCount,
+                    retries: this.retries,
+                    timeout: this.timeout,
+                    proxy: this.proxy,
+                    proxyHost: this.proxyHost,
+                    proxyPort: this.proxyPort,
+                    allChunks: this.allChunks,
+                    chunks: unfinishedChunks,
+                    outputFileList: this.outputFileList,
+                    finishedFilenames: this.finishedFilenames
+                });
+            }
+            catch (error) {
+                this.Log.error('Fail to parse previous tasks, ignored.');
+            }
+            this.Log.info('Please wait.');
         });
     }
 }

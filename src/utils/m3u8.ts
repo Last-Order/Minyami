@@ -1,12 +1,11 @@
 const fs = require('fs');
 import M3U8 from "../core/m3u8";
 import Logger from '../utils/log';
-let Log = Logger.getInstance();
 import axios from 'axios';
 import { AxiosProxyConfig } from 'axios';
 const SocksProxyAgent = require('socks-proxy-agent');
 
-export async function loadM3U8(path: string, retries: number = 1, timeout = 60000, proxy: AxiosProxyConfig = undefined) {
+export async function loadM3U8(Log:Logger, path: string, retries: number = 1, timeout = 60000, proxy: AxiosProxyConfig = undefined) {
     let m3u8Content;
     if (path.startsWith('http')) {
         Log.info('Start fetching M3U8 file.');
