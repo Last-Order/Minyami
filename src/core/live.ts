@@ -260,10 +260,7 @@ export default class LiveDownloader extends Downloader {
                     }x)`, infoObj);
                 this.checkQueue();
             }).catch(e => {
-                //console.error(e);
-                //console.log(task, this.m3u8);
                 this.Log.info(JSON.stringify(task) + " " + JSON.stringify(this.m3u8));
-                this.Log.error("Something happenned.", e);
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();
