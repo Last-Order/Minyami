@@ -178,7 +178,7 @@ class ArchiveDownloader extends Downloader {
             };
         });
 
-        if (this.sliceStart && this.sliceEnd) {
+        if (this.sliceStart !== undefined && this.sliceEnd !== undefined) {
             const startIndex = Math.floor(this.sliceStart / this.m3u8.getChunkLength());
             const endIndex = Math.floor(this.sliceEnd / this.m3u8.getChunkLength());
             this.chunks = this.chunks.slice(startIndex, endIndex);
