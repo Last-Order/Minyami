@@ -136,6 +136,7 @@ class ArchiveDownloader extends Downloader {
                 // NicoNico
                 this.Log.info('Site comfirmed: NicoNico.');
                 this.Log.info('请保持播放页面不要关闭');
+                this.Log.info('NicoNico downloading is broken now. 2018/10/25.')
                 this.Log.info('Please do not close the video page.');
                 const parser = await import('./parsers/nico');
                 const parseResult = parser.default.parse({

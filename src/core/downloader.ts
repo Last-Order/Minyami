@@ -168,6 +168,7 @@ class Downloader {
                 resolve();
             } catch (e) {
                 this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
+                this.verbose && this.Log.debug(e);
                 reject(e);
             }            
         });

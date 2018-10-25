@@ -11,9 +11,9 @@ export default class Parser {
         }
         const prefix = options.m3u8Url.match(/^(.+\/)/)[1];
         const leftPad = (str: string) => {
-            while (str.length < 3) {
-                str = '0' + str;
-            }
+            // while (str.length < 3) {
+            //     str = '0' + str;
+            // }
             return str;
         }
         if (options.downloader) {
@@ -21,12 +21,18 @@ export default class Parser {
                 // 生成 Fake M3U8
                 const chunkLength = options.downloader.m3u8.getChunkLength();
                 const videoLength = parseFloat(options.downloader.m3u8.m3u8Content.match(/#DMC-STREAM-DURATION:(.+)/)[1]);
-                const offset = options.downloader.m3u8.chunks[0].match(/(\d{3})\.ts/)[1];
+                const firstChunkFilename = options.downloader.m3u8.chunks[0].match(/^(.+ts)/)[1];
+                let offset;
+                if (firstChunkFilename === '0.ts') {
+                    offset = options.downloader.m3u8.chunks[1].match(/(\d{3})\.ts/)[1];
+                } else {
+                    offset = options.downloader.m3u8.chunks[0].match(/(\d{3})\.ts/)[1];
+                }
                 const suffix = options.downloader.m3u8.chunks[0].match(/ts(.+)/)[1];
                 const newChunkList = [];
                 for (let time = 0; time < videoLength - chunkLength; time += chunkLength) {
                     newChunkList.push(
-                        `${leftPad(time.toString())}${offset}.ts${suffix}`
+                        time.toString() === '0' ? `0.ts${suffix}` : `${leftPad(time.toString())}${offset}.ts${suffix}`
                     );
                 }
                 options.downloader.m3u8.chunks = newChunkList;
