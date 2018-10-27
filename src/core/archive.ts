@@ -136,7 +136,6 @@ class ArchiveDownloader extends Downloader {
                 // NicoNico
                 this.Log.info('Site comfirmed: NicoNico.');
                 this.Log.info('请保持播放页面不要关闭');
-                this.Log.info('NicoNico downloading is broken now. 2018/10/25.')
                 this.Log.info('Please do not close the video page.');
                 const parser = await import('./parsers/nico');
                 const parseResult = parser.default.parse({
@@ -183,6 +182,42 @@ class ArchiveDownloader extends Downloader {
         }
 
         if (this.sliceStart !== undefined && this.sliceEnd !== undefined) {
+            const newChunkList: ChunkItem[] = [];
+            let nowTime = 0;
+            for (const chunk of this.chunks) {
+                if (nowTime > this.sliceEnd) {
+                    break;
+                }
+                if (isChunkGroup(chunk)) {
+                    if (nowTime + chunk.chunks.length * this.m3u8.getChunkLength() < this.sliceStart) {
+                        // 加上整个块都还没有到开始时间
+                        nowTime += chunk.chunks.length * this.m3u8.getChunkLength();
+                        continue;
+                    } else {
+                        const newChunkItem: ChunkItem = {
+                            actions: chunk.actions,
+                            chunks: [],
+                            isFinished: false,
+                            isNew: true,
+                        };
+                        for (const c of chunk.chunks) {
+                            newChunkItem.chunks.push(c);
+                            nowTime += this.m3u8.getChunkLength();
+                            if (nowTime > this.sliceEnd) {
+                                break;
+                            }
+                        }
+                        newChunkList.push(newChunkItem);
+                    }
+                } else {
+                    if (nowTime >= this.sliceStart) {
+                        newChunkList.push(chunk);
+                        nowTime += this.m3u8.getChunkLength();
+                    } else {
+                        nowTime += this.m3u8.getChunkLength();
+                    }
+                }
+            }
             const startIndex = Math.floor(this.sliceStart / this.m3u8.getChunkLength());
             const endIndex = Math.floor(this.sliceEnd / this.m3u8.getChunkLength());
             this.chunks = this.chunks.slice(startIndex, endIndex);

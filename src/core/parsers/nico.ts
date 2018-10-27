@@ -46,9 +46,6 @@ export default class Parser {
                             actions: [{
                                 actionName: 'ping',
                                 actionParams: pingUrl.replace('1/ts/playlist.m3u8', 'master.m3u8')
-                            }, {
-                                actionName: 'ping',
-                                actionParams: pingUrl
                             }],
                             chunks: [],
                             isFinished: false,
