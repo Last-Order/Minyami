@@ -1,10 +1,11 @@
 const path = require('path');
-const fs = require('fs');
 import Logger from '../utils/log';
 import M3U8 from "./m3u8";
 import { loadM3U8 } from '../utils/m3u8';
 import * as system from '../utils/system';
 import { download, decrypt } from '../utils/media';
+import { ActionType } from './action';
+import * as actions from './action';
 
 export interface DownloaderConfig {
     threads?: number;
@@ -24,6 +25,26 @@ export interface Chunk {
     url: string;
     filename: string;
     isEncrypted?: boolean;
+    parentGroup?: ChunkGroup;
+}
+
+export interface ChunkAction {
+    actionName: ActionType;
+    actionParams: string;
+}
+
+
+export interface ChunkGroup {
+    chunks: Chunk[];
+    actions?: ChunkAction[];
+    isFinished: boolean;
+    isNew: boolean;
+}
+
+export type ChunkItem = Chunk | ChunkGroup;
+
+export function isChunkGroup(c: ChunkItem): c is ChunkGroup {
+    return !!((c as ChunkGroup).chunks);
 }
 
 class Downloader {
@@ -35,9 +56,9 @@ class Downloader {
     outputPath: string = './output.mkv'; // 输出目录
     threads: number = 5; // 并发数量
 
-    allChunks: Chunk[];
-    chunks: Chunk[];
-    pickedChunks: Chunk[];
+    allChunks: ChunkItem[];
+    chunks: ChunkItem[];
+    pickedChunks: ChunkItem[];
 
     key: string; // Key
     iv: string; // IV
@@ -54,6 +75,8 @@ class Downloader {
     proxy: string = '';
     proxyHost: string = '';
     proxyPort: number = 0;
+
+    autoGenerateChunkList: boolean = true;
 
     /**
      * 
@@ -152,6 +175,7 @@ class Downloader {
      * @param task 块下载任务
      */
     handleTask(task: Chunk) {
+        this.verbose && this.Log.debug(`Downloading ${task.url}`);
         return new Promise(async (resolve, reject) => {
             this.verbose && this.Log.debug(`Downloading ${task.filename}`);
             try {
@@ -172,6 +196,23 @@ class Downloader {
                 reject(e);
             }            
         });
+    }
+
+    async handleChunkGroupAction(action: ChunkAction) {
+        try {
+            switch (action.actionName) {
+                case 'ping': {
+                    await actions.ping(action.actionParams);
+                }
+                case 'sleep': {
+                    await actions.sleep(action.actionParams);
+                }
+            }
+            this.Log.info(`Chunk group action ${action.actionName} finished.`);
+        } catch (e) {
+            this.Log.info(`Chunk group action ${action.actionName} failed.`);
+            this.Log.info(e);
+        }
     }
 
     /**

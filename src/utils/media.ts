@@ -24,7 +24,7 @@ export async function mergeVideo(fileList = [], output = "./output.mkv") {
     ]);
 
     const tempFilename = `temp_${new Date().valueOf()}.json`;
-    fs.writeFileSync(`./${tempFilename}`, JSON.stringify(parameters));
+    fs.writeFileSync(`./${tempFilename}`, JSON.stringify(parameters, null, 2));
     await exec(`mkvmerge @${tempFilename}`);
     fs.unlinkSync(`./${tempFilename}`);
 }

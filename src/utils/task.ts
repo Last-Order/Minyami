@@ -1,8 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import Logger from '../utils/log';
-import { Chunk } from '../core/downloader';
-import M3U8 from '../core/m3u8';
+import { ChunkItem } from '../core/downloader';
 
 export interface MinyamiTask {
     id: string; // 唯一标识符
@@ -30,8 +28,8 @@ export interface MinyamiTask {
     proxyHost: string;
     proxyPort: number;
 
-    allChunks: Chunk[]; // 全部块
-    chunks: Chunk[]; // 未下载的块
+    allChunks: ChunkItem[]; // 全部块
+    chunks: ChunkItem[]; // 未下载的块
     outputFileList: string[]; // 输出文件列表
     finishedFilenames: string[]; // 已完成文件名
 }
