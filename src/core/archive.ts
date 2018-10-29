@@ -201,10 +201,12 @@ class ArchiveDownloader extends Downloader {
                             isNew: true,
                         };
                         for (const c of chunk.chunks) {
-                            newChunkItem.chunks.push(c);
-                            nowTime += this.m3u8.getChunkLength();
-                            if (nowTime > this.sliceEnd) {
-                                break;
+                            if (nowTime + this.m3u8.getChunkLength() >= this.sliceStart && nowTime + this.m3u8.getChunkLength() < this.sliceEnd) {
+                                newChunkItem.chunks.push(c);
+                                nowTime += this.m3u8.getChunkLength();
+                            } else {
+                                nowTime += this.m3u8.getChunkLength();
+                                continue;
                             }
                         }
                         newChunkList.push(newChunkItem);
@@ -218,9 +220,7 @@ class ArchiveDownloader extends Downloader {
                     }
                 }
             }
-            const startIndex = Math.floor(this.sliceStart / this.m3u8.getChunkLength());
-            const endIndex = Math.floor(this.sliceEnd / this.m3u8.getChunkLength());
-            this.chunks = this.chunks.slice(startIndex, endIndex);
+            this.chunks = newChunkList;
         }
 
         this.allChunks = [...this.chunks];
