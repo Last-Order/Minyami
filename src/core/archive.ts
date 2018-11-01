@@ -189,11 +189,13 @@ class ArchiveDownloader extends Downloader {
                     break;
                 }
                 if (isChunkGroup(chunk)) {
+                    // 处理一组块
                     if (nowTime + chunk.chunks.length * this.m3u8.getChunkLength() < this.sliceStart) {
                         // 加上整个块都还没有到开始时间
                         nowTime += chunk.chunks.length * this.m3u8.getChunkLength();
                         continue;
                     } else {
+                        // 组中至少有一个已经在时间范围内
                         const newChunkItem: ChunkItem = {
                             actions: chunk.actions,
                             chunks: [],
@@ -202,9 +204,11 @@ class ArchiveDownloader extends Downloader {
                         };
                         for (const c of chunk.chunks) {
                             if (nowTime + this.m3u8.getChunkLength() >= this.sliceStart && nowTime + this.m3u8.getChunkLength() < this.sliceEnd) {
+                                // 添加已经在时间范围内的块
                                 newChunkItem.chunks.push(c);
                                 nowTime += this.m3u8.getChunkLength();
                             } else {
+                                // 跳过时间范围外的块
                                 nowTime += this.m3u8.getChunkLength();
                                 continue;
                             }
@@ -212,6 +216,7 @@ class ArchiveDownloader extends Downloader {
                         newChunkList.push(newChunkItem);
                     }
                 } else {
+                    // 处理普通块
                     if (nowTime >= this.sliceStart) {
                         newChunkList.push(chunk);
                         nowTime += this.m3u8.getChunkLength();
@@ -224,7 +229,16 @@ class ArchiveDownloader extends Downloader {
         }
 
         this.allChunks = [...this.chunks];
-        this.totalChunksCount = this.chunks.length;
+
+        this.totalChunksCount = 0;
+        for (const chunk of this.chunks) {
+            if (isChunkGroup(chunk)) {
+                this.totalChunksCount += chunk.chunks.length;
+            } else {
+                this.totalChunksCount += 1;
+            }
+        }
+        
         this.outputFileList = [];
         this.chunks.forEach(chunkItem => {
             if (!isChunkGroup(chunkItem)) {
@@ -271,26 +285,26 @@ class ArchiveDownloader extends Downloader {
             let chunk: Chunk;
             if (isChunkGroup(task)) {
                 if (task.actions && task.isNew) {
+                    this.verbose && this.Log.debug(`Handle chunk actions for a new chunk group.`);
                     task.isNew = false;
                     for (const action of task.actions) {
                         await this.handleChunkGroupAction(action);
                     }
                 }
                 if (task.chunks.length > 0) {
-                    this.totalChunksCount++;
                     chunk = task.chunks.shift();
                     chunk.parentGroup = task;
                 } else {
                     // All chunks finished in group
-                    this.totalChunksCount--;
+                    this.verbose && this.Log.debug(`Skip a empty chunk group.`);
                     task.isFinished = true;
                     this.chunks.shift();
                     this.checkQueue();
                     return;
                 }
             } else {
-                chunk = task;
-                this.chunks.shift();
+                chunk = this.chunks.shift() as Chunk;
+                // this.chunks.shift();
             }
             this.pickedChunks.push(chunk);
             this.runningThreads++;
