@@ -208,9 +208,9 @@ class Downloader {
                     await actions.sleep(action.actionParams);
                 }
             }
-            this.Log.info(`Chunk group action ${action.actionName} finished.`);
+            this.Log.info(`Chunk group action <${action.actionName}> finished.`);
         } catch (e) {
-            this.Log.info(`Chunk group action ${action.actionName} failed.`);
+            this.Log.info(`Chunk group action <${action.actionName}> failed.`);
             this.Log.info(e);
         }
     }

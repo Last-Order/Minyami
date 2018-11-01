@@ -2,7 +2,7 @@ import Logger from '../utils/log';
 import { mergeVideo, mergeVideoNew } from '../utils/media';
 import { deleteDirectory } from '../utils/system';
 import M3U8 from './m3u8';
-import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk } from './downloader';
+import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk, ChunkGroup } from './downloader';
 import * as fs from 'fs';
 import { saveTask, deleteTask, getTask } from '../utils/task';
 import { timeStringToSeconds } from '../utils/time';
@@ -290,6 +290,8 @@ class ArchiveDownloader extends Downloader {
                     for (const action of task.actions) {
                         await this.handleChunkGroupAction(action);
                     }
+                    this.checkQueue();
+                    return;
                 }
                 if (task.chunks.length > 0) {
                     chunk = task.chunks.shift();
