@@ -16,7 +16,7 @@ class ArchiveDownloader extends Downloader {
     chunks: ChunkItem[] = [];
     allChunks: ChunkItem[] = [];
     pickedChunks: ChunkItem[] = [];
-    finishedFilenames: string[] = [];
+    finishedFilenames: { [index: string]: any } = {};
     outputFileList: string[];
 
     totalChunksCount: number;
@@ -33,7 +33,7 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log:Logger, m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy, slice }: ArchiveDownloaderConfig = {
+    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy, slice }: ArchiveDownloaderConfig = {
         threads: 5
     }) {
         super(log, m3u8Path, {
@@ -228,7 +228,16 @@ class ArchiveDownloader extends Downloader {
             this.chunks = newChunkList;
         }
 
-        this.allChunks = [...this.chunks];
+        this.allChunks = this.chunks.map(chunk => {
+            if (isChunkGroup(chunk)) {
+                return {
+                    ...chunk,
+                    chunks: [...chunk.chunks]
+                }
+            } else {
+                return chunk;
+            }
+        })
 
         this.totalChunksCount = 0;
         for (const chunk of this.chunks) {
@@ -238,7 +247,7 @@ class ArchiveDownloader extends Downloader {
                 this.totalChunksCount += 1;
             }
         }
-        
+
         this.outputFileList = [];
         this.chunks.forEach(chunkItem => {
             if (!isChunkGroup(chunkItem)) {
@@ -329,7 +338,7 @@ class ArchiveDownloader extends Downloader {
                     }x | ETA: ${
                     infoObj.eta
                     })`, infoObj);
-                this.finishedFilenames.push(chunk.filename);
+                this.finishedFilenames[chunk.filename] = true;
                 this.checkQueue();
             }).catch(e => {
                 this.runningThreads--;
@@ -364,7 +373,7 @@ class ArchiveDownloader extends Downloader {
                 } catch (error) {
                     this.Log.error('Fail to parse previous tasks, ignored.');
                 }
-                
+
                 this.Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
             }).catch(e => {
@@ -378,7 +387,7 @@ class ArchiveDownloader extends Downloader {
         const previousTask = getTask(taskId.split('?')[0]);
         if (!previousTask) {
             this.Log.error('Can\'t find a task to resume.');
-        } 
+        }
         this.Log.info('Previous task found. Resuming.');
 
         process.on("SIGINT", async () => {
@@ -420,10 +429,37 @@ class ArchiveDownloader extends Downloader {
     */
     async clean() {
         this.Log.info('Saving task status.');
-        const unfinishedChunks = this.allChunks.filter(t => {
-            return (isChunkGroup(t) || !this.finishedFilenames.includes(t.filename));
+        const unfinishedChunks: ChunkItem[] = [];
+        this.allChunks.forEach(chunkItem => {
+            if (isChunkGroup(chunkItem)) {
+                let allFinishedFlag = true;
+                const unfinishedChunksInItem: Chunk[] = [];
+                for (const chunk of chunkItem.chunks) {
+                    if (!this.finishedFilenames[chunk.filename]) {
+                        allFinishedFlag = false;
+                        unfinishedChunksInItem.push(chunk);
+                    }
+                }
+                if (!allFinishedFlag) {
+                    // 组中块未全部完成 加入未完成列表
+                    unfinishedChunks.push({
+                        ...chunkItem,
+                        chunks: unfinishedChunksInItem
+                    });
+                }
+            } else {
+                if (!this.finishedFilenames[chunkItem.filename]) {
+                    unfinishedChunks.push(chunkItem);
+                }
+            }
         });
-        this.Log.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunks.length}`);
+
+        let unfinishedChunksLength = 0;
+        for (const chunk of unfinishedChunks) {
+            unfinishedChunksLength += isChunkGroup(chunk) ? chunk.chunks.length : 1;
+        }
+
+        this.Log.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunksLength}`);
 
         try {
             saveTask({
@@ -437,7 +473,7 @@ class ArchiveDownloader extends Downloader {
                 verbose: this.verbose,
                 nomux: this.nomux,
                 startedAt: this.startedAt,
-                finishedChunksCount: this.totalChunksCount - unfinishedChunks.length,
+                finishedChunksCount: this.totalChunksCount - unfinishedChunksLength,
                 totalChunksCount: this.totalChunksCount,
                 retries: this.retries,
                 timeout: this.timeout,

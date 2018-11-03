@@ -31,7 +31,7 @@ export interface MinyamiTask {
     allChunks: ChunkItem[]; // 全部块
     chunks: ChunkItem[]; // 未下载的块
     outputFileList: string[]; // 输出文件列表
-    finishedFilenames: string[]; // 已完成文件名
+    finishedFilenames: { [index: string]: any }; // 已完成文件名
 }
 
 /**
