@@ -1,6 +1,6 @@
 {
   "name": "minyami",
-  "version": "2.0.0-beta14",
+  "version": "2.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {

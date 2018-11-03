@@ -241,11 +241,7 @@ class ArchiveDownloader extends Downloader {
 
         this.totalChunksCount = 0;
         for (const chunk of this.chunks) {
-            if (isChunkGroup(chunk)) {
-                this.totalChunksCount += chunk.chunks.length;
-            } else {
-                this.totalChunksCount += 1;
-            }
+            this.totalChunksCount += isChunkGroup(chunk) ? chunk.chunks.length : 1;
         }
 
         this.outputFileList = [];
