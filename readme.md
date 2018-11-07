@@ -12,7 +12,7 @@ Make sure you had put these binary files into your system `PATH`.
 
 `npm install minyami -g`
 
-There's also a UserScript in the root directory of this project called `Minyami Extractor` which can help you to extract m3u8 files urls from web pages. Please install it with a browser UserScript management extension such as VioletMoney(recommended).
+There's also a UserScript in the root directory of this project called `Minyami Extractor` which can help you to extract m3u8 file urls from web pages. Please install it via a browser UserScript management extension such as VioletMonkey(recommended).
 
 Press `Enter` twice to show `Minyami Extractor` on supported websites.
 
