@@ -360,6 +360,10 @@ class ArchiveDownloader extends Downloader {
         if (this.chunks.length === 0 && this.runningThreads === 0) {
             this.Log.info('All chunks downloaded. Start merging chunks.');
             const muxer = this.nomux ? mergeVideoNew : mergeVideo;
+            if (this.nomux && this.outputPath.endsWith('.mkv')) {
+                this.Log.info(`Output file name ends with .mkv is not supported in direct muxing mode, auto changing to .ts.`);
+                this.outputPath = this.outputPath + '.ts';
+            }
             muxer(this.outputFileList, this.outputPath).then(async () => {
                 this.Log.info('End of merging.');
                 this.Log.info('Starting cleaning temporary files.');
@@ -369,11 +373,9 @@ class ArchiveDownloader extends Downloader {
                 } catch (error) {
                     this.Log.error('Fail to parse previous tasks, ignored.');
                 }
-
                 this.Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
             }).catch(e => {
-                //console.log(e);
                 this.Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });
         }

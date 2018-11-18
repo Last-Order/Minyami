@@ -112,7 +112,7 @@ export function deleteTask(taskId: string): boolean {
 
     const index = tasks.findIndex(t => t.id === taskId);
     
-    if (index !== -1) {
+    if (index === -1) {
         return false;
     } else {
         // Write back to file
