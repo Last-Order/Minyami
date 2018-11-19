@@ -34,13 +34,13 @@ export async function mergeVideoNew(fileList = [], output = "./output.ts") {
         return;
     }
 
-    // create output file
-    const fd = fs.openSync(output, 'w');
-    fs.closeSync(fd);
+    const writeStream = fs.createWriteStream(output);
 
     for (const file of fileList) {
-        fs.appendFileSync(output, fs.readFileSync(file));
+        writeStream.write(fs.readFileSync(file));
     }
+
+    writeStream.end();
 }
 
 /**
