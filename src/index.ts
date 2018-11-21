@@ -157,8 +157,21 @@ Erii.addOption({
 Erii.addOption({
     name: ['nomux'],
     command: 'download',
-    description: 'Merge chunks without remuxing'
+    description: 'Merge chunks without remuxing',
 });
+
+Erii.addOption({
+    name: ['format'],
+    command: 'download',
+    description: '(Optional) Set output format. default: ts',
+    argument: {
+        name: 'format_name',
+        description: 'Format name. ts or mkv.',
+        validate: (formatString: string) => {
+            return ['mkv', 'ts'].includes(formatString);
+        }
+    }
+})
 
 Erii.addOption({
     name: ['proxy'],

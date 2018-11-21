@@ -1,7 +1,7 @@
 import Downloader, { DownloaderConfig, Chunk } from "./downloader";
 import M3U8 from "./m3u8";
 import Logger from '../utils/log';
-import { mergeVideo, mergeVideoNew, download, decrypt } from "../utils/media";
+import { mergeToMKV, mergeToTS, download, decrypt } from "../utils/media";
 import { sleep } from "../utils/system";
 const path = require('path');
 const fs = require('fs');
@@ -245,7 +245,7 @@ export default class LiveDownloader extends Downloader {
 
                 this.Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / unknown | Avg Speed: ${
                     infoObj.chunkSpeed
-                    }chunks/s or ${
+                    } chunks/s or ${
                     infoObj.ratioSpeed
                     }x)`, infoObj);
                 this.checkQueue();
@@ -260,14 +260,13 @@ export default class LiveDownloader extends Downloader {
         if (this.chunks.length === 0 && this.runningThreads === 0 && this.isEnd) {
             // 结束状态 合并文件
             this.Log.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
-            const muxer = this.nomux ? mergeVideoNew : mergeVideo;
+            const muxer = this.format === 'ts' ? mergeToTS : mergeToMKV;
             muxer(this.outputFileList, this.outputPath).then(async () => {
                 this.Log.info('End of merging.');
                 await this.clean();
                 this.Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
             }).catch(e => {
-                //console.log(e);
                 this.Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });
         }

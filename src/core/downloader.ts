@@ -15,6 +15,7 @@ export interface DownloaderConfig {
     nomux?: boolean;
     retries?: number;
     proxy?: string;
+    format?: string;
 }
 
 export interface ArchiveDownloaderConfig extends DownloaderConfig {
@@ -53,7 +54,7 @@ class Downloader {
     tempPath: string; // 临时文件目录
     m3u8Path: string; // m3u8文件路径
     m3u8: M3U8; // m3u8实体
-    outputPath: string = './output.mkv'; // 输出目录
+    outputPath: string = './output.ts'; // 输出目录
     threads: number = 5; // 并发数量
 
     allChunks: ChunkItem[];
@@ -65,6 +66,7 @@ class Downloader {
 
     verbose: boolean = false; // 调试输出
     nomux: boolean = false; // 仅合并分段不remux
+    format: string = 'ts'; // 输出格式
 
     startedAt: number; // 开始下载时间
     finishedChunksCount: number = 0; // 已完成的块数量
@@ -84,7 +86,7 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log:Logger, m3u8Path: string, { threads, output, key, verbose, nomux, retries, proxy }: DownloaderConfig = {
+    constructor(log:Logger, m3u8Path: string, { threads, output, key, verbose, nomux, retries, proxy, format }: DownloaderConfig = {
         threads: 5
     }) {
         this.Log = log;
@@ -94,8 +96,7 @@ class Downloader {
         }
 
         if (nomux) {
-            this.nomux = nomux;
-            this.outputPath = 'output.ts';
+            this.Log.warning(`--nomux is now deprecated, please use --format instead.`);
         }
 
         if (output) {
@@ -114,6 +115,10 @@ class Downloader {
             this.retries = retries;
         }
 
+        if (format) {
+            this.format = format;
+        }
+
         if (proxy) {
             const splitedProxyString: string[] = proxy.split(':');
             this.proxy = proxy;
@@ -122,6 +127,11 @@ class Downloader {
         }
 
         this.m3u8Path = m3u8Path;
+
+        if (this.format === 'ts' && this.outputPath.endsWith('.mkv')) {
+            this.Log.warning(`Output file name ends with .mkv is not supported in direct muxing mode, auto changing to .ts.`);
+            this.outputPath = this.outputPath + '.ts';
+        }
 
         if (process.platform === "win32") {
             var rl = require("readline").createInterface({
@@ -152,7 +162,6 @@ class Downloader {
                 this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
             );
         } catch (e) {
-            // console.log(e);
             await this.clean();
             this.Log.error('Aborted due to critical error.', e);
         }

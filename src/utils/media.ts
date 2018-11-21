@@ -9,7 +9,7 @@ const SocksProxyAgent = require('socks-proxy-agent');
  * @param fileList 文件列表
  * @param output 输出路径
  */
-export async function mergeVideo(fileList = [], output = "./output.mkv") {
+export async function mergeToMKV(fileList = [], output = "./output.mkv") {
     if (fileList.length === 0) {
         return;
     }
@@ -29,7 +29,7 @@ export async function mergeVideo(fileList = [], output = "./output.mkv") {
     fs.unlinkSync(`./${tempFilename}`);
 }
 
-export async function mergeVideoNew(fileList = [], output = "./output.ts") {
+export async function mergeToTS(fileList = [], output = "./output.ts") {
     if (fileList.length === 0) {
         return;
     }

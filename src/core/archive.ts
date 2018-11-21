@@ -1,5 +1,5 @@
 import Logger from '../utils/log';
-import { mergeVideo, mergeVideoNew } from '../utils/media';
+import { mergeToMKV, mergeToTS } from '../utils/media';
 import { deleteDirectory } from '../utils/system';
 import M3U8 from './m3u8';
 import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk, ChunkGroup } from './downloader';
@@ -33,7 +33,7 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy, slice }: ArchiveDownloaderConfig = {
+    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy, slice, format }: ArchiveDownloaderConfig = {
         threads: 5
     }) {
         super(log, m3u8Path, {
@@ -43,7 +43,8 @@ class ArchiveDownloader extends Downloader {
             verbose,
             nomux,
             retries,
-            proxy
+            proxy,
+            format
         });
         if (slice) {
             this.sliceStart = timeStringToSeconds(slice.split('-')[0]);
@@ -359,11 +360,7 @@ class ArchiveDownloader extends Downloader {
         }
         if (this.chunks.length === 0 && this.runningThreads === 0) {
             this.Log.info('All chunks downloaded. Start merging chunks.');
-            const muxer = this.nomux ? mergeVideoNew : mergeVideo;
-            if (this.nomux && this.outputPath.endsWith('.mkv')) {
-                this.Log.info(`Output file name ends with .mkv is not supported in direct muxing mode, auto changing to .ts.`);
-                this.outputPath = this.outputPath + '.ts';
-            }
+            const muxer = this.format === 'ts' ? mergeToTS : mergeToMKV;
             muxer(this.outputFileList, this.outputPath).then(async () => {
                 this.Log.info('End of merging.');
                 this.Log.info('Starting cleaning temporary files.');
