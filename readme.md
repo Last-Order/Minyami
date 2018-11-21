@@ -23,7 +23,7 @@ Help:
      Commands                      Description                   Alias
 
      --help <command>              Show help documentation       --h
-         <command>                 Show help of a specified command
+         <command>                 Show help of a specified comma
      --version                     Show version
      --download <input_path>       Download video                --d
          <input_path>              m3u8 file path
@@ -37,6 +37,8 @@ Help:
              <key>                 (Optional) Key for decrypt video.
          --live                    Download live
          --nomux                   Merge chunks without remuxing
+         --format <format_name>    (Optional) Set output format. default: ts
+             <format_name>         Format name. ts or mkv.
          --proxy <socks-proxy>     Download via Socks proxy
              <socks-proxy>         Set Socks Proxy in [<host>:<port>] format. eg. --proxy "127.0.0.1:1080".
          --slice <range>           Download specified part of the stream
