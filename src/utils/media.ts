@@ -10,7 +10,7 @@ const SocksProxyAgent = require('socks-proxy-agent');
  * @param output 输出路径
  */
 export function mergeToMKV(fileList = [], output = "./output.mkv") {
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve) => {
         if (fileList.length === 0) {
             return;
         }
@@ -33,9 +33,9 @@ export function mergeToMKV(fileList = [], output = "./output.mkv") {
 }
 
 export function mergeToTS(fileList = [], output = "./output.ts") {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         if (fileList.length === 0) {
-            return;
+            resolve();
         }
     
         const writeStream = fs.createWriteStream(output);
