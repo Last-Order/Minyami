@@ -9,38 +9,48 @@ const SocksProxyAgent = require('socks-proxy-agent');
  * @param fileList 文件列表
  * @param output 输出路径
  */
-export async function mergeToMKV(fileList = [], output = "./output.mkv") {
-    if (fileList.length === 0) {
-        return;
-    }
-    fileList = fileList.map((file, index) => {
-        return index === 0 ? file : `+${file}`;
-    });
+export function mergeToMKV(fileList = [], output = "./output.mkv") {
+    return new Promise(async (resolve, reject) => {
+        if (fileList.length === 0) {
+            return;
+        }
+        fileList = fileList.map((file, index) => {
+            return index === 0 ? file : `+${file}`;
+        });
+        
+        const parameters = fileList.concat([
+            "-o",
+            output,
+            "-q"
+        ]);
     
-    const parameters = fileList.concat([
-        "-o",
-        output,
-        "-q"
-    ]);
-
-    const tempFilename = `temp_${new Date().valueOf()}.json`;
-    fs.writeFileSync(`./${tempFilename}`, JSON.stringify(parameters, null, 2));
-    await exec(`mkvmerge @${tempFilename}`);
-    fs.unlinkSync(`./${tempFilename}`);
+        const tempFilename = `temp_${new Date().valueOf()}.json`;
+        fs.writeFileSync(`./${tempFilename}`, JSON.stringify(parameters, null, 2));
+        await exec(`mkvmerge @${tempFilename}`);
+        fs.unlinkSync(`./${tempFilename}`);
+        resolve();
+    });
 }
 
-export async function mergeToTS(fileList = [], output = "./output.ts") {
-    if (fileList.length === 0) {
-        return;
-    }
-
-    const writeStream = fs.createWriteStream(output);
-
-    for (const file of fileList) {
-        writeStream.write(fs.readFileSync(file));
-    }
-
-    writeStream.end();
+export function mergeToTS(fileList = [], output = "./output.ts") {
+    return new Promise((resolve, reject) => {
+        if (fileList.length === 0) {
+            return;
+        }
+    
+        const writeStream = fs.createWriteStream(output);
+        const lastIndex = fileList.length - 1;
+        for (let i = 0; i < fileList.length; i++) {
+            if (i !== lastIndex) {
+                writeStream.write(fs.readFileSync(fileList[i]));
+            } else {
+                writeStream.write(fs.readFileSync(fileList[i]), () => {
+                    writeStream.end();
+                    resolve();
+                });
+            }
+        }
+    })
 }
 
 /**
