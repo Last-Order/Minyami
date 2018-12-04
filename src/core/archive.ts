@@ -6,6 +6,7 @@ import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk, Ch
 import * as fs from 'fs';
 import { saveTask, deleteTask, getTask } from '../utils/task';
 import { timeStringToSeconds } from '../utils/time';
+import { sleep } from './action';
 const path = require('path');
 
 class ArchiveDownloader extends Downloader {
@@ -26,6 +27,8 @@ class ArchiveDownloader extends Downloader {
     sliceEnd: number;
 
     prefix: string;
+
+    globalPause: boolean = false;
 
     /**
      * 
@@ -50,6 +53,14 @@ class ArchiveDownloader extends Downloader {
             this.sliceStart = timeStringToSeconds(slice.split('-')[0]);
             this.sliceEnd = timeStringToSeconds(slice.split('-')[1]);
         }
+    }
+
+    pauseLoop() {
+        this.globalPause = true;
+    } 
+
+    resumeLoop() {
+        this.globalPause = false;
     }
 
     /**
@@ -286,6 +297,11 @@ class ArchiveDownloader extends Downloader {
      * Check task queue
      */
     async checkQueue() {
+        if (this.globalPause) {
+            await sleep(1);
+            this.checkQueue();
+            return;
+        }
         if (this.chunks.length > 0 && this.runningThreads < this.threads) {
             const task = this.chunks[0];
             let chunk: Chunk;

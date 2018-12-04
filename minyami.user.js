@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name Minyami 网页提取器
-// @version 1.1.15
+// @version 1.1.16
 // @downloadURL https://github.com/Last-Order/Minyami/raw/master/minyami.user.js
 // @updateURL https://github.com/Last-Order/Minyami/raw/master/minyami.user.js
 // @run-at document-start
@@ -80,7 +80,6 @@
      */
     const abema = (xhr) => {
         if (xhr.readyState === 4 && xhr.responseURL.startsWith('https://abema.tv/xhrp.js')) {
-            const maps = {};
             XMLHttpRequest.prototype = new Proxy(XMLHttpRequest.prototype, {
                 set: async function (obj, prop, value) {
                     if (arguments[3].proxy) {
@@ -93,6 +92,15 @@
                     return Reflect.set(...arguments);
                 }
             });
+        }
+    }
+
+    const nico = () => {
+        try {
+            const liveData = JSON.parse(document.querySelector('#embedded-data').getAttribute('data-props'));
+            key = liveData.player.audienceToken;
+        } catch {
+
         }
     }
 
@@ -117,7 +125,7 @@
                 if (resume) {
                     input_i.value = `minyami -r "${i}"`;
                 } else {
-                    input_i.value = `minyami -d "${i}"${key && ' --key ' + key || ''} --output "${document.title.replace(/[\/\*\\\:|\?<>]/ig, "")}.ts"`;
+                    input_i.value = `minyami -d "${i}"${key && (' --key "' + key + '"') || ''} --output "${document.title.replace(/[\/\*\\\:|\?<>]/ig, "")}.ts"`;
                 }
                 listi.append(input_i);
     
@@ -282,6 +290,13 @@
             setTimeout(() => {
                 flag = false;
             }, 500);
+        }
+
+        switch (location.host) {
+            case 'live2.nicovideo.jp': {
+                nico();
+                break;
+            }
         }
     }
 
