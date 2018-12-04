@@ -1,7 +1,33 @@
 import { ParserOptions, ParserResult } from "./types";
 import { isChunkGroup, ChunkGroup } from "../downloader";
+import * as Websocket from 'ws';
 
 export default class Parser {
+    static updateToken(token: string, options: ParserOptions["options"]) {
+        for (const chunk of options.downloader.allChunks) {
+            if (isChunkGroup(chunk)) {
+                for (const c of chunk.chunks) {
+                    c.url = c.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+                }
+            } else {
+                chunk.url = chunk.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+            }
+        }
+        for (const chunk of options.downloader.chunks) {
+            if (isChunkGroup(chunk)) {
+                chunk.actions.forEach(action => {
+                    if (action.actionName === 'ping') {
+                        action.actionParams = action.actionParams.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+                    }
+                })
+                for (const c of chunk.chunks) {
+                    c.url = c.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+                }
+            } else {
+                chunk.url = chunk.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+            }
+        }
+    }
     static parse({
         key = '',
         iv = '',
@@ -10,11 +36,34 @@ export default class Parser {
         if (!options.m3u8Url) {
             throw new Error('Missing m3u8 url for Niconico.');
         }
+        if (options.key) {
+            // NICO Enhanced mode ON!
+            const liveId = options.key.match(/(lv.+?)_/)[1];
+            const socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v1/watch/${liveId}/timeshift?audience_token=${options.key}`;
+            const socket = new Websocket(socketUrl);
+            socket.on('message', (message: string) => {
+                const parsedMessage = JSON.parse(message);
+                // Send heartbeat packet to keep alive
+                if (parsedMessage.type === 'ping') {
+                    socket.send(JSON.stringify({
+                        type: 'pong',
+                        body: {}
+                    }));
+                }
+                // Update stream token
+                if (parsedMessage.type === 'watch') {
+                    if (parsedMessage.body.command === 'currentstream') {
+                        const token = parsedMessage.body.currentStream.mediaServerAuth.value;
+                        Parser.updateToken(token, options);
+                    }
+                }
+            });
+            setInterval(() => {
+                socket.send(JSON.stringify({"type":"watch","body":{"command":"getpermit","requirement":{"broadcastId":liveId.replace('lv', ''),"route":"","stream":{"protocol":"hls","requireNewStream":true,"priorStreamQuality":"super_high","isLowLatency":true},"room":{"isCommentable":true,"protocol":"webSocket"}}}}))
+            }, 20000);
+        }
         const prefix = options.m3u8Url.match(/^(.+\/)/)[1];
         const leftPad = (str: string) => {
-            // while (str.length < 3) {
-            //     str = '0' + str;
-            // }
             return str;
         }
         if (options.downloader) {
@@ -70,29 +119,7 @@ export default class Parser {
             } else {
                 // 刷新 Token
                 const token = options.downloader.m3u8Path.match(/ht2_nicolive=(.+?)&/)[1];
-                for (const chunk of options.downloader.allChunks) {
-                    if (isChunkGroup(chunk)) {
-                        for (const c of chunk.chunks) {
-                            c.url = c.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
-                        }
-                    } else {
-                        chunk.url = chunk.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
-                    }
-                }
-                for (const chunk of options.downloader.chunks) {
-                    if (isChunkGroup(chunk)) {
-                        chunk.actions.forEach(action => {
-                            if (action.actionName === 'ping') {
-                                action.actionParams = action.actionParams.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
-                            }
-                        })
-                        for (const c of chunk.chunks) {
-                            c.url = c.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
-                        }
-                    } else {
-                        chunk.url = chunk.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
-                    }
-                }
+                Parser.updateToken(token, options);
             }
         }
         return {

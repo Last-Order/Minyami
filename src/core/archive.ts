@@ -150,10 +150,14 @@ class ArchiveDownloader extends Downloader {
                 this.Log.info('请保持播放页面不要关闭');
                 this.Log.info('Please do not close the video page.');
                 const parser = await import('./parsers/nico');
+                if (!this.key) {
+                    this.Log.info(`Maybe you should get a audience token to get a better user experience.`);
+                }
                 const parseResult = parser.default.parse({
                     options: {
                         downloader: this,
-                        m3u8Url: this.m3u8Path
+                        m3u8Url: this.m3u8Path,
+                        key: this.key
                     }
                 });
                 this.prefix = parseResult.prefix;

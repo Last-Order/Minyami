@@ -16,7 +16,8 @@
     "chalk": "^2.4.1",
     "crypto-js": "^3.1.9-1",
     "erii": "^1.2.6",
-    "socks-proxy-agent": "^4.0.1"
+    "socks-proxy-agent": "^4.0.1",
+    "ws": "^6.1.2"
   },
   "devDependencies": {
     "@types/node": "^10.3.6"
