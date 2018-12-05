@@ -147,11 +147,14 @@ class ArchiveDownloader extends Downloader {
             } else if (this.m3u8Path.includes('dmc.nico')) {
                 // NicoNico
                 this.Log.info('Site comfirmed: NicoNico.');
-                this.Log.info('请保持播放页面不要关闭');
-                this.Log.info('Please do not close the video page.');
                 const parser = await import('./parsers/nico');
                 if (!this.key) {
+                    this.Log.info('请保持播放页面不要关闭');
+                    this.Log.info('Please do not close the video page.');
                     this.Log.info(`Maybe you should get a audience token to get a better user experience.`);
+                }
+                if (this.threads > 10) {
+                    this.Log.warning(`High threads setting detected. Use at your own risk!`);
                 }
                 const parseResult = parser.default.parse({
                     options: {

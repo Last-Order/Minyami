@@ -32,14 +32,21 @@ export default class Parser {
         key = '',
         iv = '',
         options
-    }: ParserOptions): ParserResult { 
+    }: ParserOptions): ParserResult {
         if (!options.m3u8Url) {
             throw new Error('Missing m3u8 url for Niconico.');
         }
         if (options.key) {
             // NICO Enhanced mode ON!
-            const liveId = options.key.match(/(lv.+?)_/)[1];
-            const socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v1/watch/${liveId}/timeshift?audience_token=${options.key}`;
+            options.downloader.Log.info(`Enhanced mode for Nico-TS enabled`);
+            const liveId = options.key.match(/(.+?)_/)[1];
+            let socketUrl;
+            if (liveId.startsWith('lv')) {
+                socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v1/watch/${liveId}/timeshift?audience_token=${options.key}`;
+            } else {
+                // Channel Live
+                socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v1/watch/${liveId}/timeshift?audience_token=${options.key}`;
+            }
             const socket = new Websocket(socketUrl);
             socket.on('message', (message: string) => {
                 const parsedMessage = JSON.parse(message);
@@ -53,14 +60,23 @@ export default class Parser {
                 // Update stream token
                 if (parsedMessage.type === 'watch') {
                     if (parsedMessage.body.command === 'currentstream') {
-                        const token = parsedMessage.body.currentStream.mediaServerAuth.value;
+                        let token;
+                        if (liveId.startsWith('lv')) {
+                            token = parsedMessage.body.currentStream.mediaServerAuth.value;
+                        } else {
+                            // Channel Live
+                            token = parsedMessage.body.currentStream.uri.match(/ht2_nicolive=(.+)/)[1];
+                        }
+                        options.downloader.verbose && options.downloader.Log.info(`Update token: ${token}`);
                         Parser.updateToken(token, options);
                     }
                 }
             });
-            setInterval(() => {
-                socket.send(JSON.stringify({"type":"watch","body":{"command":"getpermit","requirement":{"broadcastId":liveId.replace('lv', ''),"route":"","stream":{"protocol":"hls","requireNewStream":true,"priorStreamQuality":"super_high","isLowLatency":true},"room":{"isCommentable":true,"protocol":"webSocket"}}}}))
-            }, 20000);
+            socket.on('open', () => {
+                setInterval(() => {
+                    socket.send(JSON.stringify({ "type": "watch", "body": { "command": "getpermit", "requirement": { "broadcastId": liveId.replace('lv', ''), "route": "", "stream": { "protocol": "hls", "requireNewStream": true, "priorStreamQuality": "super_high", "isLowLatency": true }, "room": { "isCommentable": true, "protocol": "webSocket" } } } }))
+                }, 100000 / options.downloader.threads);
+            });
         }
         const prefix = options.m3u8Url.match(/^(.+\/)/)[1];
         const leftPad = (str: string) => {
@@ -103,9 +119,9 @@ export default class Parser {
                     }
                     chunkGroup.chunks.push({
                         url: prefix + (
-                            time.toString() === '0' ? 
-                            `0.ts${suffix.replace(/start=.+&/ig, `start=${0}&`)}` : 
-                            `${leftPad(time.toString())}${offset}.ts${suffix.replace(/start=.+&/ig, `start=${startTime}&`)}`
+                            time.toString() === '0' ?
+                                `0.ts${suffix.replace(/start=.+&/ig, `start=${0}&`)}` :
+                                `${leftPad(time.toString())}${offset}.ts${suffix.replace(/start=.+&/ig, `start=${startTime}&`)}`
                         ),
                         filename: `${leftPad(time.toString())}${offset}.ts`
                     });
