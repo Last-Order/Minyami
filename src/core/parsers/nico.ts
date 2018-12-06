@@ -87,14 +87,14 @@ export default class Parser {
                 // 生成 Fake M3U8
                 const chunkLength = options.downloader.m3u8.getChunkLength();
                 const videoLength = parseFloat(options.downloader.m3u8.m3u8Content.match(/#DMC-STREAM-DURATION:(.+)/)[1]);
-                const firstChunkFilename = options.downloader.m3u8.chunks[0].match(/^(.+ts)/)[1];
+                const firstChunkFilename = options.downloader.m3u8.chunks[0].url.match(/^(.+ts)/)[1];
                 let offset;
                 if (firstChunkFilename === '0.ts') {
-                    offset = options.downloader.m3u8.chunks[1].match(/(\d{3})\.ts/)[1];
+                    offset = options.downloader.m3u8.chunks[1].url.match(/(\d{3})\.ts/)[1];
                 } else {
-                    offset = options.downloader.m3u8.chunks[0].match(/(\d{3})\.ts/)[1];
+                    offset = options.downloader.m3u8.chunks[0].url.match(/(\d{3})\.ts/)[1];
                 }
-                const suffix = options.downloader.m3u8.chunks[0].match(/ts(.+)/)[1];
+                const suffix = options.downloader.m3u8.chunks[0].url.match(/ts(.+)/)[1];
                 const newChunkList = [];
                 let counter: number = 0;
                 let chunkGroup: ChunkGroup = {

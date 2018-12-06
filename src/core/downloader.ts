@@ -80,6 +80,8 @@ class Downloader {
 
     autoGenerateChunkList: boolean = true;
 
+    encryptionKeys = {};
+
     /**
      * 
      * @param m3u8Path 
@@ -161,6 +163,7 @@ class Downloader {
                 this.timeout, 
                 this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
             );
+            console.log(this.m3u8);
         } catch (e) {
             await this.clean();
             this.Log.error('Aborted due to critical error.', e);
@@ -222,6 +225,14 @@ class Downloader {
             this.Log.info(`Chunk group action <${action.actionName}> failed.`);
             this.Log.info(e);
         }
+    }
+
+    saveEncryptionKey(url: string, key: string) {
+        this.encryptionKeys[url] = key;
+    }
+
+    getEncryptionKey(url: string) {
+        return this.encryptionKeys[url];
     }
 
     /**

@@ -195,7 +195,7 @@ class ArchiveDownloader extends Downloader {
             this.chunks = this.m3u8.chunks.map(chunk => {
                 return {
                     url: this.prefix + chunk,
-                    filename: chunk.match(/\/*([^\/]+?\.ts)/)[1]
+                    filename: chunk.url.match(/\/*([^\/]+?\.ts)/)[1]
                 };
             });
         }

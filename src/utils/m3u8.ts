@@ -43,5 +43,5 @@ export async function loadM3U8(Log:Logger, path: string, retries: number = 1, ti
         Log.info('Loading M3U8 file.');
         m3u8Content = fs.readFileSync(path).toString();
     }
-    return new M3U8(m3u8Content);
+    return new M3U8(m3u8Content, path);
 }
