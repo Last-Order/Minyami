@@ -76,75 +76,39 @@ class ArchiveDownloader extends Downloader {
             if (key.startsWith('abemafresh')) {
                 this.Log.info('Site comfirmed: FreshTV.');
                 const parser = await import('./parsers/freshtv');
-                const parseResult = parser.default.parse({
-                    key,
-                    iv
+                parser.default.parse({
+                    downloader: this
                 });
-                [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                this.Log.info(`Key: ${this.m3u8.key}; IV: ${this.m3u8.iv}.`);
             } else if (key.startsWith('abematv-license')) {
                 this.Log.info('Site comfirmed: AbemaTV.');
                 const parser = await import('./parsers/abema');
-                const parseResult = parser.default.parse({
-                    key,
-                    iv,
-                    options: {
-                        key: this.key
-                    }
+                parser.default.parse({
+                    downloader: this
                 });
-                [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
             } else if (this.m3u8Path.includes('bchvod')) {
                 this.Log.info('Site comfirmed: B-ch.');
                 const parser = await import('./parsers/bch');
                 try {
-                    const parseResult = await parser.default.parse({
-                        key,
-                        options: {
-                            m3u8: this.m3u8,
-                            proxy: {
-                                host: this.proxyHost,
-                                port: this.proxyPort
-                            }
-                        }
+                    await parser.default.parse({
+                        downloader: this
                     });
-                    [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                    this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                    this.Log.info(`Key: ${this.m3u8.key}; IV: ${this.m3u8.sequenceId}.`);
                 } catch (e) {
                     await this.clean();
                     this.Log.error('Fail to retrieve the key from server.');
                 }
             } else {
-                await this.clean();
-                this.Log.error('Unsupported site.');
+                this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
+                const parser = await import('./parsers/common');
+                await parser.default.parse({
+                    downloader: this
+                });
             }
         } else {
             // Not encrypted
-            if (this.m3u8Path.includes('freshlive')) {
-                // FreshTV
-                this.Log.info('Site comfirmed: FreshTV.');
-                const parser = await import('./parsers/freshtv');
-                this.prefix = parser.default.prefix;
-            } else if (this.m3u8Path.includes('openrec')) {
-                // Openrec
-                this.Log.info('Site comfirmed: OPENREC.');
-                const parser = await import('./parsers/openrec');
-                const parseResult = parser.default.parse({
-                    options: {
-                        m3u8Url: this.m3u8Path
-                    }
-                });
-                this.prefix = parseResult.prefix;
-            } else if (this.m3u8Path.includes('brightcove')) {
-                this.Log.info('Site comfirmed: Sony Music.');
-                const parser = await import('./parsers/sonymusic');
-                const parseResult = parser.default.parse({
-                    options: {
-                        m3u8Url: this.m3u8Path
-                    }
-                });
-                this.prefix = parseResult.prefix;
-            } else if (this.m3u8Path.includes('dmc.nico')) {
+            if (this.m3u8Path.includes('dmc.nico')) {
                 // NicoNico
                 this.Log.info('Site comfirmed: NicoNico.');
                 const parser = await import('./parsers/nico');
@@ -156,18 +120,16 @@ class ArchiveDownloader extends Downloader {
                 if (this.threads > 10) {
                     this.Log.warning(`High threads setting detected. Use at your own risk!`);
                 }
-                const parseResult = parser.default.parse({
-                    options: {
-                        downloader: this,
-                        m3u8Url: this.m3u8Path,
-                        key: this.key
-                    }
+                parser.default.parse({
+                    downloader: this
                 });
-                this.prefix = parseResult.prefix;
                 this.autoGenerateChunkList = false;
             } else {
-                await this.clean();
-                this.Log.error('Unsupported site.');
+                this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
+                const parser = await import('./parsers/common');
+                await parser.default.parse({
+                    downloader: this
+                });
             }
         }
     }
@@ -190,16 +152,17 @@ class ArchiveDownloader extends Downloader {
         await this.parse();
 
         this.Log.info(`Start downloading with ${this.threads} thread(s).`);
-
         if (this.autoGenerateChunkList) {
             this.chunks = this.m3u8.chunks.map(chunk => {
                 return {
-                    url: this.prefix + chunk,
-                    filename: chunk.url.match(/\/*([^\/]+?\.ts)/)[1]
+                    url: chunk.url,
+                    filename: chunk.url.match(/\/*([^\/]+?\.ts)/)[1],
+                    key: chunk.key,
+                    iv: chunk.iv,
+                    sequenceId: chunk.sequenceId
                 };
             });
         }
-
         if (this.sliceStart !== undefined && this.sliceEnd !== undefined) {
             const newChunkList: ChunkItem[] = [];
             let nowTime = 0;

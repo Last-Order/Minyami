@@ -3,6 +3,7 @@ import Logger from '../utils/log';
 import M3U8 from "./m3u8";
 import { loadM3U8 } from '../utils/m3u8';
 import * as system from '../utils/system';
+import CommonUtils from '../utils/common';
 import { download, decrypt } from '../utils/media';
 import { ActionType } from './action';
 import * as actions from './action';
@@ -27,6 +28,9 @@ export interface Chunk {
     filename: string;
     isEncrypted?: boolean;
     parentGroup?: ChunkGroup;
+    key?: string;
+    iv?: string;
+    sequenceId?: string;
 }
 
 export interface ChunkAction {
@@ -163,7 +167,6 @@ class Downloader {
                 this.timeout, 
                 this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
             );
-            console.log(this.m3u8);
         } catch (e) {
             await this.clean();
             this.Log.error('Aborted due to critical error.', e);
@@ -198,8 +201,48 @@ class Downloader {
                 );
                 this.verbose && this.Log.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
-                    await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    this.verbose && this.Log.debug(`Decrypting ${task.filename} succeed`);
+                    if (task.key) {
+                        if (task.iv) {
+                            await decrypt(
+                                path.resolve(this.tempPath, `./${task.filename}`), 
+                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', 
+                                this.getEncryptionKey(CommonUtils.buildFullUrl(
+                                    this.m3u8.m3u8Url, task.key
+                                )), 
+                                task.iv
+                            );
+                        } else {
+                            await decrypt(
+                                path.resolve(this.tempPath, `./${task.filename}`), 
+                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', 
+                                this.getEncryptionKey(CommonUtils.buildFullUrl(
+                                    this.m3u8.m3u8Url, task.key
+                                )), 
+                                task.sequenceId || this.m3u8.sequenceId
+                            );
+                        }
+                    } else {
+                        if (task.iv) {
+                            await decrypt(
+                                path.resolve(this.tempPath, `./${task.filename}`), 
+                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', 
+                                this.getEncryptionKey(CommonUtils.buildFullUrl(
+                                    this.m3u8.m3u8Url, this.m3u8.key
+                                )), 
+                                this.m3u8.iv
+                            );
+                        } else {
+                            await decrypt(
+                                path.resolve(this.tempPath, `./${task.filename}`), 
+                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', 
+                                this.getEncryptionKey(CommonUtils.buildFullUrl(
+                                    this.m3u8.m3u8Url, this.m3u8.key
+                                )), 
+                                task.sequenceId || this.m3u8.sequenceId
+                            );
+                        }
+                        this.verbose && this.Log.debug(`Decrypting ${task.filename} succeed`);
+                    }
                 }
                 resolve();
             } catch (e) {

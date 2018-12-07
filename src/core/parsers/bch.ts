@@ -4,24 +4,23 @@ import { requestRaw } from "../../utils/media";
 export default class Parser {
     static prefix = '';
     static async parse({
-        key = '',
-        iv = '',
-        options
+        downloader
     }: ParserOptions): Promise<ParserResult> {
-        const response = await requestRaw(key, options.proxy, {
+        const response = await requestRaw(downloader.m3u8.key, {
+            host: downloader.proxyHost,
+            port: downloader.proxyPort
+        }, {
             responseType: 'arraybuffer'
-        })
-        const hexKey = 
+        });
+        const hexKey =
             Array.from(
                 new Uint8Array(response.data)
             ).map(
                 i => i.toString(16).length === 1 ? '0' + i.toString(16) : i.toString(16)
             ).join('');
-        const sequenceId = options.m3u8.m3u8Content.match(/#EXT-X-MEDIA-SEQUENCE:(\d+)/)[1];
+        downloader.saveEncryptionKey(downloader.m3u8.key, hexKey);
         return {
-            key: hexKey, 
-            iv: sequenceId,
-            prefix: Parser.prefix
-        }
+
+        };
     }
 }

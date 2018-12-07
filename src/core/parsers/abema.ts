@@ -3,17 +3,12 @@ import { ParserOptions, ParserResult } from "./types";
 export default class Parser {
     static prefix = '';
     static parse({
-        key = '',
-        iv = '',
-        options
+        downloader
     }: ParserOptions): ParserResult {
-        if (!options.key) {
+        if (!downloader.key) {
             throw new Error('To download AbemaTV, you need to set a key manually');
         }
-        return {
-            key: options.key, 
-            iv,
-            prefix: Parser.prefix
-        }
+        downloader.saveEncryptionKey(downloader.m3u8.key, downloader.key);
+        return {};
     }
 }

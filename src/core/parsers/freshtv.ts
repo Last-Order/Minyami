@@ -4,16 +4,15 @@ const cryptojs = require('crypto-js');
 export default class Parser {
     static prefix = 'https://movie.freshlive.tv';
     static parse({
-        key = '',
-        iv = '',
+        downloader
     }: ParserOptions): ParserResult {
-        if (!key || !iv) {
+        if (!downloader.m3u8.key || !downloader.m3u8.iv) {
             throw new Error('Key or iv missing.');
         }
         const abemafresh = [1413502068, 2104980084, 1144534056, 1967279194, 2051549272, 860632952, 1464353903, 1212380503];
 
-        const part1 = key.split('/')[3];
-        const part2 = key.split('/')[4];
+        const part1 = downloader.m3u8.key.split('/')[3];
+        const part2 = downloader.m3u8.key.split('/')[4];
 
         const hash = cryptojs.HmacSHA256(part1, cryptojs.lib.WordArray.create(abemafresh));
         const decryptResult = cryptojs.AES.decrypt(cryptojs.lib.CipherParams.create({
@@ -32,10 +31,8 @@ export default class Parser {
             result.push(i.toString(16).length === 1 ? ('0' + i.toString(16)) : i.toString(16));
         }
 
-        return {
-            key: result.join(''),
-            iv: iv,
-            prefix: Parser.prefix
-        }
+        downloader.saveEncryptionKey(downloader.m3u8.key, result.join(''));
+
+        return {};
     }
 }

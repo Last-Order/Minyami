@@ -59,6 +59,9 @@ export default class M3U8 {
                 }
             } else {
                 // normal video chunk
+                if (!line) {
+                    continue;
+                }
                 inHeaderPart = false;
                 const newChunk: M3U8Chunk = {
                     url: ''

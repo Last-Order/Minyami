@@ -3,8 +3,8 @@ import { isChunkGroup, ChunkGroup } from "../downloader";
 import * as Websocket from 'ws';
 
 export default class Parser {
-    static updateToken(token: string, options: ParserOptions["options"]) {
-        for (const chunk of options.downloader.allChunks) {
+    static updateToken(token: string, downloader: ParserOptions["downloader"]) {
+        for (const chunk of downloader.allChunks) {
             if (isChunkGroup(chunk)) {
                 for (const c of chunk.chunks) {
                     c.url = c.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
@@ -13,7 +13,7 @@ export default class Parser {
                 chunk.url = chunk.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
             }
         }
-        for (const chunk of options.downloader.chunks) {
+        for (const chunk of downloader.chunks) {
             if (isChunkGroup(chunk)) {
                 chunk.actions.forEach(action => {
                     if (action.actionName === 'ping') {
@@ -29,23 +29,21 @@ export default class Parser {
         }
     }
     static parse({
-        key = '',
-        iv = '',
-        options
+        downloader
     }: ParserOptions): ParserResult {
-        if (!options.m3u8Url) {
+        if (!downloader.m3u8.m3u8Url) {
             throw new Error('Missing m3u8 url for Niconico.');
         }
-        if (options.key) {
+        if (downloader.key) {
             // NICO Enhanced mode ON!
-            options.downloader.Log.info(`Enhanced mode for Nico-TS enabled`);
-            const liveId = options.key.match(/(.+?)_/)[1];
+            downloader.Log.info(`Enhanced mode for Nico-TS enabled`);
+            const liveId = downloader.key.match(/(.+?)_/)[1];
             let socketUrl;
             if (liveId.startsWith('lv')) {
-                socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v1/watch/${liveId}/timeshift?audience_token=${options.key}`;
+                socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
             } else {
                 // Channel Live
-                socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v1/watch/${liveId}/timeshift?audience_token=${options.key}`;
+                socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
             }
             const socket = new Websocket(socketUrl);
             socket.on('message', (message: string) => {
@@ -67,34 +65,34 @@ export default class Parser {
                             // Channel Live
                             token = parsedMessage.body.currentStream.uri.match(/ht2_nicolive=(.+)/)[1];
                         }
-                        options.downloader.verbose && options.downloader.Log.info(`Update token: ${token}`);
-                        Parser.updateToken(token, options);
+                        downloader.verbose && downloader.Log.info(`Update token: ${token}`);
+                        Parser.updateToken(token, downloader);
                     }
                 }
             });
             socket.on('open', () => {
                 setInterval(() => {
                     socket.send(JSON.stringify({ "type": "watch", "body": { "command": "getpermit", "requirement": { "broadcastId": liveId.replace('lv', ''), "route": "", "stream": { "protocol": "hls", "requireNewStream": true, "priorStreamQuality": "super_high", "isLowLatency": true }, "room": { "isCommentable": true, "protocol": "webSocket" } } } }))
-                }, 100000 / options.downloader.threads);
+                }, 50000 / downloader.threads);
             });
         }
-        const prefix = options.m3u8Url.match(/^(.+\/)/)[1];
+        const prefix = downloader.m3u8.m3u8Url.match(/^(.+\/)/)[1];
         const leftPad = (str: string) => {
             return str;
         }
-        if (options.downloader) {
-            if (options.downloader.chunks.length === 0) {
+        if (downloader) {
+            if (downloader.chunks.length === 0) {
                 // 生成 Fake M3U8
-                const chunkLength = options.downloader.m3u8.getChunkLength();
-                const videoLength = parseFloat(options.downloader.m3u8.m3u8Content.match(/#DMC-STREAM-DURATION:(.+)/)[1]);
-                const firstChunkFilename = options.downloader.m3u8.chunks[0].url.match(/^(.+ts)/)[1];
+                const chunkLength = downloader.m3u8.getChunkLength();
+                const videoLength = parseFloat(downloader.m3u8.m3u8Content.match(/#DMC-STREAM-DURATION:(.+)/)[1]);
+                const firstChunkFilename = downloader.m3u8.chunks[0].url.match(/^(.+ts)/)[1];
                 let offset;
                 if (firstChunkFilename === '0.ts') {
-                    offset = options.downloader.m3u8.chunks[1].url.match(/(\d{3})\.ts/)[1];
+                    offset = downloader.m3u8.chunks[1].url.match(/(\d{3})\.ts/)[1];
                 } else {
-                    offset = options.downloader.m3u8.chunks[0].url.match(/(\d{3})\.ts/)[1];
+                    offset = downloader.m3u8.chunks[0].url.match(/(\d{3})\.ts/)[1];
                 }
-                const suffix = options.downloader.m3u8.chunks[0].url.match(/ts(.+)/)[1];
+                const suffix = downloader.m3u8.chunks[0].url.match(/ts(.+)/)[1];
                 const newChunkList = [];
                 let counter: number = 0;
                 let chunkGroup: ChunkGroup = {
@@ -106,7 +104,7 @@ export default class Parser {
                 for (let time = 0; time < videoLength - chunkLength; time += chunkLength) {
                     if (counter === 0) {
                         startTime = time.toString();
-                        const pingUrl = options.downloader.m3u8Path.replace(/start=\d+/ig, `start=${startTime}`)
+                        const pingUrl = downloader.m3u8Path.replace(/start=\d+/ig, `start=${startTime}`)
                         chunkGroup = {
                             actions: [{
                                 actionName: 'ping',
@@ -131,17 +129,13 @@ export default class Parser {
                         counter = 0;
                     }
                 }
-                options.downloader.chunks = newChunkList;
+                downloader.chunks = newChunkList;
             } else {
                 // 刷新 Token
-                const token = options.downloader.m3u8Path.match(/ht2_nicolive=(.+?)&/)[1];
-                Parser.updateToken(token, options);
+                const token = downloader.m3u8Path.match(/ht2_nicolive=(.+?)&/)[1];
+                Parser.updateToken(token, downloader);
             }
         }
-        return {
-            key,
-            iv,
-            prefix: prefix,
-        }
+        return {}
     }
 }
