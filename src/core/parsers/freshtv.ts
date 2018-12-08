@@ -1,4 +1,5 @@
 import { ParserOptions, ParserResult } from "./types";
+import CommonUtils from '../../utils/common';
 
 const cryptojs = require('crypto-js');
 export default class Parser {
@@ -31,7 +32,10 @@ export default class Parser {
             result.push(i.toString(16).length === 1 ? ('0' + i.toString(16)) : i.toString(16));
         }
 
-        downloader.saveEncryptionKey(downloader.m3u8.key, result.join(''));
+        downloader.saveEncryptionKey(
+            CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, downloader.m3u8.key), 
+            result.join('')
+        );
 
         return {};
     }

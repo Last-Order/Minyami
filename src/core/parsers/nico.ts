@@ -92,7 +92,7 @@ export default class Parser {
                 } else {
                     offset = downloader.m3u8.chunks[0].url.match(/(\d{3})\.ts/)[1];
                 }
-                const suffix = downloader.m3u8.chunks[0].url.match(/ts(.+)/)[1];
+                const suffix = downloader.m3u8.chunks[0].url.match(/\.ts(.+)/)[1];
                 const newChunkList = [];
                 let counter: number = 0;
                 let chunkGroup: ChunkGroup = {

@@ -1,5 +1,5 @@
 import Downloader, { DownloaderConfig, Chunk } from "./downloader";
-import M3U8 from "./m3u8";
+import M3U8, { M3U8Chunk } from "./m3u8";
 import Logger from '../utils/log';
 import { mergeToMKV, mergeToTS, download, decrypt } from "../utils/media";
 import { sleep } from "../utils/system";
@@ -79,74 +79,32 @@ export default class LiveDownloader extends Downloader {
 
         if (this.m3u8.isEncrypted) {
             this.isEncrypted = true;
-            const key = this.m3u8.getKey();
-            const iv = this.m3u8.getIV();
+            const key = this.m3u8.key;
             if (key.startsWith('abematv-license')) {
                 this.Log.info('Site comfirmed: AbemaTV');
                 const parser = await import('./parsers/abema');
-                const parseResult = parser.default.parse({
-                    key,
-                    iv,
-                    options: {
-                        key: this.key
-                    }
+                parser.default.parse({
+                    downloader: this
                 });
-                [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
             } else if (key.startsWith('abemafresh')) {
                 this.Log.info('Site comfirmed: FreshTV.');
                 const parser = await import('./parsers/freshtv');
-                const parseResult = parser.default.parse({
-                    key,
-                    iv
+                parser.default.parse({
+                    downloader: this
                 });
-                [this.key, this.iv, this.prefix] = [parseResult.key, parseResult.iv, parseResult.prefix];
-                this.Log.info(`Key: ${this.key}; IV: ${this.iv}.`);
+                this.Log.info(`Key: ${this.m3u8.key}; IV: ${this.m3u8.iv}.`);
             } else {
                 this.Log.error('Unknown site.')
             }
         } else {
             this.isEncrypted = false;
             // Not encrypted
-            if (this.m3u8Path.includes('freshlive')) {
-                // FreshTV
-                this.Log.info('Site comfirmed: FreshTV.');
-                const parser = await import('./parsers/freshtv');
-                this.prefix = parser.default.prefix;
-            } else if (this.m3u8Path.includes('openrec')) {
-                // Openrec
-                this.Log.info('Site comfirmed: OPENREC.');
-                const parser = await import('./parsers/openrec');
-                const parseResult = parser.default.parse({
-                    options: {
-                        m3u8Url: this.m3u8Path
-                    }
-                });
-                this.prefix = parseResult.prefix;
-            } else if (this.m3u8Path.includes('showroom')) {
-                // SHOWROOM
-                this.Log.info('Site comfirmed: SHOWROOM.');
-                const parser = await import('./parsers/showroom');
-                const parseResult = parser.default.parse({
-                    options: {
-                        m3u8Url: this.m3u8Path
-                    }
-                });
-                this.prefix = parseResult.prefix;
-            } else if (this.m3u8Path.includes('dmc.nico')) {
-                // NicoNico
-                this.Log.info('Site comfirmed: NicoNico.');
-                const parser = await import('./parsers/nico');
-                const parseResult = parser.default.parse({
-                    options: {
-                        m3u8Url: this.m3u8Path
-                    }
-                });
-                this.prefix = parseResult.prefix;
-            } else {
-                await this.clean();
-                this.Log.error('Unsupported site.')
-            }
+            this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
+            const parser = await import('./parsers/common');
+            await parser.default.parse({
+                downloader: this
+            });
         }
         await this.cycling();
     }
@@ -161,7 +119,7 @@ export default class LiveDownloader extends Downloader {
                 // 到达直播末尾
                 this.isEnd = true;
             }
-            const currentPlaylistChunks = [];
+            const currentPlaylistChunks: M3U8Chunk[] = [];
             this.m3u8.chunks.forEach(chunk => {
                 // 去重
                 if (!this.finishedList.includes(chunk.url)) {
@@ -171,15 +129,18 @@ export default class LiveDownloader extends Downloader {
             })
             const currentUndownloadedChunks = currentPlaylistChunks.map(chunk => {
                 // TODO: Hot fix of Abema Live 
-                if (chunk.includes('linear-abematv')) {
-                    if (chunk.includes('tsad')) {
+                if (chunk.url.includes('linear-abematv')) {
+                    if (chunk.url.includes('tsad')) {
                         return undefined;
                     }
                 }
                 return {
-                    url: this.prefix + chunk,
-                    filename: chunk.match(/\/*([^\/]+?\.ts)/)[1],
-                    isEncrypted: this.m3u8.isEncrypted
+                    filename: chunk.url.match(/\/*([^\/]+?\.ts)/)[1],
+                    isEncrypted: this.m3u8.isEncrypted,
+                    key: chunk.key,
+                    iv: chunk.iv,
+                    sequenceId: chunk.sequenceId,
+                    url: chunk.url
                 } as Chunk;
             });
             // 加入待完成的任务列表
@@ -200,33 +161,6 @@ export default class LiveDownloader extends Downloader {
             }
             await sleep(Math.min(5000, this.m3u8.getChunkLength() * 1000));
         }
-    }
-
-    /**
-     * 处理块下载任务
-     * @override
-     * @param task 块下载任务
-     */
-    handleTask(task: Chunk) {
-        return new Promise(async (resolve, reject) => {
-            this.verbose && this.Log.debug(`Downloading ${task.filename}`);
-            try {
-                await download(
-                    task.url,
-                    path.resolve(this.tempPath, `./${task.filename}`),
-                    this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
-                );
-                this.verbose && this.Log.debug(`Downloading ${task.filename} succeed.`);
-                if (task.isEncrypted) {
-                    await decrypt(path.resolve(this.tempPath, `./${task.filename}`), path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', this.key, this.iv);
-                    this.verbose && this.Log.debug(`Decrypting ${task.filename} succeed`);
-                }
-                resolve();
-            } catch (e) {
-                this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
-                reject(e);
-            }
-        });
     }
 
     checkQueue() {
@@ -250,7 +184,8 @@ export default class LiveDownloader extends Downloader {
                     }x)`, infoObj);
                 this.checkQueue();
             }).catch(e => {
-                this.Log.info(JSON.stringify(task) + " " + JSON.stringify(this.m3u8));
+                this.Log.warning(`Processing ${task.filename} failed.`);
+                this.verbose && this.Log.debug(JSON.stringify(e));
                 this.runningThreads--;
                 this.chunks.push(task);
                 this.checkQueue();
