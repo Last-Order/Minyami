@@ -358,7 +358,8 @@ class ArchiveDownloader extends Downloader {
                 }
                 this.Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
-            }).catch(e => {
+            }).catch(async e => {
+                await this.clean();
                 this.Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });
         }

@@ -1,6 +1,7 @@
 import { ParserOptions, ParserResult } from "./types";
 import { isChunkGroup, ChunkGroup } from "../downloader";
-import * as Websocket from 'ws';
+const ReconnectingWebSocket = require('reconnecting-websocket');
+const WebSocket = require('ws');
 
 export default class Parser {
     static updateToken(token: string, downloader: ParserOptions["downloader"]) {
@@ -39,42 +40,49 @@ export default class Parser {
             downloader.Log.info(`Enhanced mode for Nico-TS enabled`);
             const liveId = downloader.key.match(/(.+?)_/)[1];
             let socketUrl;
+            let listened = false;
             if (liveId.startsWith('lv')) {
                 socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
             } else {
                 // Channel Live
                 socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
             }
-            const socket = new Websocket(socketUrl);
-            socket.on('message', (message: string) => {
-                const parsedMessage = JSON.parse(message);
-                // Send heartbeat packet to keep alive
-                if (parsedMessage.type === 'ping') {
-                    socket.send(JSON.stringify({
-                        type: 'pong',
-                        body: {}
-                    }));
-                }
-                // Update stream token
-                if (parsedMessage.type === 'watch') {
-                    if (parsedMessage.body.command === 'currentstream') {
-                        let token;
-                        if (liveId.startsWith('lv')) {
-                            token = parsedMessage.body.currentStream.mediaServerAuth.value;
-                        } else {
-                            // Channel Live
-                            token = parsedMessage.body.currentStream.uri.match(/ht2_nicolive=(.+)/)[1];
-                        }
-                        downloader.verbose && downloader.Log.info(`Update token: ${token}`);
-                        Parser.updateToken(token, downloader);
+            const socket = new ReconnectingWebSocket(socketUrl, [], {
+                WebSocket: WebSocket
+            });
+            if (listened === false) {
+                socket.addEventListener('message', (message: any) => {
+                    listened = true;
+                    const parsedMessage = JSON.parse(message.data);
+                    // Send heartbeat packet to keep alive
+                    if (parsedMessage.type === 'ping') {
+                        socket.send(JSON.stringify({
+                            type: 'pong',
+                            body: {}
+                        }));
                     }
-                }
-            });
-            socket.on('open', () => {
-                setInterval(() => {
-                    socket.send(JSON.stringify({ "type": "watch", "body": { "command": "getpermit", "requirement": { "broadcastId": liveId.replace('lv', ''), "route": "", "stream": { "protocol": "hls", "requireNewStream": true, "priorStreamQuality": "super_high", "isLowLatency": true }, "room": { "isCommentable": true, "protocol": "webSocket" } } } }))
-                }, 50000 / downloader.threads);
-            });
+                    // Update stream token
+                    if (parsedMessage.type === 'watch') {
+                        if (parsedMessage.body.command === 'currentstream') {
+                            let token;
+                            if (liveId.startsWith('lv')) {
+                                token = parsedMessage.body.currentStream.mediaServerAuth.value;
+                            } else {
+                                // Channel Live
+                                token = parsedMessage.body.currentStream.uri.match(/ht2_nicolive=(.+)/)[1];
+                            }
+                            downloader.verbose && downloader.Log.info(`Update token: ${token}`);
+                            Parser.updateToken(token, downloader);
+                        }
+                    }
+                });
+                socket.addEventListener('open', () => {
+                    setInterval(() => {
+                        socket.send(JSON.stringify({ "type": "watch", "body": { "command": "getpermit", "requirement": { "broadcastId": liveId.replace('lv', ''), "route": "", "stream": { "protocol": "hls", "requireNewStream": true, "priorStreamQuality": "super_high", "isLowLatency": true }, "room": { "isCommentable": true, "protocol": "webSocket" } } } }))
+                    }, 50000 / downloader.threads);
+                });
+            }
+            
         }
         const prefix = downloader.m3u8.m3u8Url.match(/^(.+\/)/)[1];
         const leftPad = (str: string) => {

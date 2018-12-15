@@ -126,7 +126,8 @@ export default class LiveDownloader extends Downloader {
                     this.finishedList.push(chunk.url);
                     currentPlaylistChunks.push(chunk);
                 }
-            })
+            });
+            this.verbose && this.Log.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
             const currentUndownloadedChunks = currentPlaylistChunks.map(chunk => {
                 // TODO: Hot fix of Abema Live 
                 if (chunk.url.includes('linear-abematv')) {
@@ -159,6 +160,7 @@ export default class LiveDownloader extends Downloader {
                 this.isStarted = true;
                 this.checkQueue();
             }
+            this.verbose && this.Log.debug(`Cool down... Wait for next check`);
             await sleep(Math.min(5000, this.m3u8.getChunkLength() * 1000));
         }
     }
@@ -187,7 +189,7 @@ export default class LiveDownloader extends Downloader {
                 this.Log.warning(`Processing ${task.filename} failed.`);
                 this.verbose && this.Log.debug(JSON.stringify(e));
                 this.runningThreads--;
-                this.chunks.push(task);
+                this.chunks.unshift(task); // 对直播流来说 早速重试比较好
                 this.checkQueue();
             });
             this.checkQueue();

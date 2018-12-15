@@ -41,13 +41,17 @@ export default class M3U8 {
             if (line.startsWith('#')) {
                 // it is a m3u8 property
                 if (line.startsWith('#EXT-X-KEY')) {
-                    if (inHeaderPart) {
-                        this.isEncrypted = true;
-                        this.key = line.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
-                        this.iv = line.match(/IV=0x(.+)/) && line.match(/IV=0x(.+)/)[1];
+                    if (line.startsWith('#EXT-X-KEY:METHOD=NONE')) {
+                        // No Encryption
                     } else {
-                        key = line.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
-                        iv = line.match(/IV=0x(.+)/) && line.match(/IV=0x(.+)/)[1];
+                        if (inHeaderPart) {
+                            this.isEncrypted = true;
+                            this.key = line.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
+                            this.iv = line.match(/IV=0x(.+)/) && line.match(/IV=0x(.+)/)[1];
+                        } else {
+                            key = line.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
+                            iv = line.match(/IV=0x(.+)/) && line.match(/IV=0x(.+)/)[1];
+                        }
                     }
                 }
                 if (line.startsWith('#EXT-X-MEDIA-SEQUENCE')) {

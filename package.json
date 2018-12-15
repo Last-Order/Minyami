@@ -1,6 +1,6 @@
 {
   "name": "minyami",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -16,6 +16,7 @@
     "chalk": "^2.4.1",
     "crypto-js": "^3.1.9-1",
     "erii": "^1.2.6",
+    "reconnecting-websocket": "^4.1.10",
     "socks-proxy-agent": "^4.0.1",
     "ws": "^6.1.2"
   },
