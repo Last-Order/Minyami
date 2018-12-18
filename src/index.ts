@@ -132,8 +132,13 @@ Erii.addOption({
         validate: (path: string, logger) => {
             if (!path.endsWith('.mkv') && !path.endsWith('.ts')) {
                 logger('Output filename must ends with .mkv or .ts.');
+                return false;
             }
-            return !(!path.endsWith('.mkv') && !path.endsWith('.ts'));
+            if (path.match(/[\/\*\\\:|\?<>]/)) {
+                logger('Filename should\'t contain \\, /, :, |, <, >.');
+                return false;
+            }
+            return true;
         }
     },
 });

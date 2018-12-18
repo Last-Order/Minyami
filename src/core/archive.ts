@@ -2,7 +2,7 @@ import Logger from '../utils/log';
 import { mergeToMKV, mergeToTS } from '../utils/media';
 import { deleteDirectory } from '../utils/system';
 import M3U8 from './m3u8';
-import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk, ChunkGroup } from './downloader';
+import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk } from './downloader';
 import * as fs from 'fs';
 import { saveTask, deleteTask, getTask } from '../utils/task';
 import { timeStringToSeconds } from '../utils/time';
@@ -17,7 +17,9 @@ class ArchiveDownloader extends Downloader {
     chunks: ChunkItem[] = [];
     allChunks: ChunkItem[] = [];
     pickedChunks: ChunkItem[] = [];
-    finishedFilenames: { [index: string]: any } = {};
+    // 使用 Object 的原因是使用数组，检索需要遍历数组 1/2 * n^2 次 
+    // 当有数千块的时候有那么一点点不可接受
+    finishedFilenames: { [index: string]: any } = {}; 
     outputFileList: string[];
 
     totalChunksCount: number;

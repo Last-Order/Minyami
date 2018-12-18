@@ -106,7 +106,7 @@ class Downloader {
         }
 
         if (output) {
-            this.outputPath = output;
+            this.outputPath = output.replace(/[\/\*\\\:|\?<>]/ig, "");
         }
 
         if (key) {
