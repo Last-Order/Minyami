@@ -1,6 +1,8 @@
 # README
 [![Build Status](https://travis-ci.org/Last-Order/Minyami.svg?branch=master)](https://travis-ci.org/Last-Order/Minyami)
 
+[中文说明](readme.zh-cn.md)
+
 ## Dependencies
 
 * openssl
