@@ -89,6 +89,13 @@ class ArchiveDownloader extends Downloader {
                     downloader: this
                 });
                 this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
+            } else if (this.m3u8Path.includes('dmm.com')) {
+                this.Log.info('Site comfirmed: DMM.');
+                const parser = await import('./parsers/dmm');
+                parser.default.parse({
+                    downloader: this
+                });
+                this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.sequenceId}.`);
             } else if (this.m3u8Path.includes('bchvod')) {
                 this.Log.info('Site comfirmed: B-ch.');
                 const parser = await import('./parsers/bch');
