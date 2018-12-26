@@ -19,7 +19,7 @@ class ArchiveDownloader extends Downloader {
     pickedChunks: ChunkItem[] = [];
     // 使用 Object 的原因是使用数组，检索需要遍历数组 1/2 * n^2 次 
     // 当有数千块的时候有那么一点点不可接受
-    finishedFilenames: { [index: string]: any } = {}; 
+    finishedFilenames: { [index: string]: any } = {};
     outputFileList: string[];
 
     totalChunksCount: number;
@@ -38,7 +38,7 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, nomux, retries, proxy, slice, format }: ArchiveDownloaderConfig = {
+    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, retries, proxy, slice, format }: ArchiveDownloaderConfig = {
         threads: 5
     }) {
         super(log, m3u8Path, {
@@ -46,7 +46,6 @@ class ArchiveDownloader extends Downloader {
             output,
             key,
             verbose,
-            nomux,
             retries,
             proxy,
             format
@@ -59,7 +58,7 @@ class ArchiveDownloader extends Downloader {
 
     pauseLoop() {
         this.globalPause = true;
-    } 
+    }
 
     resumeLoop() {
         this.globalPause = false;
@@ -73,8 +72,6 @@ class ArchiveDownloader extends Downloader {
         if (this.m3u8.isEncrypted) {
             // Encrypted
             const key = this.m3u8.getKey();
-            const iv = this.m3u8.getIV();
-
             if (key.startsWith('abemafresh')) {
                 this.Log.info('Site comfirmed: FreshTV.');
                 const parser = await import('./parsers/freshtv');
@@ -96,18 +93,6 @@ class ArchiveDownloader extends Downloader {
                     downloader: this
                 });
                 this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.sequenceId}.`);
-            } else if (this.m3u8Path.includes('bchvod')) {
-                this.Log.info('Site comfirmed: B-ch.');
-                const parser = await import('./parsers/bch');
-                try {
-                    await parser.default.parse({
-                        downloader: this
-                    });
-                    this.Log.info(`Key: ${this.m3u8.key}; IV: ${this.m3u8.sequenceId}.`);
-                } catch (e) {
-                    await this.clean();
-                    this.Log.error('Fail to retrieve the key from server.');
-                }
             } else {
                 this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import('./parsers/common');

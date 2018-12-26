@@ -154,15 +154,19 @@ Erii.addOption({
 });
 
 Erii.addOption({
+    name: ['cookies'],
+    command: 'download',
+    description: 'Cookies to download',
+    argument: {
+        name: 'cookie',
+        description: ''
+    }
+})
+
+Erii.addOption({
     name: ['live'],
     command: 'download',
     description: 'Download live'
-});
-
-Erii.addOption({
-    name: ['nomux'],
-    command: 'download',
-    description: 'Merge chunks without remuxing',
 });
 
 Erii.addOption({

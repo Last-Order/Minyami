@@ -33,7 +33,7 @@ export default class LiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, nomux, retries, proxy }: DownloaderConfig = {
+    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy }: DownloaderConfig = {
         threads: 5
     }) {
         super(log, m3u8Path, {
@@ -41,7 +41,6 @@ export default class LiveDownloader extends Downloader {
             output,
             key,
             verbose,
-            nomux,
             retries,
             proxy
         });

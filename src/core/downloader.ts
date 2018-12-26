@@ -92,17 +92,13 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log:Logger, m3u8Path: string, { threads, output, key, verbose, nomux, retries, proxy, format }: DownloaderConfig = {
+    constructor(log:Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, format }: DownloaderConfig = {
         threads: 5
     }) {
         this.Log = log;
 
         if (threads) {
             this.threads = threads;
-        }
-
-        if (nomux) {
-            this.Log.warning(`--nomux is now deprecated, please use --format instead.`);
         }
 
         if (output) {
