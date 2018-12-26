@@ -14,13 +14,9 @@ Make sure you had put these binary files into your system `PATH`.
 
 `npm install minyami -g`
 
-There are 2 ways to detect streams on supported sites:
+Please also install the following extension to work with Minyami
 
 1. Install Chrome extension (recommended): https://chrome.google.com/webstore/detail/minyami/cgejkofhdaffiifhcohjdbbheldkiaed (which is also open-sourced [here](https://github.com/Last-Order/Minyami-chrome-extension))
-
-2. There's also a UserScript in the root directory of this project called `Minyami Extractor` which can help you to extract m3u8 file urls from web pages. Please install it via a browser UserScript management extension such as VioletMonkey. Press `Enter` twice to show `Minyami Extractor` on supported websites. (not recommended, will stop maintenance later). 
-
-
 
 ## Usage
 
@@ -39,7 +35,7 @@ Help:
              <limit>               (Optional) Limit of retry times
          --output, o <path>        Output path
              <path>                (Optional) Output file path, defaults to ./output.mkv
-         --key <key>               Set key manually
+         --key <key>               Set key manually (Internal use)
              <key>                 (Optional) Key for decrypt video.
          --live                    Download live
          --nomux                   Merge chunks without remuxing

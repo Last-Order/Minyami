@@ -12,13 +12,10 @@
 npm install minyami -g
 ```
 
-此外，你还有两种方法来探测网页上支持下载的视频流。
+此外，请安装插件配合 Minyami 使用。
 
 1. 安装 Chrome 插件（推荐）：https://chrome.google.com/webstore/detail/minyami/cgejkofhdaffiifhcohjdbbheldkiaed （同样[开源](https://github.com/Last-Order/Minyami-chrome-extension)）。
 
-2. 安装用户脚本（不推荐，将停止维护）：
-
-项目根目录有一个`minyami.user.js`，使用 VioletMonkey 之类的脚本管理器安装。在网页中使用两次回车来调出。
 
 ## 用法
 ```

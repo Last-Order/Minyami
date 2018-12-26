@@ -146,7 +146,7 @@ Erii.addOption({
 Erii.addOption({
     name: ['key'],
     command: 'download',
-    description: 'Set key manually',
+    description: 'Set key manually (Internal use)',
     argument: {
         name: 'key',
         description: '(Optional) Key for decrypt video.'
