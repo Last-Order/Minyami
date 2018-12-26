@@ -2,6 +2,7 @@ import { exec } from './system';
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { AxiosProxyConfig } from 'axios';
 import * as fs from 'fs';
+import UA from './ua';
 const SocksProxyAgent = require('socks-proxy-agent');
 
 /**
@@ -58,7 +59,7 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
  * @param url 
  * @param path 
  */
-export function download(url: string, path: string, proxy: AxiosProxyConfig = undefined) {
+export function download(url: string, path: string, proxy: AxiosProxyConfig = undefined, options: AxiosRequestConfig = {}) {
     return new Promise(async (resolve, reject) => {
         try {
             const response = await axios({
@@ -68,8 +69,9 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
                 timeout: 60000,
                 httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
                 headers:{
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36'
-                }
+                    'User-Agent': UA.CHROME_DEFAULT_UA,
+                },
+                ...options
             });
             fs.writeFileSync(path, response.data);
             resolve();
@@ -92,7 +94,7 @@ export async function requestRaw(url: string, proxy: AxiosProxyConfig = undefine
         timeout: 60000,
         httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
         headers:{
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36'
+            'User-Agent': UA.CHROME_DEFAULT_UA,
         },
         ...options
     });

@@ -7,13 +7,14 @@ import CommonUtils from '../utils/common';
 import { download, decrypt } from '../utils/media';
 import { ActionType } from './action';
 import * as actions from './action';
+import { AxiosRequestConfig } from 'axios';
 
 export interface DownloaderConfig {
     threads?: number;
     output?: string;
     key?: string;
     verbose?: boolean;
-    nomux?: boolean;
+    cookies?: string;
     retries?: number;
     proxy?: string;
     format?: string;
@@ -65,11 +66,11 @@ class Downloader {
     chunks: ChunkItem[];
     pickedChunks: ChunkItem[];
 
+    cookies: string; // Cookie
     key: string; // Key
     iv: string; // IV
 
     verbose: boolean = false; // 调试输出
-    nomux: boolean = false; // 仅合并分段不remux
     format: string = 'ts'; // 输出格式
 
     startedAt: number; // 开始下载时间
@@ -92,7 +93,7 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log:Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, format }: DownloaderConfig = {
+    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, format, cookies }: DownloaderConfig = {
         threads: 5
     }) {
         this.Log = log;
@@ -111,7 +112,7 @@ class Downloader {
 
         if (verbose) {
             this.verbose = verbose;
-        }        
+        }
 
         if (retries) {
             this.retries = retries;
@@ -119,6 +120,10 @@ class Downloader {
 
         if (format) {
             this.format = format;
+        }
+
+        if (cookies) {
+            this.cookies = cookies;
         }
 
         if (proxy) {
@@ -156,12 +161,19 @@ class Downloader {
 
     async loadM3U8() {
         try {
+            const options: AxiosRequestConfig = {};
+            if (this.cookies) {
+                options.headers = {
+                    'Cookie': this.cookies
+                }
+            }
             this.m3u8 = await loadM3U8(
                 this.Log,
-                this.m3u8Path, 
-                this.retries, 
-                this.timeout, 
-                this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
+                this.m3u8Path,
+                this.retries,
+                this.timeout,
+                this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined,
+                options
             );
         } catch (e) {
             await this.clean();
@@ -187,53 +199,60 @@ class Downloader {
      */
     handleTask(task: Chunk) {
         this.verbose && this.Log.debug(`Downloading ${task.url}`);
+        const options: AxiosRequestConfig = {};
+        if (this.cookies) {
+            options.headers = {
+                'Cookie': this.cookies
+            }
+        }
         return new Promise(async (resolve, reject) => {
             this.verbose && this.Log.debug(`Downloading ${task.filename}`);
             try {
                 await download(
-                    task.url, 
+                    task.url,
                     path.resolve(this.tempPath, `./${task.filename}`),
-                    this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined
+                    this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined,
+                    options
                 );
                 this.verbose && this.Log.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     if (task.key) {
                         if (task.iv) {
                             await decrypt(
-                                path.resolve(this.tempPath, `./${task.filename}`), 
-                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', 
+                                path.resolve(this.tempPath, `./${task.filename}`),
+                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt',
                                 this.getEncryptionKey(CommonUtils.buildFullUrl(
                                     this.m3u8.m3u8Url, task.key
-                                )), 
+                                )),
                                 task.iv
                             );
                         } else {
                             await decrypt(
-                                path.resolve(this.tempPath, `./${task.filename}`), 
-                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', 
+                                path.resolve(this.tempPath, `./${task.filename}`),
+                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt',
                                 this.getEncryptionKey(CommonUtils.buildFullUrl(
                                     this.m3u8.m3u8Url, task.key
-                                )), 
+                                )),
                                 task.sequenceId || this.m3u8.sequenceId
                             );
                         }
                     } else {
                         if (task.iv) {
                             await decrypt(
-                                path.resolve(this.tempPath, `./${task.filename}`), 
-                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', 
+                                path.resolve(this.tempPath, `./${task.filename}`),
+                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt',
                                 this.getEncryptionKey(CommonUtils.buildFullUrl(
                                     this.m3u8.m3u8Url, this.m3u8.key
-                                )), 
+                                )),
                                 this.m3u8.iv
                             );
                         } else {
                             await decrypt(
-                                path.resolve(this.tempPath, `./${task.filename}`), 
-                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt', 
+                                path.resolve(this.tempPath, `./${task.filename}`),
+                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt',
                                 this.getEncryptionKey(CommonUtils.buildFullUrl(
                                     this.m3u8.m3u8Url, this.m3u8.key
-                                )), 
+                                )),
                                 task.sequenceId || this.m3u8.sequenceId
                             );
                         }
@@ -245,7 +264,7 @@ class Downloader {
                 this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
                 this.verbose && this.Log.debug(e);
                 reject(e);
-            }            
+            }
         });
     }
 

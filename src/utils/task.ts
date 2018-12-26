@@ -11,11 +11,11 @@ export interface MinyamiTask {
     outputPath: string; // 输出目录
     threads: number; // 并发数量
 
+    cookies: string; // Cookie
     key: string; // Key
     iv: string; // IV
 
     verbose: boolean; // 调试输出
-    nomux: boolean; // 仅合并分段不remux
 
     startedAt: number; // 开始下载时间
     finishedChunksCount: number; // 已完成的块数量

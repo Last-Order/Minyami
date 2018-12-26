@@ -158,7 +158,7 @@ Erii.addOption({
     command: 'download',
     description: 'Cookies to download',
     argument: {
-        name: 'cookie',
+        name: 'cookies',
         description: ''
     }
 })

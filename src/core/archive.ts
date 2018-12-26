@@ -38,7 +38,7 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, retries, proxy, slice, format }: ArchiveDownloaderConfig = {
+    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, retries, proxy, slice, format, cookies }: ArchiveDownloaderConfig = {
         threads: 5
     }) {
         super(log, m3u8Path, {
@@ -48,7 +48,8 @@ class ArchiveDownloader extends Downloader {
             verbose,
             retries,
             proxy,
-            format
+            format,
+            cookies
         });
         if (slice) {
             this.sliceStart = timeStringToSeconds(slice.split('-')[0]);
@@ -376,10 +377,10 @@ class ArchiveDownloader extends Downloader {
         this.tempPath = previousTask.tempPath;
         this.outputPath = previousTask.outputPath;
         this.threads = previousTask.threads;
+        this.cookies = previousTask.cookies;
         this.key = previousTask.key;
         this.iv = previousTask.iv;
         this.verbose = previousTask.verbose;
-        this.nomux = previousTask.nomux;
         this.startedAt = new Date().valueOf();
         this.finishedChunksCount = 0;
         this.totalChunksCount = previousTask.totalChunksCount - previousTask.finishedChunksCount;
@@ -444,10 +445,10 @@ class ArchiveDownloader extends Downloader {
                 m3u8Path: this.m3u8Path,
                 outputPath: this.outputPath,
                 threads: this.threads,
+                cookies: this.cookies,
                 key: this.key,
                 iv: this.iv,
                 verbose: this.verbose,
-                nomux: this.nomux,
                 startedAt: this.startedAt,
                 finishedChunksCount: this.totalChunksCount - unfinishedChunksLength,
                 totalChunksCount: this.totalChunksCount,
