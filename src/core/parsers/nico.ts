@@ -8,24 +8,24 @@ export default class Parser {
         for (const chunk of downloader.allChunks) {
             if (isChunkGroup(chunk)) {
                 for (const c of chunk.chunks) {
-                    c.url = c.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+                    c.url = c.url.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
                 }
             } else {
-                chunk.url = chunk.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+                chunk.url = chunk.url.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
             }
         }
         for (const chunk of downloader.chunks) {
             if (isChunkGroup(chunk)) {
                 chunk.actions.forEach(action => {
                     if (action.actionName === 'ping') {
-                        action.actionParams = action.actionParams.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+                        action.actionParams = action.actionParams.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
                     }
                 })
                 for (const c of chunk.chunks) {
-                    c.url = c.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+                    c.url = c.url.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
                 }
             } else {
-                chunk.url = chunk.url.replace(/ht2_nicolive=(.+)/, `ht2_nicolive=${token}`);
+                chunk.url = chunk.url.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
             }
         }
     }
@@ -77,8 +77,9 @@ export default class Parser {
                     }
                 });
                 socket.addEventListener('open', () => {
+                    const payload = { "type": "watch", "body": { "command": "getpermit", "requirement": { "broadcastId": liveId.replace('lv', ''), "route": "", "stream": { "protocol": "hls", "requireNewStream": true, "priorStreamQuality": "super_high", "isLowLatency": true }, "room": { "isCommentable": true, "protocol": "webSocket" } } } };
                     setInterval(() => {
-                        socket.send(JSON.stringify({ "type": "watch", "body": { "command": "getpermit", "requirement": { "broadcastId": liveId.replace('lv', ''), "route": "", "stream": { "protocol": "hls", "requireNewStream": true, "priorStreamQuality": "super_high", "isLowLatency": true }, "room": { "isCommentable": true, "protocol": "webSocket" } } } }))
+                        socket.send(JSON.stringify(payload))
                     }, 50000 / downloader.threads);
                 });
             }
