@@ -342,6 +342,8 @@ class ArchiveDownloader extends Downloader {
         if (this.chunks.length === 0 && this.runningThreads === 0) {
             this.Log.info('All chunks downloaded. Start merging chunks.');
             const muxer = this.format === 'ts' ? mergeToTS : mergeToMKV;
+            // Save before merge
+            this.saveTask();
             muxer(this.outputFileList, this.outputPath).then(async () => {
                 this.Log.info('End of merging.');
                 this.Log.info('Starting cleaning temporary files.');
@@ -406,6 +408,11 @@ class ArchiveDownloader extends Downloader {
     */
     async clean() {
         this.Log.info('Saving task status.');
+        this.saveTask();
+        this.Log.info('Please wait.');
+    }
+
+    saveTask() {
         const unfinishedChunks: ChunkItem[] = [];
         this.allChunks.forEach(chunkItem => {
             if (isChunkGroup(chunkItem)) {
@@ -465,7 +472,6 @@ class ArchiveDownloader extends Downloader {
         } catch (error) {
             this.Log.error('Fail to parse previous tasks, ignored.');
         }
-        this.Log.info('Please wait.');
     }
 }
 
