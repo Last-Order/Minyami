@@ -18,7 +18,7 @@ process.on('unhandledRejection', error => {
 // Check dependencies
 exec('mkvmerge --version').then(() => {
     exec('openssl version').then(() => {
-        Erii.start();
+        Erii.okite();
     }).catch(e => {
         Log.error('Missing dependence: openssl');
     });
@@ -26,10 +26,8 @@ exec('mkvmerge --version').then(() => {
     Log.error('Missing dependence: mkvmerge');
 });
 
-
-
 Erii.setMetaInfo({
-    version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json')).toString())['version'],
+    version: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json')).toString())['version'] + '\nうめにゃん~ (虎>ω<)',
     name: 'Minyami / A lovely video downloader'
 });
 
