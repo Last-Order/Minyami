@@ -35,8 +35,9 @@ Help:
              <path>                (可选) 输出文件路径，默认为 ./output.mkv
          --key <key>               手动设置 Key
              <key>                 (可选) 视频解密 Key.
+         --cookies <cookies>       (可选) 视频下载 Cookies
+             <cookies>
          --live                    直播下载模式
-         --nomux                   （废弃）
          --format <format_name>    (可选) 输出格式，默认为 ts
              <format_name>         格式名称，ts 或 mkv
          --proxy <socks-proxy>     通过 Socks 代理下载

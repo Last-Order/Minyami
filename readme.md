@@ -37,8 +37,9 @@ Help:
              <path>                (Optional) Output file path, defaults to ./output.mkv
          --key <key>               Set key manually (Internal use)
              <key>                 (Optional) Key for decrypt video.
+         --cookies <cookies>       Cookies to download
+             <cookies>
          --live                    Download live
-         --nomux                   Merge chunks without remuxing
          --format <format_name>    (Optional) Set output format. default: ts
              <format_name>         Format name. ts or mkv.
          --proxy <socks-proxy>     Download via Socks proxy

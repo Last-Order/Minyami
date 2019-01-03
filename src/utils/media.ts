@@ -3,6 +3,7 @@ import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { AxiosProxyConfig } from 'axios';
 import * as fs from 'fs';
 import UA from './ua';
+import { sleep } from '../core/action';
 const SocksProxyAgent = require('socks-proxy-agent');
 
 /**
@@ -34,21 +35,28 @@ export function mergeToMKV(fileList = [], output = "./output.mkv") {
 }
 
 export function mergeToTS(fileList = [], output = "./output.ts") {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
         if (fileList.length === 0) {
             resolve();
         }
     
         const writeStream = fs.createWriteStream(output);
         const lastIndex = fileList.length - 1;
-        for (let i = 0; i < fileList.length; i++) {
-            if (i !== lastIndex) {
-                writeStream.write(fs.readFileSync(fileList[i]));
-            } else {
-                writeStream.write(fs.readFileSync(fileList[i]), () => {
-                    writeStream.end();
-                    resolve();
+        let i = 0;
+        let writable = true;
+        write();
+        function write() {
+            writable = true;
+            while (i < fileList.length && writable) {
+                writable = writeStream.write(fs.readFileSync(fileList[i]));
+                i++;
+            }
+            if (i < lastIndex) {
+                writeStream.once('drain', () => {
+                    write();
                 });
+            } else {
+                resolve();
             }
         }
     })
