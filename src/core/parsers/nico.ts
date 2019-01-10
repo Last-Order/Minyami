@@ -1,17 +1,26 @@
 import { ParserOptions, ParserResult } from "./types";
 import { isChunkGroup, ChunkGroup } from "../downloader";
+const SocksProxyAgent = require('socks-proxy-agent');
+import UA from "../../utils/ua";
+import Axios from "axios";
 const ReconnectingWebSocket = require('reconnecting-websocket');
 const WebSocket = require('ws');
 
 export default class Parser {
-    static updateToken(token: string, downloader: ParserOptions["downloader"]) {
+    static updateToken(token: string, downloader: ParserOptions["downloader"], host = undefined) {
         for (const chunk of downloader.allChunks) {
             if (isChunkGroup(chunk)) {
                 for (const c of chunk.chunks) {
                     c.url = c.url.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
+                    if (host) {
+                        c.url = c.url.replace(/(http(s):\/\/.+\/)(\d\/ts)/, `${host}$3`);
+                    }
                 }
             } else {
                 chunk.url = chunk.url.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
+                if (host) {
+                    chunk.url = chunk.url.replace(/(http(s):\/\/.+\/)(\d\/ts)/, `${host}$3`);
+                }
             }
         }
         for (const chunk of downloader.chunks) {
@@ -19,13 +28,22 @@ export default class Parser {
                 chunk.actions.forEach(action => {
                     if (action.actionName === 'ping') {
                         action.actionParams = action.actionParams.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
+                        if (host) {
+                            action.actionParams = action.actionParams.replace(/(http(s):\/\/.+\/)/ig, host);
+                        }
                     }
                 })
                 for (const c of chunk.chunks) {
                     c.url = c.url.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
+                    if (host) {
+                        c.url = c.url.replace(/(http(s):\/\/.+\/)(\d\/ts)/, `${host}$3`);
+                    }
                 }
             } else {
                 chunk.url = chunk.url.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
+                if (host) {
+                    chunk.url = chunk.url.replace(/(http(s):\/\/.+\/)(\d\/ts)/, `${host}$3`);
+                }
             }
         }
     }
@@ -38,52 +56,87 @@ export default class Parser {
         if (downloader.key) {
             // NICO Enhanced mode ON!
             downloader.Log.info(`Enhanced mode for Nico-TS enabled`);
-            const liveId = downloader.key.match(/(.+?)_/)[1];
-            let socketUrl;
-            let listened = false;
-            if (liveId.startsWith('lv')) {
-                socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
+            if (downloader.key.includes('CAS_MODE')) {
+                // 试验放送
+                const liveId: string = downloader.key.match(/(lv\d+)/)[1];
+                const getNewToken = async (): Promise<string | null> => {
+                    const tokenServer = `https://api.cas.nicovideo.jp/v1/services/live/programs/${liveId}/watching-archive`;
+                    try {
+                        const response = await Axios.post(tokenServer,  {
+                            "actionTrackId":"f9c2ff58de_1547108086372",
+                            "streamProtocol":"https",
+                            "streamQuality":"ultrahigh",
+                            "streamCapacity":"ultrahigh"
+                        }, {
+                            responseType: 'json',
+                            headers: {
+                                'X-Frontend-Id': '91',
+                                'X-Connection-Environment': 'ethernet',
+                                'Content-Type': 'application/json',
+                                'Cookie': downloader.cookies,
+                                'User-Agent': UA.CHROME_DEFAULT_UA
+                            },
+                            httpsAgent: downloader.proxy ? new SocksProxyAgent(`socks5://${downloader.proxyHost}:${downloader.proxyPort}`) : undefined,
+                        })
+                        const token = response.data.data.streamServer.url.match(/ht2_nicolive=(.+)/)[1];
+                        const host = response.data.data.streamServer.url.match(/(http(s):\/\/.+\/)/)[1];
+                        Parser.updateToken(token, downloader, host);
+                        return token;
+                    } catch (e) {
+                        downloader.verbose && downloader.Log.debug('Fail to get new token from cas server.');
+                        return null;
+                    }
+                }
+                setInterval(() => {
+                    getNewToken();
+                }, 80000 / downloader.threads)
             } else {
-                // Channel Live
-                socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
-            }
-            const socket = new ReconnectingWebSocket(socketUrl, [], {
-                WebSocket: WebSocket
-            });
-            if (listened === false) {
-                socket.addEventListener('message', (message: any) => {
-                    listened = true;
-                    const parsedMessage = JSON.parse(message.data);
-                    // Send heartbeat packet to keep alive
-                    if (parsedMessage.type === 'ping') {
-                        socket.send(JSON.stringify({
-                            type: 'pong',
-                            body: {}
-                        }));
-                    }
-                    // Update stream token
-                    if (parsedMessage.type === 'watch') {
-                        if (parsedMessage.body.command === 'currentstream') {
-                            let token;
-                            if (liveId.startsWith('lv')) {
-                                token = parsedMessage.body.currentStream.mediaServerAuth.value;
-                            } else {
-                                // Channel Live
-                                token = parsedMessage.body.currentStream.uri.match(/ht2_nicolive=(.+)/)[1];
-                            }
-                            downloader.verbose && downloader.Log.info(`Update token: ${token}`);
-                            Parser.updateToken(token, downloader);
+                const liveId = downloader.key.match(/(.+?)_/)[1];
+                let socketUrl;
+                let listened = false;
+                if (liveId.startsWith('lv')) {
+                    socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
+                } else {
+                    // Channel Live
+                    socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
+                }
+                const socket = new ReconnectingWebSocket(socketUrl, [], {
+                    WebSocket: WebSocket
+                });
+                if (listened === false) {
+                    socket.addEventListener('message', (message: any) => {
+                        listened = true;
+                        const parsedMessage = JSON.parse(message.data);
+                        // Send heartbeat packet to keep alive
+                        if (parsedMessage.type === 'ping') {
+                            socket.send(JSON.stringify({
+                                type: 'pong',
+                                body: {}
+                            }));
                         }
-                    }
-                });
-                socket.addEventListener('open', () => {
-                    const payload = { "type": "watch", "body": { "command": "getpermit", "requirement": { "broadcastId": liveId.replace('lv', ''), "route": "", "stream": { "protocol": "hls", "requireNewStream": true, "priorStreamQuality": "super_high", "isLowLatency": true }, "room": { "isCommentable": true, "protocol": "webSocket" } } } };
-                    setInterval(() => {
-                        socket.send(JSON.stringify(payload))
-                    }, 50000 / downloader.threads);
-                });
+                        // Update stream token
+                        if (parsedMessage.type === 'watch') {
+                            if (parsedMessage.body.command === 'currentstream') {
+                                let token;
+                                if (liveId.startsWith('lv')) {
+                                    token = parsedMessage.body.currentStream.mediaServerAuth.value;
+                                } else {
+                                    // Channel Live
+                                    token = parsedMessage.body.currentStream.uri.match(/ht2_nicolive=(.+)/)[1];
+                                }
+                                downloader.verbose && downloader.Log.info(`Update token: ${token}`);
+                                Parser.updateToken(token, downloader);
+                            }
+                        }
+                    });
+                    socket.addEventListener('open', () => {
+                        const payload = { "type": "watch", "body": { "command": "getpermit", "requirement": { "broadcastId": liveId.replace('lv', ''), "route": "", "stream": { "protocol": "hls", "requireNewStream": true, "priorStreamQuality": "super_high", "isLowLatency": true }, "room": { "isCommentable": true, "protocol": "webSocket" } } } };
+                        setInterval(() => {
+                            socket.send(JSON.stringify(payload))
+                        }, 50000 / downloader.threads);
+                    });
+                }
             }
-            
         }
         const prefix = downloader.m3u8.m3u8Url.match(/^(.+\/)/)[1];
         const leftPad = (str: string) => {

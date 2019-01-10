@@ -3,7 +3,6 @@ import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { AxiosProxyConfig } from 'axios';
 import * as fs from 'fs';
 import UA from './ua';
-import { sleep } from '../core/action';
 const SocksProxyAgent = require('socks-proxy-agent');
 
 /**
@@ -19,13 +18,13 @@ export function mergeToMKV(fileList = [], output = "./output.mkv") {
         fileList = fileList.map((file, index) => {
             return index === 0 ? file : `+${file}`;
         });
-        
+
         const parameters = fileList.concat([
             "-o",
             output,
             "-q"
         ]);
-    
+
         const tempFilename = `temp_${new Date().valueOf()}.json`;
         fs.writeFileSync(`./${tempFilename}`, JSON.stringify(parameters, null, 2));
         await exec(`mkvmerge @${tempFilename}`);
@@ -39,7 +38,7 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
         if (fileList.length === 0) {
             resolve();
         }
-    
+
         const writeStream = fs.createWriteStream(output);
         const lastIndex = fileList.length - 1;
         let i = 0;
@@ -76,7 +75,7 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
                 responseType: 'arraybuffer',
                 timeout: 60000,
                 httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
-                headers:{
+                headers: {
                     'User-Agent': UA.CHROME_DEFAULT_UA,
                 },
                 ...options
@@ -101,7 +100,7 @@ export async function requestRaw(url: string, proxy: AxiosProxyConfig = undefine
         responseType: 'stream',
         timeout: 60000,
         httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
-        headers:{
+        headers: {
             'User-Agent': UA.CHROME_DEFAULT_UA,
         },
         ...options
