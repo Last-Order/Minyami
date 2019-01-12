@@ -46,16 +46,18 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
         write();
         function write() {
             writable = true;
-            while (i < fileList.length && writable) {
-                writable = writeStream.write(fs.readFileSync(fileList[i]));
+            while (i <= lastIndex && writable) {
+                writable = writeStream.write(fs.readFileSync(fileList[i]), () => {
+                    if (i > lastIndex) {
+                        resolve();
+                    }
+                });
                 i++;
             }
-            if (i < lastIndex) {
+            if (i <= lastIndex) {
                 writeStream.once('drain', () => {
                     write();
                 });
-            } else {
-                resolve();
             }
         }
     })
