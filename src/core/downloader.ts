@@ -147,6 +147,7 @@ class Downloader {
             });
 
             rl.on("SIGINT", function () {
+                // @ts-ignore
                 process.emit("SIGINT");
             });
         }

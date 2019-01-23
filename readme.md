@@ -8,6 +8,8 @@
 * openssl
 * mkvmerge
 
+! Minyami requires Node 10.5.0+
+
 Make sure you had put these binary files into your system `PATH`.
 
 ## Installation
