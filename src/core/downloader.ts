@@ -32,6 +32,7 @@ export interface Chunk {
     key?: string;
     iv?: string;
     sequenceId?: string;
+    retryCount?: number;
 }
 
 export interface ChunkAction {
@@ -206,6 +207,7 @@ class Downloader {
                 'Cookie': this.cookies
             }
         }
+        options.timeout = Math.min(((task.retryCount || 0) + 1) * this.timeout, this.timeout * 5);
         return new Promise(async (resolve, reject) => {
             this.verbose && this.Log.debug(`Downloading ${task.filename}`);
             try {

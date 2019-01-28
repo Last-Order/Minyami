@@ -186,6 +186,12 @@ export default class LiveDownloader extends Downloader {
                     }x)`, infoObj);
                 this.checkQueue();
             }).catch(e => {
+                // 重试计数
+                if (task.retryCount) {
+                    task.retryCount++;
+                } else {
+                    task.retryCount = 1;
+                }
                 this.Log.warning(`Processing ${task.filename} failed.`);
                 this.verbose && this.Log.debug(JSON.stringify(e));
                 this.runningThreads--;

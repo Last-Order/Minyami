@@ -75,7 +75,6 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
                 url,
                 method: 'GET',
                 responseType: 'arraybuffer',
-                timeout: 60000,
                 httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
                 headers: {
                     'User-Agent': UA.CHROME_DEFAULT_UA,
@@ -91,7 +90,7 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
     const timeout = new Promise((resolve, reject) => {
         setTimeout(() => {
             reject('Timeout');
-        }, 60000);
+        }, options.timeout || 60000);
     })
     return Promise.race([
         promise,

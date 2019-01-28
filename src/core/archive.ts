@@ -320,6 +320,12 @@ class ArchiveDownloader extends Downloader {
                 this.checkQueue();
             }).catch(e => {
                 this.runningThreads--;
+                // 重试计数
+                if (chunk.retryCount) {
+                    chunk.retryCount++;
+                } else {
+                    chunk.retryCount = 1;
+                }
                 if (chunk.parentGroup) {
                     if (chunk.parentGroup.isFinished) {
                         // Add a new group to the queue.
