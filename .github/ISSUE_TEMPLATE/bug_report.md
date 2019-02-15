@@ -7,7 +7,8 @@ about: Create a report to help us improve
 **Basic Information**
 * Node.js version: 
 * Minyami version: 
-* Minyami Extractor version:
+* Minyami Extractor (Chrome Extension) version:
+* Video URL: 
 
 **Describe the bug**
 A clear and concise description of what the bug is.
