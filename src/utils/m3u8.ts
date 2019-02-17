@@ -4,6 +4,7 @@ import Logger from '../utils/log';
 import UA from './ua';
 import axios, { AxiosRequestConfig } from 'axios';
 import { AxiosProxyConfig } from 'axios';
+import { URL } from "url";
 const SocksProxyAgent = require('socks-proxy-agent');
 
 export async function loadM3U8(Log:Logger, path: string, retries: number = 1, timeout = 60000, proxy: AxiosProxyConfig = undefined, options: AxiosRequestConfig = {}) {
@@ -17,6 +18,7 @@ export async function loadM3U8(Log:Logger, path: string, retries: number = 1, ti
                     httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
                     headers:{
                         'User-Agent': UA.CHROME_DEFAULT_UA,
+                        'Host': new URL(path).host
                     },
                     ...options
                 });

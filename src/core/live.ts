@@ -216,6 +216,7 @@ export default class LiveDownloader extends Downloader {
 
         if (this.chunks.length === 0 && this.runningThreads === 0 && !this.isEnd) {
             // 空闲状态 一秒后再检查待完成任务列表
+            this.verbose && this.Log.debug('Sleep 1000ms.');
             sleep(1000).then(() => {
                 this.checkQueue();
             });

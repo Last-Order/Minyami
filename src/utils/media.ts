@@ -3,6 +3,7 @@ import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { AxiosProxyConfig } from 'axios';
 import * as fs from 'fs';
 import UA from './ua';
+import { URL } from 'url';
 const SocksProxyAgent = require('socks-proxy-agent');
 
 /**
@@ -80,9 +81,10 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
                 httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
                 headers: {
                     'User-Agent': UA.CHROME_DEFAULT_UA,
+                    'Host': new URL(url).host
                 },
                 cancelToken: source.token,
-                ...options
+                ...options,
             });
             fs.writeFileSync(path, response.data);
             resolve();
@@ -116,6 +118,7 @@ export async function requestRaw(url: string, proxy: AxiosProxyConfig = undefine
         httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
         headers: {
             'User-Agent': UA.CHROME_DEFAULT_UA,
+            'Host': new URL(url).host
         },
         ...options
     });
