@@ -95,7 +95,11 @@ export default class LiveDownloader extends Downloader {
                 });
                 this.Log.info(`Key: ${this.m3u8.key}; IV: ${this.m3u8.iv}.`);
             } else {
-                this.Log.error('Unknown site.')
+                this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
+                const parser = await import('./parsers/common');
+                await parser.default.parse({
+                    downloader: this
+                });
             }
         } else {
             this.isEncrypted = false;
