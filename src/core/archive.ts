@@ -283,6 +283,12 @@ class ArchiveDownloader extends Downloader {
                 if (task.chunks.length > 0) {
                     chunk = task.chunks.shift();
                     chunk.parentGroup = task;
+                    if (chunk.parentGroup.retryActions) {
+                        for (const action of chunk.parentGroup.actions) {
+                            await this.handleChunkGroupAction(action);
+                        }
+                        chunk.parentGroup.retryActions = false;
+                    }
                 } else {
                     // All chunks finished in group
                     this.verbose && this.Log.debug(`Skip a empty chunk group.`);
@@ -336,6 +342,7 @@ class ArchiveDownloader extends Downloader {
                             isNew: true
                         });
                     } else {
+                        chunk.parentGroup.retryActions = true;
                         chunk.parentGroup.chunks.push(chunk);
                     }
                 } else {

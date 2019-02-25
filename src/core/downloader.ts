@@ -46,6 +46,7 @@ export interface ChunkGroup {
     actions?: ChunkAction[];
     isFinished: boolean;
     isNew: boolean;
+    retryActions?: boolean;
 }
 
 export type ChunkItem = Chunk | ChunkGroup;
