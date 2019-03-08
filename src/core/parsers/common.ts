@@ -1,6 +1,7 @@
 import { ParserOptions, ParserResult } from "./types";
 import { requestRaw } from "../../utils/media";
 import CommonUtils from '../../utils/common';
+import { AxiosRequestConfig } from "axios";
 
 export default class Parser {
     static parse({
@@ -21,16 +22,28 @@ export default class Parser {
                 for (const url of Object.keys(keys)) {
                     downloader.Log.info(`Downloading decrypt keys. (${counter} / ${Object.keys(keys).length})`);
                     let response;
+                    const options: AxiosRequestConfig = {};
+                    if (downloader.cookies) {
+                        options.headers = {
+                            'Cookie': downloader.cookies
+                        };
+                    }
+                    if (Object.keys(downloader.headers).length > 0) {
+                        options.headers = downloader.headers;
+                    }
                     if (downloader.proxy) {
                         response = await requestRaw(url, {
                             host: downloader.proxyHost,
                             port: downloader.proxyPort
-                        }, {
-                                responseType: 'arraybuffer'
-                            });
+                        },  {
+                                responseType: 'arraybuffer',
+                                ...options
+                            },
+                        );
                     } else {
                         response = await requestRaw(url, null, {
-                            responseType: 'arraybuffer'
+                            responseType: 'arraybuffer',
+                            ...options
                         });
                     }
                     const hexKey =

@@ -16,14 +16,10 @@ process.on('unhandledRejection', error => {
   });
 
 // Check dependencies
-exec('mkvmerge --version').then(() => {
-    exec('openssl version').then(() => {
-        Erii.okite();
-    }).catch(e => {
-        Log.error('Missing dependence: openssl');
-    });
+exec('openssl version').then(() => {
+    Erii.okite();
 }).catch(e => {
-    Log.error('Missing dependence: mkvmerge');
+    Log.error('Missing dependence: openssl');
 });
 
 Erii.setMetaInfo({
@@ -132,6 +128,13 @@ Erii.addOption({
                 logger('Output filename must ends with .mkv or .ts.');
                 return false;
             }
+            if (path.endsWith('mkv')) {
+                exec('mkvmerge --version').then(() => {
+                    // 
+                }).catch(e => {
+                    Log.error('Missing dependence: mkvmerge');
+                });
+            }
             if (path.match(/[\/\*\\\:|\?<>]/)) {
                 logger('Filename should\'t contain \\, /, :, |, <, >.');
                 return false;
@@ -158,6 +161,16 @@ Erii.addOption({
     argument: {
         name: 'cookies',
         description: ''
+    }
+});
+
+Erii.addOption({
+    name: ['headers'],
+    command: 'download',
+    description: 'HTTP Headers used to download',
+    argument: {
+        name: 'headers',
+        description: 'Multiple headers splited with \\n. eg. --header "Cookie: a=1\\nUser-Agent: X-UA". Don\'t forget to escape. This option will override --cookies.'
     }
 })
 

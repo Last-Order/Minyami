@@ -15,6 +15,7 @@ export interface DownloaderConfig {
     key?: string;
     verbose?: boolean;
     cookies?: string;
+    headers?: string;
     retries?: number;
     proxy?: string;
     format?: string;
@@ -68,7 +69,8 @@ class Downloader {
     chunks: ChunkItem[];
     pickedChunks: ChunkItem[];
 
-    cookies: string; // Cookie
+    cookies: string; // Cookies
+    headers: object = {}; // HTTP Headers
     key: string; // Key
     iv: string; // IV
 
@@ -95,7 +97,7 @@ class Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, format, cookies }: DownloaderConfig = {
+    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, format, cookies, headers }: DownloaderConfig = {
         threads: 5
     }) {
         this.Log = log;
@@ -126,6 +128,16 @@ class Downloader {
 
         if (cookies) {
             this.cookies = cookies;
+        }
+
+        if (headers) {
+            for (const h of headers.split('\n')) {
+                const header = h.split(':');
+                if (header.length !== 2) {
+                    this.Log.error(`HTTP Headers invalid.`);
+                }
+                this.headers[header[0]] = header[1];
+            }
         }
 
         if (proxy) {
@@ -170,6 +182,12 @@ class Downloader {
                     'Cookie': this.cookies
                 }
             }
+            if (Object.keys(this.headers).length > 0) {
+                options.headers = this.headers;
+            }
+            if (this.headers) {
+                options.headers = this.headers;
+            }
             this.m3u8 = await loadM3U8(
                 this.Log,
                 this.m3u8Path,
@@ -207,6 +225,9 @@ class Downloader {
             options.headers = {
                 'Cookie': this.cookies
             }
+        }
+        if (Object.keys(this.headers).length > 0) {
+            options.headers = this.headers;
         }
         options.timeout = Math.min(((task.retryCount || 0) + 1) * this.timeout, this.timeout * 5);
         return new Promise(async (resolve, reject) => {

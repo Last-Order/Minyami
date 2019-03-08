@@ -38,7 +38,7 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, retries, proxy, slice, format, cookies }: ArchiveDownloaderConfig = {
+    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, retries, proxy, slice, format, cookies, headers }: ArchiveDownloaderConfig = {
         threads: 5
     }) {
         super(log, m3u8Path, {
@@ -49,7 +49,8 @@ class ArchiveDownloader extends Downloader {
             retries,
             proxy,
             format,
-            cookies
+            cookies,
+            headers
         });
         if (slice) {
             this.sliceStart = timeStringToSeconds(slice.split('-')[0]);
