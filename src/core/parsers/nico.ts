@@ -117,15 +117,16 @@ export default class Parser {
                         // Update stream token
                         if (parsedMessage.type === 'watch') {
                             if (parsedMessage.body.command === 'currentstream') {
-                                let token;
+                                let token: string, host: string;
                                 if (liveId.startsWith('lv')) {
                                     token = parsedMessage.body.currentStream.mediaServerAuth.value;
                                 } else {
                                     // Channel Live
                                     token = parsedMessage.body.currentStream.uri.match(/ht2_nicolive=(.+)/)[1];
                                 }
+                                host = parsedMessage.body.currentStream.uri.match(/(http(s):\/\/.+\/)/)[1];
                                 downloader.verbose && downloader.Log.info(`Update token: ${token}`);
-                                Parser.updateToken(token, downloader);
+                                Parser.updateToken(token, downloader, host);
                             }
                         }
                     });
