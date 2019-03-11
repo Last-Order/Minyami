@@ -170,7 +170,7 @@ Erii.addOption({
     description: 'HTTP Headers used to download',
     argument: {
         name: 'headers',
-        description: 'Multiple headers splited with \\n. eg. --header "Cookie: a=1\\nUser-Agent: X-UA". Don\'t forget to escape. This option will override --cookies.'
+        description: 'Multiple headers should be splited with \\n. eg. --header "Cookie: a=1\\nUser-Agent: X-UA". Don\'t forget to escape. This option will override --cookies.'
     }
 })
 

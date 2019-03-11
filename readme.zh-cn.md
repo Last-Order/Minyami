@@ -37,6 +37,8 @@ Help:
              <key>                 (可选) 视频解密 Key.
          --cookies <cookies>       (可选) 视频下载 Cookies
              <cookies>
+         --headers <headers>       手动设定 HTTP Headers
+             <headers>             多个 Header 使用 "\n" 分隔，例如："Cookie: a=1\nUser-Agent: X-UA"
          --live                    直播下载模式
          --format <format_name>    (可选) 输出格式，默认为 ts
              <format_name>         格式名称，ts 或 mkv
