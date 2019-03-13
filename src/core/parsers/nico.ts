@@ -44,6 +44,16 @@ export default class Parser {
                 if (host) {
                     chunk.url = chunk.url.replace(/(http(s):\/\/.+\/)(\d\/ts)/, `${host}$3`);
                 }
+                if (chunk.parentGroup) {
+                    chunk.parentGroup.actions.forEach(action => {
+                        if (action.actionName === 'ping') {
+                            action.actionParams = action.actionParams.replace(/ht2_nicolive=([^\&]+)/, `ht2_nicolive=${token}`);
+                            if (host) {
+                                action.actionParams = action.actionParams.replace(/(http(s):\/\/.+\/)/ig, host);
+                            }
+                        }
+                    })
+                }
             }
         }
     }

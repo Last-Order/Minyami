@@ -2,7 +2,7 @@ import Logger from '../utils/log';
 import { mergeToMKV, mergeToTS } from '../utils/media';
 import { deleteDirectory } from '../utils/system';
 import M3U8 from './m3u8';
-import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk } from './downloader';
+import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk, ChunkGroup } from './downloader';
 import * as fs from 'fs';
 import { saveTask, deleteTask, getTask } from '../utils/task';
 import { timeStringToSeconds } from '../utils/time';
@@ -30,7 +30,7 @@ class ArchiveDownloader extends Downloader {
 
     prefix: string;
 
-    globalPause: boolean = false;
+    isResumed: boolean = false; // 是否为恢复模式
 
     /**
      * 
@@ -56,14 +56,6 @@ class ArchiveDownloader extends Downloader {
             this.sliceStart = timeStringToSeconds(slice.split('-')[0]);
             this.sliceEnd = timeStringToSeconds(slice.split('-')[1]);
         }
-    }
-
-    pauseLoop() {
-        this.globalPause = true;
-    }
-
-    resumeLoop() {
-        this.globalPause = false;
     }
 
     /**
@@ -263,11 +255,6 @@ class ArchiveDownloader extends Downloader {
      * Check task queue
      */
     async checkQueue() {
-        if (this.globalPause) {
-            await sleep(1);
-            this.checkQueue();
-            return;
-        }
         if (this.chunks.length > 0 && this.runningThreads < this.threads) {
             const task = this.chunks[0];
             let chunk: Chunk;
@@ -341,7 +328,7 @@ class ArchiveDownloader extends Downloader {
                             actions: chunk.parentGroup.actions,
                             isFinished: false,
                             isNew: true
-                        });
+                        } as ChunkGroup);
                     } else {
                         chunk.parentGroup.retryActions = true;
                         chunk.parentGroup.chunks.push(chunk);
@@ -412,6 +399,8 @@ class ArchiveDownloader extends Downloader {
         // Load M3U8
         await this.loadM3U8();
         await this.parse();
+
+        this.isResumed = true;
 
         this.Log.info(`Start downloading with ${this.threads} thread(s).`);
         this.checkQueue();
