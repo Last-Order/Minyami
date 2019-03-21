@@ -102,7 +102,7 @@ export default class Parser {
                 }, 80000 / downloader.threads)
             } else {
                 const liveId = downloader.key.match(/(.+?)_/)[1];
-                let socketUrl;
+                let socketUrl, socket;
                 let listened = false;
                 if (liveId.startsWith('lv')) {
                     socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
@@ -110,9 +110,18 @@ export default class Parser {
                     // Channel Live
                     socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
                 }
-                const socket = new ReconnectingWebSocket(socketUrl, [], {
-                    WebSocket: WebSocket
-                });
+                if (downloader.proxy) {
+                    const agent = new SocksProxyAgent(`socks5://${downloader.proxyHost}:${downloader.proxyPort}`);
+                    socket = new ReconnectingWebSocket(socketUrl, {
+                        agent
+                    }, {
+                        WebSocket: WebSocket
+                    })
+                } else {
+                    socket = new ReconnectingWebSocket(socketUrl, [], {
+                        WebSocket: WebSocket
+                    });
+                }
                 if (listened === false) {
                     socket.addEventListener('message', (message: any) => {
                         listened = true;
