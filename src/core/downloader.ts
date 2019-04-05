@@ -185,9 +185,6 @@ class Downloader {
             if (Object.keys(this.headers).length > 0) {
                 options.headers = this.headers;
             }
-            if (this.headers) {
-                options.headers = this.headers;
-            }
             this.m3u8 = await loadM3U8(
                 this.Log,
                 this.m3u8Path,
