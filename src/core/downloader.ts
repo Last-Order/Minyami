@@ -283,7 +283,9 @@ class Downloader {
                 }
                 resolve();
             } catch (e) {
-                this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later.`);
+                this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later. [${e.code || 
+                    (e.response ? `${e.response.status} ${e.response.statusText}` : undefined)
+                || 'UNKNOWN'}]`);
                 this.verbose && this.Log.debug(e);
                 reject(e);
             }

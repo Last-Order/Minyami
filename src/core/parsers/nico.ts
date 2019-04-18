@@ -8,6 +8,7 @@ const WebSocket = require('ws');
 
 export default class Parser {
     static updateToken(token: string, downloader: ParserOptions["downloader"], host = undefined) {
+        downloader.Log.info(`Update Token: ${token}`);
         for (const chunk of downloader.allChunks) {
             if (isChunkGroup(chunk)) {
                 for (const c of chunk.chunks) {

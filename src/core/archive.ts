@@ -87,6 +87,13 @@ class ArchiveDownloader extends Downloader {
                     downloader: this
                 });
                 this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.sequenceId}.`);
+            } else if (this.m3u8Path.includes('d22puzix29w08m')) {
+                this.Log.info('Site comfirmed: Hibiki-Radio.');
+                const parser = await import('./parsers/hibiki');
+                parser.default.parse({
+                    downloader: this
+                });
+                this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
             } else {
                 this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import('./parsers/common');
