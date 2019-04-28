@@ -76,7 +76,7 @@ export default class LiveDownloader extends Downloader {
         await this.loadM3U8();
 
         this.playlists.push(this.m3u8);
-        this.timeout = this.m3u8.getChunkLength() * this.m3u8.chunks.length * 1000;
+        this.timeout = Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000);
 
         if (this.m3u8.isEncrypted) {
             this.isEncrypted = true;
@@ -105,11 +105,22 @@ export default class LiveDownloader extends Downloader {
         } else {
             this.isEncrypted = false;
             // Not encrypted
-            this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
-            const parser = await import('./parsers/common');
-            await parser.default.parse({
-                downloader: this
-            });
+            if (this.m3u8Path.includes('dmc.nico')) {
+                this.Log.info('Site comfirmed: Niconico.');
+                const parser = await import('./parsers/nicolive');
+                parser.default.parse({
+                    downloader: this
+                });
+            } else {
+                this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
+                const parser = await import('./parsers/common');
+                await parser.default.parse({
+                    downloader: this
+                });
+            }
+        }
+        if (this.afterFirstParse) {
+            this.afterFirstParse(this);
         }
         await this.cycling();
     }

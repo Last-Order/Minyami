@@ -91,6 +91,13 @@ class Downloader {
 
     encryptionKeys = {};
 
+    // Hooks
+    afterFirstParse: (downloader: Downloader) => void;
+    afterParse: (downloader: Downloader) => void;
+    beforeDownload: (downloader: Downloader) => void;
+    beforeMerge: (downloader: Downloader) => void;
+    onDownloadError: (error: Error, downloader: Downloader) => void;
+
     /**
      * 
      * @param m3u8Path 

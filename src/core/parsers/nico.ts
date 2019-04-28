@@ -160,9 +160,6 @@ export default class Parser {
             }
         }
         const prefix = downloader.m3u8.m3u8Url.match(/^(.+\/)/)[1];
-        const leftPad = (str: string) => {
-            return str;
-        }
         if (downloader) {
             if (downloader.chunks.length === 0) {
                 // 生成 Fake M3U8
@@ -202,9 +199,9 @@ export default class Parser {
                         url: prefix + (
                             time.toString() === '0' ?
                                 `0.ts${suffix.replace(/start=.+&/ig, `start=${0}&`)}` :
-                                `${leftPad(time.toString())}${offset}.ts${suffix.replace(/start=.+&/ig, `start=${startTime}&`)}`
+                                `${time.toString()}${offset}.ts${suffix.replace(/start=.+&/ig, `start=${startTime}&`)}`
                         ),
-                        filename: `${leftPad(time.toString())}${offset}.ts`
+                        filename: `${time.toString()}${offset}.ts`
                     });
                     counter++;
                     if (counter === 4) {
