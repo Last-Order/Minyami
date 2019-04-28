@@ -2,7 +2,7 @@
 
 ## 依赖
 * openssl
-* mkvmerge
+* mkvmerge (可选，mkv 格式输出需要)
 
 请安装这两个并确保系统变量`PATH`中添加这两个所在的路径。
 

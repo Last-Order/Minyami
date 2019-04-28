@@ -6,7 +6,7 @@
 ## Dependencies
 
 * openssl
-* mkvmerge
+* mkvmerge (optional, mkv output required)
 
 ! Minyami requires Node 10.5.0+
 
