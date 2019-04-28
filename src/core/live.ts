@@ -145,8 +145,8 @@ export default class LiveDownloader extends Downloader {
             const currentPlaylistChunks: M3U8Chunk[] = [];
             this.m3u8.chunks.forEach(chunk => {
                 // 去重
-                if (!this.finishedList.includes(chunk.url)) {
-                    this.finishedList.push(chunk.url);
+                if (!this.finishedList.includes(this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url)) {
+                    this.finishedList.push(this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url);
                     currentPlaylistChunks.push(chunk);
                 }
             });
