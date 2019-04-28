@@ -119,6 +119,13 @@ class ArchiveDownloader extends Downloader {
                     downloader: this
                 });
                 this.autoGenerateChunkList = false;
+            } else if (this.m3u8Path.includes('googlevideo')) {
+                // YouTube
+                this.Log.info('Site comfirmed: YouTube.');
+                const parser = await import('./parsers/youtube');
+                parser.default.parse({
+                    downloader: this
+                });
             } else {
                 this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import('./parsers/common');
@@ -151,7 +158,7 @@ class ArchiveDownloader extends Downloader {
             this.chunks = this.m3u8.chunks.map(chunk => {
                 return {
                     url: chunk.url,
-                    filename: chunk.url.match(/\/*([^\/]+?\.ts)/)[1],
+                    filename: this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url.match(/\/*([^\/]+?\.ts)/)[1],
                     key: chunk.key,
                     iv: chunk.iv,
                     sequenceId: chunk.sequenceId

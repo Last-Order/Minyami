@@ -1,6 +1,6 @@
 const path = require('path');
 import Logger from '../utils/log';
-import M3U8 from "./m3u8";
+import M3U8, { M3U8Chunk } from "./m3u8";
 import { loadM3U8 } from '../utils/m3u8';
 import * as system from '../utils/system';
 import CommonUtils from '../utils/common';
@@ -96,6 +96,7 @@ class Downloader {
     afterParse: (downloader: Downloader) => void;
     beforeDownload: (downloader: Downloader) => void;
     beforeMerge: (downloader: Downloader) => void;
+    onChunkNaming: (chunk: M3U8Chunk) => string;
     onDownloadError: (error: Error, downloader: Downloader) => void;
 
     /**

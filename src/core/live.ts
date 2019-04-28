@@ -111,6 +111,13 @@ export default class LiveDownloader extends Downloader {
                 parser.default.parse({
                     downloader: this
                 });
+            } else if (this.m3u8Path.includes('googlevideo')) {
+                // YouTube
+                this.Log.info('Site comfirmed: YouTube.');
+                const parser = await import('./parsers/youtube');
+                parser.default.parse({
+                    downloader: this
+                });
             } else {
                 this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import('./parsers/common');
@@ -152,7 +159,7 @@ export default class LiveDownloader extends Downloader {
                     }
                 }
                 return {
-                    filename: chunk.url.match(/\/*([^\/]+?\.ts)/)[1],
+                    filename: this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url.match(/\/*([^\/]+?\.ts)/)[1],
                     isEncrypted: this.m3u8.isEncrypted,
                     key: chunk.key,
                     iv: chunk.iv,
