@@ -78,7 +78,7 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
                 url,
                 method: 'GET',
                 responseType: 'arraybuffer',
-                httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
+                httpsAgent: proxy ? new SocksProxyAgent(`socks5h://${proxy.host}:${proxy.port}`) : undefined,
                 headers: {
                     'User-Agent': UA.CHROME_DEFAULT_UA,
                     'Host': new URL(url).host
@@ -115,7 +115,7 @@ export async function requestRaw(url: string, proxy: AxiosProxyConfig = undefine
         method: 'GET',
         responseType: 'stream',
         timeout: 60000,
-        httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
+        httpsAgent: proxy ? new SocksProxyAgent(`socks5h://${proxy.host}:${proxy.port}`) : undefined,
         headers: {
             'User-Agent': UA.CHROME_DEFAULT_UA,
             'Host': new URL(url).host

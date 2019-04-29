@@ -26,7 +26,7 @@ export default class Parser {
                     socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
                 }
                 if (downloader.proxy) {
-                    const agent = new SocksProxyAgent(`socks5://${downloader.proxyHost}:${downloader.proxyPort}`);
+                    const agent = new SocksProxyAgent(`socks5h://${downloader.proxyHost}:${downloader.proxyPort}`);
                     socket = new ReconnectingWebSocket(socketUrl, {
                         agent
                     }, {

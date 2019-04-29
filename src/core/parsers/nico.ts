@@ -87,7 +87,7 @@ export default class Parser {
                                 'Cookie': downloader.cookies,
                                 'User-Agent': UA.CHROME_DEFAULT_UA
                             },
-                            httpsAgent: downloader.proxy ? new SocksProxyAgent(`socks5://${downloader.proxyHost}:${downloader.proxyPort}`) : undefined,
+                            httpsAgent: downloader.proxy ? new SocksProxyAgent(`socks5h://${downloader.proxyHost}:${downloader.proxyPort}`) : undefined,
                         })
                         const token = response.data.data.streamServer.url.match(/ht2_nicolive=(.+)/)[1];
                         const host = response.data.data.streamServer.url.match(/(http(s):\/\/.+\/)/)[1];
@@ -112,7 +112,7 @@ export default class Parser {
                     socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v1/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
                 }
                 if (downloader.proxy) {
-                    const agent = new SocksProxyAgent(`socks5://${downloader.proxyHost}:${downloader.proxyPort}`);
+                    const agent = new SocksProxyAgent(`socks5h://${downloader.proxyHost}:${downloader.proxyPort}`);
                     socket = new ReconnectingWebSocket(socketUrl, {
                         agent
                     }, {

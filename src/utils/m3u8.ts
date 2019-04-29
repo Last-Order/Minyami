@@ -15,7 +15,7 @@ export async function loadM3U8(Log:Logger, path: string, retries: number = 1, ti
             try {
                 const response = await axios.get(path, {
                     timeout,
-                    httpsAgent: proxy ? new SocksProxyAgent(`socks5://${proxy.host}:${proxy.port}`) : undefined,
+                    httpsAgent: proxy ? new SocksProxyAgent(`socks5h://${proxy.host}:${proxy.port}`) : undefined,
                     headers: {
                         'User-Agent': UA.CHROME_DEFAULT_UA,
                         'Host': new URL(path).host
