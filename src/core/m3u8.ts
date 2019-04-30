@@ -1,3 +1,5 @@
+import { URL } from "url";
+
 /**
  * M3U8 Parser
  */
@@ -72,6 +74,12 @@ export default class M3U8 {
                 };
                 if (line.startsWith('http')) {
                     newChunk.url = line;
+                } else if (line.startsWith('//')) {
+                    if (this.m3u8Url) {
+                        newChunk.url = new URL(this.m3u8Url).protocol + line;
+                    } else {
+                        throw new M3U8ParseError('Missing full url for m3u8.');
+                    }
                 } else if (line.startsWith('/')) {
                     if (this.m3u8Url) {
                         newChunk.url = this.m3u8Url.match(/(htt(p|ps):\/\/.+?\/)/)[1] + line.slice(1);
