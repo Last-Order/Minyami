@@ -1,5 +1,5 @@
 # README
-[![Build Status](https://travis-ci.org/Last-Order/Minyami.svg?branch=master)](https://travis-ci.org/Last-Order/Minyami)
+[![Build Status](https://dev.azure.com/MeowSound-Idols/Open-source%20Projects/_apis/build/status/Last-Order.Minyami?branchName=master)](https://dev.azure.com/MeowSound-Idols/Open-source%20Projects/_build/latest?definitionId=1&branchName=master)
 
 [中文说明](readme.zh-cn.md)
 
