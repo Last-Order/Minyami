@@ -80,7 +80,7 @@ class Downloader {
     startedAt: number; // 开始下载时间
     finishedChunksCount: number = 0; // 已完成的块数量
 
-    retries: number = 1; // 重试数量
+    retries: number = 5; // 重试数量
     timeout: number = 60000; // 超时时间
 
     proxy: string = '';
@@ -202,7 +202,6 @@ class Downloader {
                 options
             );
         } catch (e) {
-            await this.clean();
             this.Log.error('Aborted due to critical error.', e);
         }
     }
