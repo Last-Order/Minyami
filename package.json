@@ -1,6 +1,6 @@
 {
   "name": "minyami",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,7 @@
   "author": "",
   "license": "GPLv3",
   "dependencies": {
-    "axios": "^0.18.0",
+    "axios": "^0.18.1",
     "chalk": "^2.4.1",
     "crypto-js": "^3.1.9-1",
     "erii": "^1.2.6",
