@@ -126,9 +126,7 @@ export default class LiveDownloader extends Downloader {
                 });
             }
         }
-        if (this.afterFirstParse) {
-            this.afterFirstParse(this);
-        }
+        this.emit('parsed');
         await this.cycling();
     }
 
@@ -225,6 +223,7 @@ export default class LiveDownloader extends Downloader {
         }
         if (this.chunks.length === 0 && this.runningThreads === 0 && this.isEnd) {
             // 结束状态 合并文件
+            this.emit('downloaded');
             this.Log.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
             const muxer = this.format === 'ts' ? mergeToTS : mergeToMKV;
             muxer(this.outputFileList, this.outputPath).then(async () => {

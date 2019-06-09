@@ -16,7 +16,7 @@ export default class Parser {
         if (downloader.key.includes('CAS_MODE')) {
             // 试验放送
         } else {
-            downloader.afterFirstParse = () => {
+            downloader.once('parsed', () => {
                 const liveId = downloader.key.match(/(.+?)_/)[1];
                 let socketUrl, socket;
                 if (liveId.startsWith('lv')) {
@@ -46,8 +46,8 @@ export default class Parser {
                             body: {}
                         }));
                     }
-                })
-            }
+                });
+            });
         }
         return {};
     }

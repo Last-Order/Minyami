@@ -8,6 +8,7 @@ import { download, decrypt } from '../utils/media';
 import { ActionType } from './action';
 import * as actions from './action';
 import { AxiosRequestConfig } from 'axios';
+import { EventEmitter } from 'events';
 
 export interface DownloaderConfig {
     threads?: number;
@@ -56,7 +57,7 @@ export function isChunkGroup(c: ChunkItem): c is ChunkGroup {
     return !!((c as ChunkGroup).chunks);
 }
 
-class Downloader {
+class Downloader extends EventEmitter {
     Log: Logger;
 
     tempPath: string; // 临时文件目录
@@ -92,10 +93,6 @@ class Downloader {
     encryptionKeys = {};
 
     // Hooks
-    afterFirstParse: (downloader: Downloader) => void;
-    afterParse: (downloader: Downloader) => void;
-    beforeDownload: (downloader: Downloader) => void;
-    beforeMerge: (downloader: Downloader) => void;
     onChunkNaming: (chunk: M3U8Chunk) => string;
     onDownloadError: (error: Error, downloader: Downloader) => void;
 
@@ -108,6 +105,7 @@ class Downloader {
     constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, format, cookies, headers }: DownloaderConfig = {
         threads: 5
     }) {
+        super();
         this.Log = log;
 
         if (threads) {

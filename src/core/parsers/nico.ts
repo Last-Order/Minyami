@@ -98,10 +98,14 @@ export default class Parser {
                         return null;
                     }
                 }
-                setInterval(() => {
+                const freshTokenInterval = setInterval(() => {
                     getNewToken();
-                }, 80000 / downloader.threads)
+                }, 80000 / downloader.threads);
+                downloader.once('downloaded', () => {
+                    clearInterval(freshTokenInterval);
+                });
             } else {
+                // 旧生放送
                 const liveId = downloader.key.match(/(.+?)_/)[1];
                 let socketUrl, socket;
                 let listened = false;
@@ -152,9 +156,12 @@ export default class Parser {
                     });
                     socket.addEventListener('open', () => {
                         const payload = { "type": "watch", "body": { "command": "getpermit", "requirement": { "broadcastId": liveId.replace('lv', ''), "route": "", "stream": { "protocol": "hls", "requireNewStream": true, "priorStreamQuality": "super_high", "isLowLatency": true }, "room": { "isCommentable": true, "protocol": "webSocket" } } } };
-                        setInterval(() => {
+                        const freshTokenInterval = setInterval(() => {
                             socket.send(JSON.stringify(payload))
                         }, 50000 / downloader.threads);
+                        downloader.once('downloaded', () => {
+                            clearInterval(freshTokenInterval);
+                        });
                     });
                 }
             }
