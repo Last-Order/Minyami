@@ -31,6 +31,7 @@ class ArchiveDownloader extends Downloader {
     prefix: string;
 
     isResumed: boolean = false; // 是否为恢复模式
+    isDownloaded: boolean = false;
 
     /**
      * 
@@ -354,10 +355,15 @@ class ArchiveDownloader extends Downloader {
             });
             this.checkQueue();
         }
-        if (this.chunks.length === 0 && this.runningThreads === 0) {
+        if (this.chunks.length === 0 && this.totalChunksCount === this.finishedChunksCount && this.runningThreads === 0) {
+            if (this.isDownloaded) {
+                return;
+            }
+            this.isDownloaded = true;
             this.Log.info('All chunks downloaded. Start merging chunks.');
             const muxer = this.format === 'ts' ? mergeToTS : mergeToMKV;
             // Save before merge
+            this.emit('downloaded');
             this.saveTask();
             muxer(this.outputFileList, this.outputPath).then(async () => {
                 this.Log.info('End of merging.');
