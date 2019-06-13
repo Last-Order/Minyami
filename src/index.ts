@@ -135,8 +135,8 @@ Erii.addOption({
                     Log.error('Missing dependence: mkvmerge');
                 });
             }
-            if (path.match(/[\/\*\\\:|\?<>]/)) {
-                logger('Filename should\'t contain \\, /, :, |, <, >.');
+            if (path.match(/[\*\:|\?<>]/)) {
+                logger('Filename should\'t contain :, |, <, >.');
                 return false;
             }
             return true;
