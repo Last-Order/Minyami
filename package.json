@@ -1,10 +1,10 @@
 {
   "name": "minyami",
-  "version": "2.2.8",
+  "version": "2.2.10",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc --newLine lf"
   },
   "bin": {
     "minyami": "./dist/index.js"
