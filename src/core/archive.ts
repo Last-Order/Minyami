@@ -127,6 +127,13 @@ class ArchiveDownloader extends Downloader {
                 parser.default.parse({
                     downloader: this
                 });
+            } else if (this.m3u8Path.includes('radiko.jp')){
+                // Radiko
+                this.Log.info('Site comfirmed: Radiko.');
+                const parser = await import('./parsers/radiko');
+                await parser.default.parse({
+                    downloader: this
+                });
             } else {
                 this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import('./parsers/common');
@@ -159,7 +166,7 @@ class ArchiveDownloader extends Downloader {
             this.chunks = this.m3u8.chunks.map(chunk => {
                 return {
                     url: chunk.url,
-                    filename: this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url.match(/\/*([^\/]+?\.ts)/)[1],
+                    filename: this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url.match(/\/*([^\/]+?\.\w+)$/)[1],
                     key: chunk.key,
                     iv: chunk.iv,
                     sequenceId: chunk.sequenceId

@@ -3,4 +3,7 @@
 /temp_*/
 tasks.json
 output.mkv
+output.ts
 /dist/
+
+yarn.lock

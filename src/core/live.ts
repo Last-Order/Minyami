@@ -76,7 +76,6 @@ export default class LiveDownloader extends Downloader {
         await this.loadM3U8();
 
         this.playlists.push(this.m3u8);
-        this.timeout = Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000);
 
         if (this.m3u8.isEncrypted) {
             this.isEncrypted = true;
@@ -118,6 +117,13 @@ export default class LiveDownloader extends Downloader {
                 parser.default.parse({
                     downloader: this
                 });
+            } else if (this.m3u8Path.includes('smartstream.ne.jp')){
+                // Radiko
+                this.Log.info('Site comfirmed: Radiko.');
+                const parser = await import('./parsers/radiko');
+                await parser.default.parse({
+                    downloader: this
+                });
             } else {
                 this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import('./parsers/common');
@@ -127,6 +133,7 @@ export default class LiveDownloader extends Downloader {
             }
         }
         this.emit('parsed');
+        this.timeout = Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000);
         await this.cycling();
     }
 
@@ -157,7 +164,7 @@ export default class LiveDownloader extends Downloader {
                     }
                 }
                 return {
-                    filename: this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url.match(/\/*([^\/]+?\.ts)/)[1],
+                    filename: this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url.match(/\/*([^\/]+?\.\w+)$/)[1],
                     isEncrypted: this.m3u8.isEncrypted,
                     key: chunk.key,
                     iv: chunk.iv,
