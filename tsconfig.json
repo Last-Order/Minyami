@@ -6,7 +6,8 @@
         "module": "commonjs",
         "sourceMap": true,
         "lib": ["es7", "esnext"],
-        "experimentalDecorators": true
+        "experimentalDecorators": true,
+        "newLine": "LF"
     },
     "include": [
         "src/**/*"

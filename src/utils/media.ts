@@ -71,7 +71,7 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
  */
 export function download(url: string, path: string, proxy: AxiosProxyConfig = undefined, options: AxiosRequestConfig = {}) {
     const CancelToken = axios.CancelToken;
-    const source = CancelToken.source();
+    let source = CancelToken.source();
     const promise = new Promise(async (resolve, reject) => {
         try {
             const response = await axios({
@@ -90,12 +90,14 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
             resolve();
         } catch (e) {
             reject(e);
+        } finally {
+            source = null;
         }
     });
     const timeout = new Promise((resolve, reject) => {
         setTimeout(() => {
             reject('Timeout');
-            source.cancel('Cancel');
+            source && source.cancel('Cancel');
         }, options.timeout || 60000);
     })
     return Promise.race([
