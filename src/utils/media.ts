@@ -74,6 +74,10 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
     let source = CancelToken.source();
     const promise = new Promise(async (resolve, reject) => {
         try {
+            setTimeout(() => {
+                source && source.cancel();
+                source = null;
+            }, options.timeout || 60000);
             const response = await axios({
                 url,
                 method: 'GET',
@@ -94,16 +98,7 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
             source = null;
         }
     });
-    const timeout = new Promise((resolve, reject) => {
-        setTimeout(() => {
-            reject('Timeout');
-            source && source.cancel('Cancel');
-        }, options.timeout || 60000);
-    })
-    return Promise.race([
-        promise,
-        timeout
-    ]);
+    return promise;
 }
 
 /**
