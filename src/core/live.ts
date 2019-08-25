@@ -14,7 +14,6 @@ export default class LiveDownloader extends Downloader {
     outputFileList: string[] = [];
     finishedList: string[] = [];
     m3u8: M3U8;
-    playlists: M3U8[] = [];
     chunks: Chunk[] = [];
     runningThreads: number = 0;
 
@@ -75,7 +74,6 @@ export default class LiveDownloader extends Downloader {
 
         await this.loadM3U8();
 
-        this.playlists.push(this.m3u8);
         this.timeout = Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000);
 
         if (this.m3u8.isEncrypted) {

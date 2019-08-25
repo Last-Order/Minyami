@@ -39,7 +39,14 @@ export default class M3U8 {
 
         let inHeaderPart = true;
         let key: string, iv: string, sequenceId: string;
-        for (const line of this.m3u8Content.split('\n')) {
+        for (let line of this.m3u8Content.split('\n')) {
+            /**
+             * v8 引擎内部对 split/slice 出的字符串有一个对 parent 的引用
+             * 并且默认不会被 GC 当 parent string 很长时会造成内存泄漏
+             * 此处复制了一次字符串避免此情况
+             * See also: https://github.com/nodejs/help/issues/711
+             */
+            line = line.split('').join('');
             if (line.startsWith('#')) {
                 // it is a m3u8 property
                 if (line.startsWith('#EXT-X-KEY')) {
