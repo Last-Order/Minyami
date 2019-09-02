@@ -11,9 +11,9 @@ import { timeStringToSeconds } from './utils/time';
 let Log: Logger = new ConsoleLogger();
 
 const path = require('path');
-process.on('unhandledRejection', error => {
-    Log.info(error);
-  });
+process.on('unhandledRejection', (error: Error) => {
+    console.error(error.name, error.message, error.stack);
+});
 
 // Check dependencies
 exec('openssl version').then(() => {

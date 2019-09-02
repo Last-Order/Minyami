@@ -1,6 +1,6 @@
 {
   "name": "minyami",
-  "version": "2.2.13",
+  "version": "2.2.14",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -21,6 +21,6 @@
     "ws": "^6.1.2"
   },
   "devDependencies": {
-    "@types/node": "^10.12.18"
+    "@types/node": "^10.14.17"
   }
 }
