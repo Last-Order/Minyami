@@ -1,5 +1,5 @@
 # README
-[![Build Status](https://dev.azure.com/MeowSound-Idols/Open-source%20Projects/_apis/build/status/Last-Order.Minyami?branchName=master)](https://dev.azure.com/MeowSound-Idols/Open-source%20Projects/_build/latest?definitionId=1&branchName=master)
+[![Build Status](https://github.com/Last-Order/Minyami/workflows/Node%20CI/badge.svg)](https://github.com/Last-Order/Minyami/actions)
 
 [中文说明](readme.zh-cn.md)
 
