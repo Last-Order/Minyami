@@ -5,7 +5,13 @@ export default class Parser {
         downloader
     }: ParserOptions): ParserResult {
         downloader.onChunkNaming = (chunk) => {
-            return chunk.url.match(/\/(\d+?)\/goap/)[1];
+            const chunkIdMatch = chunk.url.match(/\/(\d+?)\/goap/);
+            if (chunkIdMatch) {
+                return chunkIdMatch[1];
+            } else {
+                downloader.Log.error(`Bad chunk url: ${chunk.url}`);
+                return chunk.url.replace(/[\*\:|\?<>]/ig, '');
+            }
         }
         return {};
     }

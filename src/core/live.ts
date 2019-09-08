@@ -212,7 +212,7 @@ export default class LiveDownloader extends Downloader {
                     task.retryCount = 1;
                 }
                 this.Log.warning(`Processing ${task.filename} failed.`);
-                this.verbose && this.Log.debug(JSON.stringify(e));
+                this.verbose && this.Log.debug(e.message);
                 this.runningThreads--;
                 this.chunks.unshift(task); // 对直播流来说 早速重试比较好
                 this.checkQueue();
