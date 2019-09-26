@@ -6,11 +6,12 @@ import LiveDownloader from './core/live';
 import { exec, deleteDirectory } from './utils/system';
 import * as fs from 'fs';
 import { timeStringToSeconds } from './utils/time';
+const path = require('path');
 
 // Build Logger for all global components.
 let Log: Logger = new ConsoleLogger();
 
-const path = require('path');
+
 process.on('unhandledRejection', (error: Error) => {
     console.error(error.name, error.message, error.stack);
 });
@@ -123,19 +124,19 @@ Erii.addOption({
     argument: {
         name: 'path',
         description: '(Optional) Output file path, defaults to ./output.mkv',
-        validate: (path: string, logger) => {
-            if (!path.endsWith('.mkv') && !path.endsWith('.ts')) {
+        validate: (outputPath: string, logger) => {
+            if (!outputPath.endsWith('.mkv') && !outputPath.endsWith('.ts')) {
                 logger('Output filename must ends with .mkv or .ts.');
                 return false;
             }
-            if (path.endsWith('mkv')) {
+            if (outputPath.endsWith('mkv')) {
                 exec('mkvmerge --version').then(() => {
                     // 
                 }).catch(e => {
                     Log.error('Missing dependence: mkvmerge');
                 });
             }
-            if (path.match(/[\*\:|\?<>]/)) {
+            if (path.basename(outputPath).match(/[\*\:|\?<>]/)) {
                 logger('Filename should\'t contain :, |, <, >.');
                 return false;
             }

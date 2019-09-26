@@ -113,7 +113,7 @@ class Downloader extends EventEmitter {
         }
 
         if (output) {
-            this.outputPath = output.replace(/[\/\*\\\:|\?<>]/ig, "");
+            this.outputPath = output;
         }
 
         if (key) {
