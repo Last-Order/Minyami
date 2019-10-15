@@ -32,7 +32,7 @@ export default class LiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, cookies, headers }: DownloaderConfig = {
+    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, cookies, headers, nomerge }: DownloaderConfig = {
         threads: 5
     }) {
         super(log, m3u8Path, {
@@ -43,7 +43,8 @@ export default class LiveDownloader extends Downloader {
             retries,
             proxy,
             cookies,
-            headers
+            headers,
+            nomerge
         });
         if (retries) {
             this.retries = retries;
@@ -222,6 +223,11 @@ export default class LiveDownloader extends Downloader {
         if (this.chunks.length === 0 && this.runningThreads === 0 && this.isEnd) {
             // 结束状态 合并文件
             this.emit('downloaded');
+            if (this.noMerge) {
+                this.Log.info('Skip merging. Please merge video chunks manually.');
+                this.Log.info(`Temporary files are located at ${this.tempPath}`);
+                process.exit();
+            }
             this.Log.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
             const muxer = this.format === 'ts' ? mergeToTS : mergeToMKV;
             muxer(this.outputFileList, this.outputPath).then(async () => {

@@ -228,6 +228,12 @@ Erii.addOption({
             }
         }
     }
+});
+
+Erii.addOption({
+    name: ['nomerge'],
+    command: 'download',
+    description: 'Do not merge m3u8 chunks.'
 })
 
 Erii.default(() => {

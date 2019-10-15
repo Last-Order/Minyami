@@ -39,7 +39,7 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, retries, proxy, slice, format, cookies, headers }: ArchiveDownloaderConfig = {
+    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, retries, proxy, slice, format, cookies, headers, nomerge }: ArchiveDownloaderConfig = {
         threads: 5
     }) {
         super(log, m3u8Path, {
@@ -51,7 +51,8 @@ class ArchiveDownloader extends Downloader {
             proxy,
             format,
             cookies,
-            headers
+            headers,
+            nomerge
         });
         if (slice) {
             this.sliceStart = timeStringToSeconds(slice.split('-')[0]);
@@ -365,6 +366,11 @@ class ArchiveDownloader extends Downloader {
             // Save before merge
             this.emit('downloaded');
             this.saveTask();
+            if (this.noMerge) {
+                this.Log.info('Skip merging. Please merge video chunks manually.');
+                this.Log.info(`Temporary files are located at ${this.tempPath}`);
+                process.exit();
+            }
             muxer(this.outputFileList, this.outputPath).then(async () => {
                 this.Log.info('End of merging.');
                 this.Log.info('Starting cleaning temporary files.');

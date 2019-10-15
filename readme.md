@@ -50,6 +50,7 @@ Help:
              <socks-proxy>         Set Socks Proxy in [<host>:<port>] format. eg. --proxy "127.0.0.1:1080".
          --slice <range>           Download specified part of the stream
              <range>               Set time range in [<hh:mm:ss>-<hh:mm:ss> format]. eg. --slice "45:00-53:00"
+         --nomerge                 Do not merge m3u8 chunks.
      --resume <input_path>         Resume a download. (Archive)  --r
          <input_path>              m3u8 file path
      --clean                       Clean cache files

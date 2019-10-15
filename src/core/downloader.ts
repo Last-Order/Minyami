@@ -20,6 +20,7 @@ export interface DownloaderConfig {
     retries?: number;
     proxy?: string;
     format?: string;
+    nomerge?: boolean;
 }
 
 export interface ArchiveDownloaderConfig extends DownloaderConfig {
@@ -77,6 +78,7 @@ class Downloader extends EventEmitter {
 
     verbose: boolean = false; // 调试输出
     format: string = 'ts'; // 输出格式
+    noMerge: boolean = false;
 
     startedAt: number; // 开始下载时间
     finishedChunksCount: number = 0; // 已完成的块数量
@@ -102,7 +104,7 @@ class Downloader extends EventEmitter {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, format, cookies, headers }: DownloaderConfig = {
+    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, format, cookies, headers, nomerge }: DownloaderConfig = {
         threads: 5
     }) {
         super();
@@ -151,6 +153,10 @@ class Downloader extends EventEmitter {
             this.proxy = proxy;
             this.proxyHost = splitedProxyString.slice(0, splitedProxyString.length - 1).join('');
             this.proxyPort = parseInt(splitedProxyString[splitedProxyString.length - 1]);
+        }
+
+        if (nomerge) {
+            this.noMerge = nomerge;
         }
 
         this.m3u8Path = m3u8Path;
@@ -288,9 +294,9 @@ class Downloader extends EventEmitter {
                 }
                 resolve();
             } catch (e) {
-                this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later. [${e.code || 
+                this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later. [${e.code ||
                     (e.response ? `${e.response.status} ${e.response.statusText}` : undefined)
-                || e.message || e.constructor.name || 'UNKNOWN'}]`);
+                    || e.message || e.constructor.name || 'UNKNOWN'}]`);
                 this.verbose && this.Log.debug(e);
                 reject(e);
             }
