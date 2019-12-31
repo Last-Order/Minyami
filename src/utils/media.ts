@@ -90,8 +90,8 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
                 cancelToken: source.token,
                 ...options,
             });
-            if (parseInt(response.headers['content-length']) !== response.data.length) {
-                reject('Bad response');
+            if (response.headers['content-length'] && parseInt(response.headers['content-length']) !== response.data.length) {
+                reject(new Error('Bad Response'));
             }
             fs.writeFileSync(path, response.data);
             resolve();
