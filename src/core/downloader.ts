@@ -294,7 +294,6 @@ class Downloader extends EventEmitter {
                 }
                 resolve();
             } catch (e) {
-                console.log(e);
                 this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later. [${e.code ||
                     (e.response ? `${e.response.status} ${e.response.statusText}` : undefined)
                     || e.message || e.constructor.name || 'UNKNOWN'}]`);
