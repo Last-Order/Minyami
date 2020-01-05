@@ -140,11 +140,12 @@ class Downloader extends EventEmitter {
 
         if (headers) {
             for (const h of headers.split('\n')) {
-                const header = h.split(':');
-                if (header.length !== 2) {
+                try {
+                    const header = /^([^ :]+):(.+)$/.exec(h).slice(1);
+                    this.headers[header[0]] = header[1].trim();
+                } catch (e) {
                     this.Log.error(`HTTP Headers invalid.`);
                 }
-                this.headers[header[0]] = header[1];
             }
         }
 
