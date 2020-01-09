@@ -1,6 +1,6 @@
 {
   "name": "minyami",
-  "version": "2.2.21",
+  "version": "2.3.0",
   "description": "",
   "main": "index.js",
   "repository": {
@@ -13,8 +13,11 @@
   "bin": {
     "minyami": "./dist/index.js"
   },
-  "author": "",
-  "license": "GPLv3",
+  "author": {
+    "email": "sora@sound.moe",
+    "name": "Eridanus Sora"
+  },
+  "license": "GPL-3.0-or-later",
   "dependencies": {
     "axios": "^0.18.1",
     "chalk": "^2.4.1",
@@ -25,6 +28,6 @@
     "ws": "^6.1.2"
   },
   "devDependencies": {
-    "@types/node": "^10.14.17"
+    "@types/node": "^13.1.5"
   }
 }
