@@ -8,6 +8,7 @@ import { saveTask, deleteTask, getTask } from '../utils/task';
 import { timeStringToSeconds } from '../utils/time';
 import { sleep } from './action';
 const path = require('path');
+const os = require('os');
 
 class ArchiveDownloader extends Downloader {
     tempPath: string;
@@ -142,7 +143,7 @@ class ArchiveDownloader extends Downloader {
         // Record start time to calculate speed.
         this.startedAt = new Date().valueOf();
         // Allocate temporary directory.
-        this.tempPath = path.resolve(__dirname, '../../temp_' + new Date().valueOf());
+        this.tempPath = path.resolve(os.tmpdir(), 'minyami_' + new Date().valueOf());
 
         if (!fs.existsSync(this.tempPath)) {
             fs.mkdirSync(this.tempPath);
