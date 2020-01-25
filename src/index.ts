@@ -6,6 +6,7 @@ import LiveDownloader from './core/live';
 import { exec, deleteDirectory } from './utils/system';
 import * as fs from 'fs';
 import { timeStringToSeconds } from './utils/time';
+const os = require('os');
 const path = require('path');
 
 // Build Logger for all global components.
@@ -82,9 +83,9 @@ Erii.bind({
     name: ['clean'],
     description: 'Clean cache files',
 }, () => {
-    for (const file of fs.readdirSync(path.resolve(__dirname, '../'))) {
-        if (file.startsWith('temp_')) {
-            deleteDirectory(path.resolve(__dirname, `../${file}`));
+    for (const file of fs.readdirSync(path.resolve(os.tmpdir()))) {
+        if (file.startsWith('minyami_')) {
+            deleteDirectory(path.resolve(os.tmpdir(), `./${file}`));
         }
     }
     fs.writeFileSync(path.resolve(__dirname, '../tasks.json'), '[]');
