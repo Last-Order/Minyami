@@ -69,7 +69,6 @@ export default class LiveDownloader extends Downloader {
                 this.forceStop = true;
             } else {
                 this.Log.info('Force stop.'); // TODO: reject all download promises
-                await this.clean();
                 process.exit();
             }
         });
