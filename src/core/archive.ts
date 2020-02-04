@@ -379,7 +379,7 @@ class ArchiveDownloader extends Downloader {
                 try {
                     deleteTask(this.m3u8Path.split('?')[0]);
                 } catch (error) {
-                    this.Log.error('Fail to parse previous tasks, ignored.');
+                    this.Log.warning('Fail to parse previous tasks, ignored.');
                 }
                 this.Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
@@ -500,7 +500,7 @@ class ArchiveDownloader extends Downloader {
                 finishedFilenames: this.finishedFilenames
             });
         } catch (error) {
-            this.Log.error('Fail to parse previous tasks, ignored.');
+            this.Log.warning('Fail to parse previous tasks, ignored.');
         }
     }
 }
