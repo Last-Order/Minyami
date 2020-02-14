@@ -248,7 +248,12 @@ class ArchiveDownloader extends Downloader {
                     }
                 }
             }
-        })
+        });
+        if (this.verbose) {
+            setInterval(() => {
+                this.Log.debug(`Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunksCount}, total chunks: ${this.totalChunksCount}`);
+            }, 3000);
+        }
         this.checkQueue();
     }
 

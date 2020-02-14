@@ -188,7 +188,7 @@ export default class Parser {
                     isNew: true
                 };
                 let startTime;
-                for (let time = 0; time < videoLength - chunkLength; time += chunkLength) {
+                for (let time = 0; time < videoLength; time += chunkLength) {
                     if (counter === 0) {
                         startTime = time.toString();
                         const pingUrl = downloader.m3u8Path.replace(/start=\d+/ig, `start=${startTime}`)
@@ -215,6 +215,10 @@ export default class Parser {
                         newChunkList.push(chunkGroup);
                         counter = 0;
                     }
+                }
+                if (counter !== 0) {
+                    newChunkList.push(chunkGroup);
+                    counter = 0;
                 }
                 downloader.chunks = newChunkList;
             } else {
