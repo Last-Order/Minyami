@@ -141,10 +141,15 @@ export default class LiveDownloader extends Downloader {
             }
             const currentPlaylistChunks: M3U8Chunk[] = [];
             this.m3u8.chunks.forEach(chunk => {
-                // 去重
-                if (!this.finishedList.includes(this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url)) {
-                    this.finishedList.push(this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url);
-                    currentPlaylistChunks.push(chunk);
+                try {
+                    // 去重
+                    if (!this.finishedList.includes(this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url)) {
+                        this.finishedList.push(this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url);
+                        currentPlaylistChunks.push(chunk);
+                    }
+                } catch (e) {
+                    // 无法正确命名块 忽略错误
+                    // pass
                 }
             });
             this.verbose && this.Log.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);

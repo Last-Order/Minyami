@@ -9,8 +9,7 @@ export default class Parser {
             if (chunkIdMatch) {
                 return chunkIdMatch[1];
             } else {
-                downloader.Log.error(`Bad chunk url: ${chunk.url}`);
-                return chunk.url.replace(/[\*\:|\?<>]/ig, '');
+                throw new Error(`Bad chunk url: ${chunk.url}`);
             }
         }
         return {};
