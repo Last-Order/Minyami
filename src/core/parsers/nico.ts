@@ -202,6 +202,10 @@ export default class Parser {
                             isNew: true
                         };
                     }
+                    if (videoLength - parseFloat(`${time.toString()}.${offset}`) < 1) {
+                        // 最后一块小于1秒 可能不存在
+                        continue;
+                    }
                     chunkGroup.chunks.push({
                         url: prefix + (
                             time.toString() === '0' ?
