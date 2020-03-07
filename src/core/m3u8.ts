@@ -132,6 +132,6 @@ export default class M3U8 {
      * 获得块长度
      */
     getChunkLength() {
-        return parseFloat(this.m3u8Content.match(/#EXTINF:(.+),/)[1]);
+        return parseFloat(this.m3u8Content.match(/#EXTINF:(.+?)(,|$)/m)[1]);
     }
 }
