@@ -3,3 +3,5 @@
 /temp_*/
 tasks.json
 output.mkv
+Dockerfile
+Dockerfile*
