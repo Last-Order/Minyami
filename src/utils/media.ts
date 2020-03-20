@@ -35,6 +35,7 @@ export function mergeToMKV(fileList = [], output = "./output.mkv") {
 }
 
 export function mergeToTS(fileList = [], output = "./output.ts") {
+    const cliProgress = require('cli-progress');
     return new Promise(async (resolve) => {
         if (fileList.length === 0) {
             resolve();
@@ -42,6 +43,10 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
 
         const writeStream = fs.createWriteStream(output);
         const lastIndex = fileList.length - 1;
+        const bar = new cliProgress.SingleBar({
+            format: '[MINYAMI][MERGING] [{bar}] {percentage}% | ETA: {eta}s | {value}/{total}'
+        }, cliProgress.Presets.shades_classic);
+        bar.start(fileList.length, 0);
         let i = 0;
         let writable = true;
         write();
@@ -50,9 +55,12 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
             while (i <= lastIndex && writable) {
                 writable = writeStream.write(fs.readFileSync(fileList[i]), () => {
                     if (i > lastIndex) {
+                        bar.update(i);
+                        bar.stop();
                         resolve();
                     }
                 });
+                bar.update(i);
                 i++;
             }
             if (i <= lastIndex) {
