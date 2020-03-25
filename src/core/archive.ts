@@ -385,6 +385,7 @@ class ArchiveDownloader extends Downloader {
                     deleteTask(this.m3u8Path.split('?')[0]);
                 } catch (error) {
                     this.Log.warning('Fail to parse previous tasks, ignored.');
+                    this.Log.warning(error.message);
                 }
                 this.Log.info(`All finished. Check your file at [${this.outputPath}] .`);
                 process.exit();
@@ -506,6 +507,7 @@ class ArchiveDownloader extends Downloader {
             });
         } catch (error) {
             this.Log.warning('Fail to parse previous tasks, ignored.');
+            this.Log.warning(error.message);
         }
     }
 }
