@@ -7,9 +7,6 @@ export function timeStringToSeconds(timeString: string): number {
 
     while (timeArray.length > 0) {
         const digit = parseInt(timeArray.pop());
-        if (digit > 59) {
-            throw new Error('Invalid time string');
-        }
         seconds += m * digit;
         m *= 60;
     }
