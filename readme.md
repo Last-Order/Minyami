@@ -61,6 +61,18 @@ Options:
      --verbose, debug              Debug output
 ```
 
+## FAQ
+
+Q: Should I keep the browser open when downloading?
+
+A: It's not necessary.
+
+Q: How to get openssl for Windows?
+
+A: You can install openssl via Chocolatey.
+
+`choco install openssl`
+
 ## Contribution
 
 Minyami is developed with TypeScript. You need to install TypeScript Compiler before you start coding.
