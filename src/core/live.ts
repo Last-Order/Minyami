@@ -238,7 +238,7 @@ export default class LiveDownloader extends Downloader {
             muxer(this.outputFileList, this.outputPath).then(async () => {
                 this.Log.info('End of merging.');
                 await this.clean();
-                this.Log.info(`All finished. Check your file at [${this.outputPath}] .`);
+                this.Log.info(`All finished. Check your file at [${path.resolve(this.outputPath)}] .`);
                 process.exit();
             }).catch(e => {
                 this.Log.error('Fail to merge video. Please merge video chunks manually.', e);

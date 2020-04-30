@@ -6,7 +6,6 @@ import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk, Ch
 import * as fs from 'fs';
 import { saveTask, deleteTask, getTask } from '../utils/task';
 import { timeStringToSeconds } from '../utils/time';
-import { sleep } from './action';
 const path = require('path');
 const os = require('os');
 
@@ -387,7 +386,7 @@ class ArchiveDownloader extends Downloader {
                     this.Log.warning('Fail to parse previous tasks, ignored.');
                     this.Log.warning(error.message);
                 }
-                this.Log.info(`All finished. Check your file at [${this.outputPath}] .`);
+                this.Log.info(`All finished. Check your file at [${path.resolve(this.outputPath)}] .`);
                 process.exit();
             }).catch(async e => {
                 await this.clean();
