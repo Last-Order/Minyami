@@ -46,7 +46,7 @@ export default class M3U8 {
              * 此处复制了一次字符串避免此情况
              * See also: https://github.com/nodejs/help/issues/711
              */
-            line = line.split('').join('');
+            line = line.split('').join('').trim();
             if (line.startsWith('#')) {
                 // it is a m3u8 property
                 if (line.startsWith('#EXT-X-KEY')) {
