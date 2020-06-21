@@ -2,7 +2,8 @@
   "name": "minyami",
   "version": "3.0.8",
   "description": "",
-  "main": "index.js",
+  "main": "dist/exports.js",
+  "types": "dist/exports.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/Last-Order/Minyami"
