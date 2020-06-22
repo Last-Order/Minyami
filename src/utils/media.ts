@@ -57,6 +57,7 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
                     if (i > lastIndex) {
                         bar.update(i);
                         bar.stop();
+                        writeStream.end();
                         resolve();
                     }
                 });
