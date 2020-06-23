@@ -69,7 +69,7 @@ export default class LiveDownloader extends Downloader {
                 this.forceStop = true;
             } else {
                 this.Log.info('Force stop.'); // TODO: reject all download promises
-                process.exit();
+                this.emit('finished');
             }
         });
 
@@ -231,7 +231,7 @@ export default class LiveDownloader extends Downloader {
             if (this.noMerge) {
                 this.Log.info('Skip merging. Please merge video chunks manually.');
                 this.Log.info(`Temporary files are located at ${this.tempPath}`);
-                process.exit();
+                this.emit('finished');
             }
             this.Log.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
             const muxer = this.format === 'ts' ? mergeToTS : mergeToMKV;
@@ -239,7 +239,7 @@ export default class LiveDownloader extends Downloader {
                 this.Log.info('End of merging.');
                 await this.clean();
                 this.Log.info(`All finished. Check your file at [${path.resolve(this.outputPath)}] .`);
-                process.exit();
+                this.emit('finished');
             }).catch(e => {
                 this.Log.error('Fail to merge video. Please merge video chunks manually.', e);
             });

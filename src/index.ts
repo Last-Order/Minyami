@@ -58,9 +58,15 @@ Erii.bind({
     const path = ctx.getArgument().toString();
     if (options.live) {
         const downloader = new LiveDownloader(Log, path, options);
+        downloader.on('finished', () => {
+            process.exit();
+        });
         await downloader.download();
     } else {
         const downloader = new ArchiveDownloader(Log, path, options);
+        downloader.on('finished', () => {
+            process.exit();
+        });
         await downloader.init();
         await downloader.download();
     }

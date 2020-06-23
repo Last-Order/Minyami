@@ -73,6 +73,12 @@ A: You can install openssl via Chocolatey.
 
 `choco install openssl`
 
+## Use as a library
+
+```TypeScript
+import { ArchiveDownloader } from 'minyami';
+```
+
 ## Contribution
 
 Minyami is developed with TypeScript. You need to install TypeScript Compiler before you start coding.

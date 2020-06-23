@@ -150,7 +150,7 @@ class ArchiveDownloader extends Downloader {
 
         process.on("SIGINT", async () => {
             await this.clean();
-            process.exit();
+            this.emit('finished');
         });
 
         await this.parse();
@@ -374,7 +374,7 @@ class ArchiveDownloader extends Downloader {
             if (this.noMerge) {
                 this.Log.info('Skip merging. Please merge video chunks manually.');
                 this.Log.info(`Temporary files are located at ${this.tempPath}`);
-                process.exit();
+                this.emit('finished');
             }
             muxer(this.outputFileList, this.outputPath).then(async () => {
                 this.Log.info('End of merging.');
@@ -387,7 +387,7 @@ class ArchiveDownloader extends Downloader {
                     this.Log.warning(error.message);
                 }
                 this.Log.info(`All finished. Check your file at [${path.resolve(this.outputPath)}] .`);
-                process.exit();
+                this.emit('finished');
             }).catch(async e => {
                 await this.clean();
                 this.Log.error('Fail to merge video. Please merge video chunks manually.', e);
@@ -404,7 +404,7 @@ class ArchiveDownloader extends Downloader {
 
         process.on("SIGINT", async () => {
             await this.clean();
-            process.exit();
+            this.emit('finish');
         });
 
         this.m3u8Path = taskId;
