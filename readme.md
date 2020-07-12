@@ -73,11 +73,26 @@ A: You can install openssl via Chocolatey.
 
 `choco install openssl`
 
-## Use as a library
+## Use as a library (3.1.0+)
 
 ```TypeScript
 import { ArchiveDownloader } from 'minyami';
+import { LiveDownloader } from 'minyami';
 ```
+### Event: `chunk-downloaded`
+
+* `currentChunkInfo` `<object>` The information of the chunk which is just downloaded. 
+
+The `'chunk-downloaded'` event is emitted when every media chunk is downloaded. 
+
+### Event: `downloaded`
+
+The `'downloaded'` event is emitted after all chunks are downloaded but before starting merge.
+
+### Event: `finished`
+
+The `'finished'` event is emitted after all the works are done. CLI program exits after this event is emiited.
+
 
 ## Contribution
 

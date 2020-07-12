@@ -1,12 +1,10 @@
 import chalk from 'chalk';
 abstract class Logger {
     public abstract debug(message: string);
-    public abstract info(message: string, infoObj?: any);
+    public abstract info(message: string);
     public abstract warning(message: string);
     public abstract error(message: string, error?: any);
 }
-
-
 
 export class ConsoleLogger extends Logger {
     debug(message: string) {
@@ -22,7 +20,7 @@ export class ConsoleLogger extends Logger {
     }
 
     error(message: string, error: any = undefined) {
-        if(error!==undefined) console.log(error);
+        if (error !== undefined) console.log(error);
         console.info(chalk.red(`[MINYAMI][ERROR] ${message}`));
         process.exit();
     }

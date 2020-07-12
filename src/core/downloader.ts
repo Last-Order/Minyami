@@ -25,6 +25,11 @@ export interface DownloaderConfig {
 
 export interface ArchiveDownloaderConfig extends DownloaderConfig {
     slice?: string;
+    logger?: Logger;
+}
+
+export interface LiveDownloaderConfig extends DownloaderConfig {
+    logger?: Logger;
 }
 
 export interface Chunk {

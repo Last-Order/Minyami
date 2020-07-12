@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import Logger, { ConsoleLogger } from './utils/log';
+import { ConsoleLogger } from './utils/log';
 import Erii from 'erii';
 import ArchiveDownloader from './core/archive';
 import LiveDownloader from './core/live';
@@ -9,13 +9,11 @@ import { timeStringToSeconds } from './utils/time';
 const os = require('os');
 const path = require('path');
 
-// Build Logger for all global components.
-let Log: Logger = new ConsoleLogger();
-
-
 process.on('unhandledRejection', (error: Error) => {
     console.error(error.name, error.message, error.stack);
 });
+
+const Log = new ConsoleLogger();
 
 // Check dependencies
 exec('openssl version').then(() => {
@@ -57,13 +55,19 @@ Erii.bind({
 }, async (ctx, options) => {
     const path = ctx.getArgument().toString();
     if (options.live) {
-        const downloader = new LiveDownloader(Log, path, options);
+        const downloader = new LiveDownloader(path, {
+            ...options,
+            logger: new ConsoleLogger()
+        });
         downloader.on('finished', () => {
             process.exit();
         });
         await downloader.download();
     } else {
-        const downloader = new ArchiveDownloader(Log, path, options);
+        const downloader = new ArchiveDownloader(path, {
+            ...options,
+            logger: new ConsoleLogger()
+        });
         downloader.on('finished', () => {
             process.exit();
         });
@@ -81,7 +85,7 @@ Erii.bind({
     }
 }, async (ctx, options) => {
     const path = ctx.getArgument().toString();
-    const downloader = new ArchiveDownloader(Log);
+    const downloader = new ArchiveDownloader();
     downloader.resume(path);
 });
 

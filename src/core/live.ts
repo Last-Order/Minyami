@@ -1,6 +1,6 @@
-import Downloader, { DownloaderConfig, Chunk } from "./downloader";
+import Downloader, { DownloaderConfig, Chunk, LiveDownloaderConfig } from "./downloader";
 import M3U8, { M3U8Chunk } from "./m3u8";
-import Logger from '../utils/log';
+import Logger, { ConsoleLogger } from '../utils/log';
 import { mergeToMKV, mergeToTS, download, decrypt } from "../utils/media";
 import { sleep } from "../utils/system";
 const path = require('path');
@@ -33,11 +33,9 @@ export default class LiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, cookies, headers, nomerge }: DownloaderConfig = {
-        threads: 5
-    }) {
-        super(log, m3u8Path, {
-            threads,
+    constructor(m3u8Path: string, { threads, output, key, verbose, retries, proxy, cookies, headers, nomerge, logger }: LiveDownloaderConfig) {
+        super(logger || new ConsoleLogger(), m3u8Path, {
+            threads: threads || 5,
             output,
             key,
             verbose,
@@ -197,18 +195,19 @@ export default class LiveDownloader extends Downloader {
             this.handleTask(task).then(() => {
                 this.finishedChunksCount++;
                 this.runningThreads--;
-                let infoObj = {
+                const currentChunkInfo = {
                     taskname: task.filename,
                     finishedChunksCount: this.finishedChunksCount,
                     chunkSpeed: this.calculateSpeedByChunk(),
                     ratioSpeed: this.calculateSpeedByRatio()
                 }
 
-                this.Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / unknown | Avg Speed: ${
-                    infoObj.chunkSpeed
+                this.Log.info(`Proccessing ${currentChunkInfo.taskname} finished. (${currentChunkInfo.finishedChunksCount} / unknown | Avg Speed: ${
+                    currentChunkInfo.chunkSpeed
                     } chunks/s or ${
-                    infoObj.ratioSpeed
-                    }x)`, infoObj);
+                    currentChunkInfo.ratioSpeed
+                    }x)`);
+                this.emit('chunk-downloaded', currentChunkInfo);
                 this.checkQueue();
             }).catch(e => {
                 // 重试计数

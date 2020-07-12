@@ -1,4 +1,4 @@
-import Logger from '../utils/log';
+import Logger, { ConsoleLogger } from '../utils/log';
 import { mergeToMKV, mergeToTS } from '../utils/media';
 import { deleteDirectory } from '../utils/system';
 import M3U8 from './m3u8';
@@ -39,11 +39,9 @@ class ArchiveDownloader extends Downloader {
      * @param config
      * @param config.threads 线程数量 
      */
-    constructor(log: Logger, m3u8Path?: string, { threads, output, key, verbose, retries, proxy, slice, format, cookies, headers, nomerge }: ArchiveDownloaderConfig = {
-        threads: 5
-    }) {
-        super(log, m3u8Path, {
-            threads,
+    constructor(m3u8Path?: string, { threads, output, key, verbose, retries, proxy, slice, format, cookies, headers, nomerge, logger }: ArchiveDownloaderConfig = {}) {
+        super(logger || new ConsoleLogger(), m3u8Path, {
+            threads: threads || 5,
             output,
             key,
             verbose,
@@ -315,7 +313,7 @@ class ArchiveDownloader extends Downloader {
             this.handleTask(chunk).then(() => {
                 this.finishedChunksCount++;
                 this.runningThreads--;
-                let infoObj = {
+                const currentChunkInfo = {
                     taskname: chunk.filename,
                     finishedChunksCount: this.finishedChunksCount,
                     totalChunksCount: this.totalChunksCount,
@@ -324,14 +322,15 @@ class ArchiveDownloader extends Downloader {
                     eta: this.getETA()
                 }
 
-                this.Log.info(`Proccessing ${infoObj.taskname} finished. (${infoObj.finishedChunksCount} / ${this.totalChunksCount} or ${(infoObj.finishedChunksCount / infoObj.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${
-                    infoObj.chunkSpeed
+                this.Log.info(`Proccessing ${currentChunkInfo.taskname} finished. (${currentChunkInfo.finishedChunksCount} / ${this.totalChunksCount} or ${(currentChunkInfo.finishedChunksCount / currentChunkInfo.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${
+                    currentChunkInfo.chunkSpeed
                     } chunks/s or ${
-                    infoObj.ratioSpeed
+                    currentChunkInfo.ratioSpeed
                     }x | ETA: ${
-                    infoObj.eta
-                    })`, infoObj);
+                    currentChunkInfo.eta
+                    })`);
                 this.finishedFilenames[chunk.filename] = true;
+                this.emit('chunk-downloaded', currentChunkInfo);
                 this.checkQueue();
             }).catch(e => {
                 this.runningThreads--;
