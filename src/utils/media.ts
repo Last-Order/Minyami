@@ -119,6 +119,7 @@ export function download(url: string, path: string, proxy: AxiosProxyConfig = un
  * @param proxy 
  */
 export async function requestRaw(url: string, proxy: AxiosProxyConfig = undefined, options: AxiosRequestConfig = {}): Promise<AxiosResponse> {
+    console.log(options)
     return await axios({
         url,
         method: 'GET',

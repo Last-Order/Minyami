@@ -144,7 +144,7 @@ class Downloader extends EventEmitter {
         }
 
         if (headers) {
-            for (const h of headers.split('\n')) {
+            for (const h of headers.split('\\n')) {
                 try {
                     const header = /^([^ :]+):(.+)$/.exec(h).slice(1);
                     this.headers[header[0]] = header[1].trim();
