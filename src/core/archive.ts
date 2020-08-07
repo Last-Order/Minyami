@@ -1,13 +1,19 @@
-import Logger, { ConsoleLogger } from '../utils/log';
-import { mergeToMKV, mergeToTS } from '../utils/media';
-import { deleteDirectory } from '../utils/system';
-import M3U8 from './m3u8';
-import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk, ChunkGroup } from './downloader';
-import * as fs from 'fs';
-import { saveTask, deleteTask, getTask } from '../utils/task';
-import { timeStringToSeconds } from '../utils/time';
-const path = require('path');
-const os = require('os');
+import { ConsoleLogger } from "../utils/log";
+import { mergeToMKV, mergeToTS } from "../utils/media";
+import { deleteDirectory } from "../utils/system";
+import M3U8 from "./m3u8";
+import Downloader, {
+    ArchiveDownloaderConfig,
+    ChunkItem,
+    isChunkGroup,
+    Chunk,
+    ChunkGroup,
+} from "./downloader";
+import * as fs from "fs";
+import { saveTask, deleteTask, getTask } from "../utils/task";
+import { timeStringToSeconds } from "../utils/time";
+const path = require("path");
+const os = require("os");
 
 class ArchiveDownloader extends Downloader {
     tempPath: string;
@@ -17,7 +23,7 @@ class ArchiveDownloader extends Downloader {
     chunks: ChunkItem[] = [];
     allChunks: ChunkItem[] = [];
     pickedChunks: ChunkItem[] = [];
-    // 使用 Object 的原因是使用数组，检索需要遍历数组 1/2 * n^2 次 
+    // 使用 Object 的原因是使用数组，检索需要遍历数组 1/2 * n^2 次
     // 当有数千块的时候有那么一点点不可接受
     finishedFilenames: { [index: string]: any } = {};
     outputFileList: string[];
@@ -34,12 +40,28 @@ class ArchiveDownloader extends Downloader {
     isDownloaded: boolean = false;
 
     /**
-     * 
-     * @param m3u8Path 
+     *
+     * @param m3u8Path
      * @param config
-     * @param config.threads 线程数量 
+     * @param config.threads 线程数量
      */
-    constructor(m3u8Path?: string, { threads, output, key, verbose, retries, proxy, slice, format, cookies, headers, nomerge, logger }: ArchiveDownloaderConfig = {}) {
+    constructor(
+        m3u8Path?: string,
+        {
+            threads,
+            output,
+            key,
+            verbose,
+            retries,
+            proxy,
+            slice,
+            format,
+            cookies,
+            headers,
+            nomerge,
+            logger,
+        }: ArchiveDownloaderConfig = {}
+    ) {
         super(logger || new ConsoleLogger(), m3u8Path, {
             threads: threads || 5,
             output,
@@ -50,11 +72,11 @@ class ArchiveDownloader extends Downloader {
             format,
             cookies,
             headers,
-            nomerge
+            nomerge,
         });
         if (slice) {
-            this.sliceStart = timeStringToSeconds(slice.split('-')[0]);
-            this.sliceEnd = timeStringToSeconds(slice.split('-')[1]);
+            this.sliceStart = timeStringToSeconds(slice.split("-")[0]);
+            this.sliceEnd = timeStringToSeconds(slice.split("-")[1]);
         }
     }
 
@@ -66,71 +88,79 @@ class ArchiveDownloader extends Downloader {
         if (this.m3u8.isEncrypted) {
             // Encrypted
             const key = this.m3u8.getKey();
-            if (key.startsWith('abemafresh')) {
-                this.Log.info('Site comfirmed: FreshTV.');
-                const parser = await import('./parsers/freshtv');
+            if (key.startsWith("abemafresh")) {
+                this.Log.info("Site comfirmed: FreshTV.");
+                const parser = await import("./parsers/freshtv");
                 parser.default.parse({
-                    downloader: this
+                    downloader: this,
                 });
                 this.Log.info(`Key: ${this.m3u8.key}; IV: ${this.m3u8.iv}.`);
-            } else if (key.startsWith('abematv-license')) {
-                this.Log.info('Site comfirmed: AbemaTV.');
-                const parser = await import('./parsers/abema');
+            } else if (key.startsWith("abematv-license")) {
+                this.Log.info("Site comfirmed: AbemaTV.");
+                const parser = await import("./parsers/abema");
                 parser.default.parse({
-                    downloader: this
+                    downloader: this,
                 });
                 this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
-            } else if (this.m3u8Path.includes('dmm.com')) {
-                this.Log.info('Site comfirmed: DMM.');
-                const parser = await import('./parsers/dmm');
+            } else if (this.m3u8Path.includes("dmm.com")) {
+                this.Log.info("Site comfirmed: DMM.");
+                const parser = await import("./parsers/dmm");
                 parser.default.parse({
-                    downloader: this
+                    downloader: this,
                 });
                 this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.sequenceId}.`);
-            } else if (this.m3u8Path.includes('d22puzix29w08m')) {
-                this.Log.info('Site comfirmed: Hibiki-Radio.');
-                const parser = await import('./parsers/hibiki');
+            } else if (this.m3u8Path.includes("d22puzix29w08m")) {
+                this.Log.info("Site comfirmed: Hibiki-Radio.");
+                const parser = await import("./parsers/hibiki");
                 parser.default.parse({
-                    downloader: this
+                    downloader: this,
                 });
                 this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
             } else {
-                this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
-                const parser = await import('./parsers/common');
+                this.Log.warning(
+                    `Site is not supported by Minyami Core. Try common parser.`
+                );
+                const parser = await import("./parsers/common");
                 await parser.default.parse({
-                    downloader: this
+                    downloader: this,
                 });
             }
         } else {
             // Not encrypted
-            if (this.m3u8Path.includes('dmc.nico')) {
+            if (this.m3u8Path.includes("dmc.nico")) {
                 // NicoNico
-                this.Log.info('Site comfirmed: NicoNico.');
-                const parser = await import('./parsers/nico');
+                this.Log.info("Site comfirmed: NicoNico.");
+                const parser = await import("./parsers/nico");
                 if (!this.key) {
-                    this.Log.info('请保持播放页面不要关闭');
-                    this.Log.info('Please do not close the video page.');
-                    this.Log.info(`Maybe you should get a audience token to get a better user experience.`);
+                    this.Log.info("请保持播放页面不要关闭");
+                    this.Log.info("Please do not close the video page.");
+                    this.Log.info(
+                        `Maybe you should get a audience token to get a better user experience.`
+                    );
                 }
                 if (this.threads > 10) {
-                    this.Log.warning(`High threads setting detected. Use at your own risk!`);
+                    this.Log.warning(
+                        `High threads setting detected. Use at your own risk!`
+                    );
                 }
                 parser.default.parse({
-                    downloader: this
+                    downloader: this,
                 });
                 this.autoGenerateChunkList = false;
-            } else if (this.m3u8Path.includes('googlevideo')) {
+            } else if (this.m3u8Path.includes("googlevideo")) {
                 // YouTube
-                this.Log.info('Site comfirmed: YouTube.');
-                const parser = await import('./parsers/youtube');
+                this.Log.info("Site comfirmed: YouTube.");
+                const parser = await import("./parsers/youtube");
                 parser.default.parse({
-                    downloader: this
+                    downloader: this,
                 });
             } else {
-                this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
-                const parser = await import('./parsers/common');
+                this.Log.warning(
+                    `Site is not supported by Minyami Core. Try common parser.`
+                );
+                const parser = await import("./parsers/common");
                 await parser.default.parse({
-                    downloader: this
+                    downloader: this,
                 });
             }
         }
@@ -140,7 +170,10 @@ class ArchiveDownloader extends Downloader {
         // Record start time to calculate speed.
         this.startedAt = new Date().valueOf();
         // Allocate temporary directory.
-        this.tempPath = path.resolve(os.tmpdir(), 'minyami_' + new Date().valueOf());
+        this.tempPath = path.resolve(
+            os.tmpdir(),
+            "minyami_" + new Date().valueOf()
+        );
 
         if (!fs.existsSync(this.tempPath)) {
             fs.mkdirSync(this.tempPath);
@@ -148,20 +181,22 @@ class ArchiveDownloader extends Downloader {
 
         process.on("SIGINT", async () => {
             await this.clean();
-            this.emit('finished');
+            this.emit("finished");
         });
 
         await this.parse();
 
         this.Log.info(`Start downloading with ${this.threads} thread(s).`);
         if (this.autoGenerateChunkList) {
-            this.chunks = this.m3u8.chunks.map(chunk => {
+            this.chunks = this.m3u8.chunks.map((chunk) => {
                 return {
                     url: chunk.url,
-                    filename: this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url.match(/\/*([^\/]+?\.ts)/)[1],
+                    filename: this.onChunkNaming
+                        ? this.onChunkNaming(chunk)
+                        : path.parse(chunk.url).base,
                     key: chunk.key,
                     iv: chunk.iv,
-                    sequenceId: chunk.sequenceId
+                    sequenceId: chunk.sequenceId,
                 };
             });
         }
@@ -174,9 +209,14 @@ class ArchiveDownloader extends Downloader {
                 }
                 if (isChunkGroup(chunk)) {
                     // 处理一组块
-                    if (nowTime + chunk.chunks.length * this.m3u8.getChunkLength() < this.sliceStart) {
+                    if (
+                        nowTime +
+                            chunk.chunks.length * this.m3u8.getChunkLength() <
+                        this.sliceStart
+                    ) {
                         // 加上整个块都还没有到开始时间
-                        nowTime += chunk.chunks.length * this.m3u8.getChunkLength();
+                        nowTime +=
+                            chunk.chunks.length * this.m3u8.getChunkLength();
                         continue;
                     } else {
                         // 组中至少有一个已经在时间范围内
@@ -187,7 +227,12 @@ class ArchiveDownloader extends Downloader {
                             isNew: true,
                         };
                         for (const c of chunk.chunks) {
-                            if (nowTime + this.m3u8.getChunkLength() >= this.sliceStart && nowTime + this.m3u8.getChunkLength() < this.sliceEnd) {
+                            if (
+                                nowTime + this.m3u8.getChunkLength() >=
+                                    this.sliceStart &&
+                                nowTime + this.m3u8.getChunkLength() <
+                                    this.sliceEnd
+                            ) {
                                 // 添加已经在时间范围内的块
                                 newChunkItem.chunks.push(c);
                                 nowTime += this.m3u8.getChunkLength();
@@ -212,61 +257,86 @@ class ArchiveDownloader extends Downloader {
             this.chunks = newChunkList;
         }
 
-        this.allChunks = this.chunks.map(chunk => {
+        this.allChunks = this.chunks.map((chunk) => {
             if (isChunkGroup(chunk)) {
                 return {
                     ...chunk,
-                    chunks: [...chunk.chunks]
-                }
+                    chunks: [...chunk.chunks],
+                };
             } else {
                 return chunk;
             }
-        })
+        });
 
         this.totalChunksCount = 0;
         for (const chunk of this.chunks) {
-            this.totalChunksCount += isChunkGroup(chunk) ? chunk.chunks.length : 1;
+            this.totalChunksCount += isChunkGroup(chunk)
+                ? chunk.chunks.length
+                : 1;
         }
 
         this.outputFileList = [];
-        this.chunks.forEach(chunkItem => {
+        this.chunks.forEach((chunkItem) => {
             if (!isChunkGroup(chunkItem)) {
                 if (this.m3u8.isEncrypted) {
-                    this.outputFileList.push(path.resolve(this.tempPath, `./${chunkItem.filename}.decrypt`));
+                    this.outputFileList.push(
+                        path.resolve(
+                            this.tempPath,
+                            `./${chunkItem.filename}.decrypt`
+                        )
+                    );
                 } else {
-                    this.outputFileList.push(path.resolve(this.tempPath, `./${chunkItem.filename}`));
+                    this.outputFileList.push(
+                        path.resolve(this.tempPath, `./${chunkItem.filename}`)
+                    );
                 }
             } else {
                 for (const chunk of chunkItem.chunks) {
                     if (this.m3u8.isEncrypted) {
-                        this.outputFileList.push(path.resolve(this.tempPath, `./${chunk.filename}.decrypt`));
+                        this.outputFileList.push(
+                            path.resolve(
+                                this.tempPath,
+                                `./${chunk.filename}.decrypt`
+                            )
+                        );
                     } else {
-                        this.outputFileList.push(path.resolve(this.tempPath, `./${chunk.filename}`));
+                        this.outputFileList.push(
+                            path.resolve(this.tempPath, `./${chunk.filename}`)
+                        );
                     }
                 }
             }
         });
         if (this.verbose) {
             setInterval(() => {
-                this.Log.debug(`Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunksCount}, total chunks: ${this.totalChunksCount}`);
+                this.Log.debug(
+                    `Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunksCount}, total chunks: ${this.totalChunksCount}`
+                );
             }, 3000);
         }
         this.checkQueue();
     }
-
 
     /**
      * calculate ETA
      */
     getETA() {
         const usedTime = new Date().valueOf() - this.startedAt;
-        const remainingTimeInSeconds = Math.round(((usedTime / this.finishedChunksCount * this.totalChunksCount) - usedTime) / 1000)
+        const remainingTimeInSeconds = Math.round(
+            ((usedTime / this.finishedChunksCount) * this.totalChunksCount -
+                usedTime) /
+                1000
+        );
         if (remainingTimeInSeconds < 60) {
             return `${remainingTimeInSeconds}s`;
         } else if (remainingTimeInSeconds < 3600) {
-            return `${Math.floor(remainingTimeInSeconds / 60)}m ${remainingTimeInSeconds % 60}s`;
+            return `${Math.floor(remainingTimeInSeconds / 60)}m ${
+                remainingTimeInSeconds % 60
+            }s`;
         } else {
-            return `${Math.floor(remainingTimeInSeconds / 3600)}h ${Math.floor((remainingTimeInSeconds % 3600) / 60)}m ${remainingTimeInSeconds % 60}s`;
+            return `${Math.floor(remainingTimeInSeconds / 3600)}h ${Math.floor(
+                (remainingTimeInSeconds % 3600) / 60
+            )}m ${remainingTimeInSeconds % 60}s`;
         }
     }
 
@@ -279,7 +349,10 @@ class ArchiveDownloader extends Downloader {
             let chunk: Chunk;
             if (isChunkGroup(task)) {
                 if (task.actions && task.isNew) {
-                    this.verbose && this.Log.debug(`Handle chunk actions for a new chunk group.`);
+                    this.verbose &&
+                        this.Log.debug(
+                            `Handle chunk actions for a new chunk group.`
+                        );
                     task.isNew = false;
                     for (const action of task.actions) {
                         await this.handleChunkGroupAction(action);
@@ -310,100 +383,127 @@ class ArchiveDownloader extends Downloader {
             }
             this.pickedChunks.push(chunk);
             this.runningThreads++;
-            this.handleTask(chunk).then(() => {
-                this.finishedChunksCount++;
-                this.runningThreads--;
-                const currentChunkInfo = {
-                    taskname: chunk.filename,
-                    finishedChunksCount: this.finishedChunksCount,
-                    totalChunksCount: this.totalChunksCount,
-                    chunkSpeed: this.calculateSpeedByChunk(),
-                    ratioSpeed: this.calculateSpeedByRatio(),
-                    eta: this.getETA()
-                }
+            this.handleTask(chunk)
+                .then(() => {
+                    this.finishedChunksCount++;
+                    this.runningThreads--;
+                    const currentChunkInfo = {
+                        taskname: chunk.filename,
+                        finishedChunksCount: this.finishedChunksCount,
+                        totalChunksCount: this.totalChunksCount,
+                        chunkSpeed: this.calculateSpeedByChunk(),
+                        ratioSpeed: this.calculateSpeedByRatio(),
+                        eta: this.getETA(),
+                    };
 
-                this.Log.info(`Proccessing ${currentChunkInfo.taskname} finished. (${currentChunkInfo.finishedChunksCount} / ${this.totalChunksCount} or ${(currentChunkInfo.finishedChunksCount / currentChunkInfo.totalChunksCount * 100).toFixed(2)}% | Avg Speed: ${
-                    currentChunkInfo.chunkSpeed
-                    } chunks/s or ${
-                    currentChunkInfo.ratioSpeed
-                    }x | ETA: ${
-                    currentChunkInfo.eta
-                    })`);
-                this.finishedFilenames[chunk.filename] = true;
-                this.emit('chunk-downloaded', currentChunkInfo);
-                this.checkQueue();
-            }).catch(e => {
-                this.runningThreads--;
-                // 重试计数
-                if (chunk.retryCount) {
-                    chunk.retryCount++;
-                } else {
-                    chunk.retryCount = 1;
-                }
-                if (chunk.parentGroup) {
-                    if (chunk.parentGroup.isFinished) {
-                        // Add a new group to the queue.
-                        this.chunks.push({
-                            chunks: [chunk],
-                            actions: chunk.parentGroup.actions,
-                            isFinished: false,
-                            isNew: true
-                        } as ChunkGroup);
+                    this.Log.info(
+                        `Proccessing ${currentChunkInfo.taskname} finished. (${
+                            currentChunkInfo.finishedChunksCount
+                        } / ${this.totalChunksCount} or ${(
+                            (currentChunkInfo.finishedChunksCount /
+                                currentChunkInfo.totalChunksCount) *
+                            100
+                        ).toFixed(2)}% | Avg Speed: ${
+                            currentChunkInfo.chunkSpeed
+                        } chunks/s or ${currentChunkInfo.ratioSpeed}x | ETA: ${
+                            currentChunkInfo.eta
+                        })`
+                    );
+                    this.finishedFilenames[chunk.filename] = true;
+                    this.emit("chunk-downloaded", currentChunkInfo);
+                    this.checkQueue();
+                })
+                .catch((e) => {
+                    this.runningThreads--;
+                    // 重试计数
+                    if (chunk.retryCount) {
+                        chunk.retryCount++;
                     } else {
-                        chunk.parentGroup.retryActions = true;
-                        chunk.parentGroup.chunks.push(chunk);
+                        chunk.retryCount = 1;
                     }
-                } else {
-                    this.chunks.push(chunk);
-                }
-                this.checkQueue();
-            });
+                    if (chunk.parentGroup) {
+                        if (chunk.parentGroup.isFinished) {
+                            // Add a new group to the queue.
+                            this.chunks.push({
+                                chunks: [chunk],
+                                actions: chunk.parentGroup.actions,
+                                isFinished: false,
+                                isNew: true,
+                            } as ChunkGroup);
+                        } else {
+                            chunk.parentGroup.retryActions = true;
+                            chunk.parentGroup.chunks.push(chunk);
+                        }
+                    } else {
+                        this.chunks.push(chunk);
+                    }
+                    this.checkQueue();
+                });
             this.checkQueue();
         }
-        if (this.chunks.length === 0 && this.totalChunksCount === this.finishedChunksCount && this.runningThreads === 0) {
+        if (
+            this.chunks.length === 0 &&
+            this.totalChunksCount === this.finishedChunksCount &&
+            this.runningThreads === 0
+        ) {
             if (this.isDownloaded) {
                 return;
             }
             this.isDownloaded = true;
-            this.Log.info('All chunks downloaded. Start merging chunks.');
-            const muxer = this.format === 'ts' ? mergeToTS : mergeToMKV;
+            this.Log.info("All chunks downloaded. Start merging chunks.");
+            const muxer = this.format === "ts" ? mergeToTS : mergeToMKV;
             // Save before merge
-            this.emit('downloaded');
+            this.emit("downloaded");
             this.saveTask();
             if (this.noMerge) {
-                this.Log.info('Skip merging. Please merge video chunks manually.');
-                this.Log.info(`Temporary files are located at ${this.tempPath}`);
-                this.emit('finished');
+                this.Log.info(
+                    "Skip merging. Please merge video chunks manually."
+                );
+                this.Log.info(
+                    `Temporary files are located at ${this.tempPath}`
+                );
+                this.emit("finished");
             }
-            muxer(this.outputFileList, this.outputPath).then(async () => {
-                this.Log.info('End of merging.');
-                this.Log.info('Starting cleaning temporary files.');
-                await deleteDirectory(this.tempPath);
-                try {
-                    deleteTask(this.m3u8Path.split('?')[0]);
-                } catch (error) {
-                    this.Log.warning('Fail to parse previous tasks, ignored.');
-                    this.Log.warning(error.message);
-                }
-                this.Log.info(`All finished. Check your file at [${path.resolve(this.outputPath)}] .`);
-                this.emit('finished');
-            }).catch(async e => {
-                await this.clean();
-                this.Log.error('Fail to merge video. Please merge video chunks manually.', e);
-            });
+            muxer(this.outputFileList, this.outputPath)
+                .then(async () => {
+                    this.Log.info("End of merging.");
+                    this.Log.info("Starting cleaning temporary files.");
+                    await deleteDirectory(this.tempPath);
+                    try {
+                        deleteTask(this.m3u8Path.split("?")[0]);
+                    } catch (error) {
+                        this.Log.warning(
+                            "Fail to parse previous tasks, ignored."
+                        );
+                        this.Log.warning(error.message);
+                    }
+                    this.Log.info(
+                        `All finished. Check your file at [${path.resolve(
+                            this.outputPath
+                        )}] .`
+                    );
+                    this.emit("finished");
+                })
+                .catch(async (e) => {
+                    await this.clean();
+                    this.Log.error(
+                        "Fail to merge video. Please merge video chunks manually.",
+                        e
+                    );
+                });
         }
     }
 
     async resume(taskId: string) {
-        const previousTask = getTask(taskId.split('?')[0]);
+        const previousTask = getTask(taskId.split("?")[0]);
         if (!previousTask) {
-            this.Log.error('Can\'t find a task to resume.');
+            this.Log.error("Can't find a task to resume.");
         }
-        this.Log.info('Previous task found. Resuming.');
+        this.Log.info("Previous task found. Resuming.");
 
         process.on("SIGINT", async () => {
             await this.clean();
-            this.emit('finish');
+            this.emit("finish");
         });
 
         this.m3u8Path = taskId;
@@ -417,7 +517,8 @@ class ArchiveDownloader extends Downloader {
         this.verbose = previousTask.verbose;
         this.startedAt = new Date().valueOf();
         this.finishedChunksCount = 0;
-        this.totalChunksCount = previousTask.totalChunksCount - previousTask.finishedChunksCount;
+        this.totalChunksCount =
+            previousTask.totalChunksCount - previousTask.finishedChunksCount;
         this.retries = previousTask.retries;
         this.timeout = previousTask.timeout;
         this.proxy = previousTask.proxy;
@@ -438,17 +539,17 @@ class ArchiveDownloader extends Downloader {
     }
 
     /**
-    * 退出前的清理工作
-    */
+     * 退出前的清理工作
+     */
     async clean() {
-        this.Log.info('Saving task status.');
+        this.Log.info("Saving task status.");
         this.saveTask();
-        this.Log.info('Please wait.');
+        this.Log.info("Please wait.");
     }
 
     saveTask() {
         const unfinishedChunks: ChunkItem[] = [];
-        this.allChunks.forEach(chunkItem => {
+        this.allChunks.forEach((chunkItem) => {
             if (isChunkGroup(chunkItem)) {
                 let allFinishedFlag = true;
                 const unfinishedChunksInItem: Chunk[] = [];
@@ -462,7 +563,7 @@ class ArchiveDownloader extends Downloader {
                     // 组中块未全部完成 加入未完成列表
                     unfinishedChunks.push({
                         ...chunkItem,
-                        chunks: unfinishedChunksInItem
+                        chunks: unfinishedChunksInItem,
                     });
                 }
             } else {
@@ -474,14 +575,18 @@ class ArchiveDownloader extends Downloader {
 
         let unfinishedChunksLength = 0;
         for (const chunk of unfinishedChunks) {
-            unfinishedChunksLength += isChunkGroup(chunk) ? chunk.chunks.length : 1;
+            unfinishedChunksLength += isChunkGroup(chunk)
+                ? chunk.chunks.length
+                : 1;
         }
 
-        this.Log.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunksLength}`);
+        this.Log.info(
+            `Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunksLength}`
+        );
 
         try {
             saveTask({
-                id: this.m3u8Path.split('?')[0],
+                id: this.m3u8Path.split("?")[0],
                 tempPath: this.tempPath,
                 m3u8Path: this.m3u8Path,
                 outputPath: this.outputPath,
@@ -491,7 +596,8 @@ class ArchiveDownloader extends Downloader {
                 iv: this.iv,
                 verbose: this.verbose,
                 startedAt: this.startedAt,
-                finishedChunksCount: this.totalChunksCount - unfinishedChunksLength,
+                finishedChunksCount:
+                    this.totalChunksCount - unfinishedChunksLength,
                 totalChunksCount: this.totalChunksCount,
                 retries: this.retries,
                 timeout: this.timeout,
@@ -501,10 +607,10 @@ class ArchiveDownloader extends Downloader {
                 allChunks: this.allChunks,
                 chunks: unfinishedChunks,
                 outputFileList: this.outputFileList,
-                finishedFilenames: this.finishedFilenames
+                finishedFilenames: this.finishedFilenames,
             });
         } catch (error) {
-            this.Log.warning('Fail to parse previous tasks, ignored.');
+            this.Log.warning("Fail to parse previous tasks, ignored.");
             this.Log.warning(error.message);
         }
     }

@@ -142,7 +142,6 @@ export async function requestRaw(
     proxy: AxiosProxyConfig = undefined,
     options: AxiosRequestConfig = {}
 ): Promise<AxiosResponse> {
-    console.log(url);
     return await axios({
         url,
         method: "GET",
