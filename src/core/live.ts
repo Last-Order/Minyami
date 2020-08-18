@@ -203,7 +203,7 @@ export default class LiveDownloader extends Downloader {
                     return {
                         filename: this.onChunkNaming
                             ? this.onChunkNaming(chunk)
-                            : path.parse(chunk.url).base,
+                            : path.parse(chunk.url).base.split('?')[0],
                         isEncrypted: this.m3u8.isEncrypted,
                         key: chunk.key,
                         iv: chunk.iv,
