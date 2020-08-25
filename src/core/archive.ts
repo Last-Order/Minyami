@@ -503,7 +503,7 @@ class ArchiveDownloader extends Downloader {
 
         process.on("SIGINT", async () => {
             await this.clean();
-            this.emit("finish");
+            this.emit("finished");
         });
 
         this.m3u8Path = taskId;

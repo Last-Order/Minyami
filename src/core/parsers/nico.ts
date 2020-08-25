@@ -104,6 +104,9 @@ export default class Parser {
                 downloader.once('downloaded', () => {
                     clearInterval(freshTokenInterval);
                 });
+                downloader.once('finished', () => {
+                    clearInterval(freshTokenInterval);
+                });
             } else {
                 // 旧生放送
                 const liveId = downloader.key.match(/(.+?)_/)[1];
@@ -160,6 +163,9 @@ export default class Parser {
                             socket.send(JSON.stringify(payload))
                         }, 50000 / downloader.threads);
                         downloader.once('downloaded', () => {
+                            clearInterval(freshTokenInterval);
+                        });
+                        downloader.once('finished', () => {
                             clearInterval(freshTokenInterval);
                         });
                     });
