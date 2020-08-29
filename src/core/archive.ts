@@ -12,6 +12,7 @@ import Downloader, {
 import * as fs from "fs";
 import { saveTask, deleteTask, getTask } from "../utils/task";
 import { timeStringToSeconds } from "../utils/time";
+import { URL } from "url";
 const path = require("path");
 const os = require("os");
 
@@ -193,7 +194,7 @@ class ArchiveDownloader extends Downloader {
                     url: chunk.url,
                     filename: this.onChunkNaming
                         ? this.onChunkNaming(chunk)
-                        : path.parse(chunk.url).base.split('?')[0],
+                        : new URL(chunk.url).pathname.split('/').slice(-1)[0],
                     key: chunk.key,
                     iv: chunk.iv,
                     sequenceId: chunk.sequenceId,

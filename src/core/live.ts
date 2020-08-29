@@ -7,6 +7,7 @@ import M3U8, { M3U8Chunk } from "./m3u8";
 import Logger, { ConsoleLogger } from "../utils/log";
 import { mergeToMKV, mergeToTS, download, decrypt } from "../utils/media";
 import { sleep } from "../utils/system";
+import { URL } from "url";
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -203,7 +204,7 @@ export default class LiveDownloader extends Downloader {
                     return {
                         filename: this.onChunkNaming
                             ? this.onChunkNaming(chunk)
-                            : path.parse(chunk.url).base.split('?')[0],
+                            : new URL(chunk.url).pathname.split('/').slice(-1)[0],
                         isEncrypted: this.m3u8.isEncrypted,
                         key: chunk.key,
                         iv: chunk.iv,
