@@ -119,18 +119,23 @@ export default class Parser {
                     // Channel Live
                     socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v2/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
                 }
-                if (downloader.proxy) {
-                    const agent = new SocksProxyAgent(`socks5h://${downloader.proxyHost}:${downloader.proxyPort}`);
-                    socket = new ReconnectingWebSocket(socketUrl, {
-                        agent
-                    }, {
-                        WebSocket: WebSocket
-                    })
-                } else {
-                    socket = new ReconnectingWebSocket(socketUrl, [], {
-                        WebSocket: WebSocket
-                    });
-                }
+                socket = new WebSocket(socketUrl, undefined, {
+                    headers: {
+                        'User-Agent': UA.CHROME_DEFAULT_UA
+                    }
+                });
+                // if (downloader.proxy) {
+                //     const agent = new SocksProxyAgent(`socks5h://${downloader.proxyHost}:${downloader.proxyPort}`);
+                //     socket = new ReconnectingWebSocket(socketUrl, {
+                //         agent
+                //     }, {
+                //         WebSocket: WebSocket
+                //     })
+                // } else {
+                //     socket = new ReconnectingWebSocket(socketUrl, [], {
+                //         WebSocket: WebSocket
+                //     });
+                // }
                 if (listened === false) {
                     socket.addEventListener('message', (message: any) => {
                         listened = true;
