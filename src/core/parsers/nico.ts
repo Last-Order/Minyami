@@ -3,7 +3,7 @@ import { isChunkGroup, ChunkGroup } from "../downloader";
 const SocksProxyAgent = require('socks-proxy-agent');
 import UA from "../../utils/ua";
 import Axios from "axios";
-const ReconnectingWebSocket = require('reconnecting-websocket');
+const ReconnectingWebSocket = require('@eridanussora/reconnecting-websocket');
 const WebSocket = require('ws');
 
 export default class Parser {
@@ -119,23 +119,27 @@ export default class Parser {
                     // Channel Live
                     socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v2/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
                 }
-                socket = new WebSocket(socketUrl, undefined, {
-                    headers: {
-                        'User-Agent': UA.CHROME_DEFAULT_UA
-                    }
-                });
-                // if (downloader.proxy) {
-                //     const agent = new SocksProxyAgent(`socks5h://${downloader.proxyHost}:${downloader.proxyPort}`);
-                //     socket = new ReconnectingWebSocket(socketUrl, {
-                //         agent
-                //     }, {
-                //         WebSocket: WebSocket
-                //     })
-                // } else {
-                //     socket = new ReconnectingWebSocket(socketUrl, [], {
-                //         WebSocket: WebSocket
-                //     });
-                // }
+                if (downloader.proxy) {
+                    const agent = new SocksProxyAgent(`socks5h://${downloader.proxyHost}:${downloader.proxyPort}`);
+                    socket = new ReconnectingWebSocket(socketUrl, undefined, {
+                        WebSocket: WebSocket,
+                        clientOptions: {
+                            headers: {
+                                'User-Agent': UA.CHROME_DEFAULT_UA
+                            },
+                            agent
+                        }
+                    })
+                } else {
+                    socket = new ReconnectingWebSocket(socketUrl, undefined, {
+                        WebSocket: WebSocket,
+                        clientOptions: {
+                            headers: {
+                                'User-Agent': UA.CHROME_DEFAULT_UA
+                            }
+                        }
+                    });
+                }
                 if (listened === false) {
                     socket.addEventListener('message', (message: any) => {
                         listened = true;
