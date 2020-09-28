@@ -155,6 +155,7 @@ class Downloader extends EventEmitter {
         }
 
         if (proxy) {
+            this.Log.warning(`--proxy is deprecated and will be removed in the future. See https://github.com/Last-Order/Minyami/issues/54.`)
             const splitedProxyString: string[] = proxy.split(':');
             this.proxy = proxy;
             this.proxyHost = splitedProxyString.slice(0, splitedProxyString.length - 1).join('');
