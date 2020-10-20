@@ -1,16 +1,25 @@
+FROM node:alpine AS builder
+
+COPY / /Minyami/
+
+WORKDIR /Minyami
+
+RUN npm i -g typescript && npm ci && tsc && \
+    npm pack && \
+    find . -type f -name minyami-?.?.?.tgz -exec mv \{} ./minyami.tgz \;
+
+
 FROM node:alpine
 
-ARG VERION="3.0.3"
+COPY --from=builder /Minyami/minyami.tgz /minyami.tgz
 
-RUN wget "https://github.com/Last-Order/Minyami/archive/${VERION}.tar.gz" -O "Minyami-${VERION}.tar.gz" && \
-	tar -zxf "Minyami-${VERION}.tar.gz" && cd "Minyami-${VERION}" && export npm_config_cache="$(mktemp -d)" && \
-	npm install -g typescript && npm install && tsc && rm -r node_modules && \
-	npm pack && npm i -g minyami-${VERION}.tgz && \
-	npm -g rm typescript && npm clean-install && rm -rf "${npm_config_cache}" && \
-	cd .. && rm -rf "Minyami-${VERION}" "Minyami-${VERION}.tar.gz"
+RUN apk add --no-cache dumb-init mkvtoolnix && \
+    npm i -g minyami.tgz
 
 VOLUME /minyami
 
 WORKDIR /minyami
 
-ENTRYPOINT ["/usr/local/bin/minyami"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+CMD ["minyami", "--help"]
