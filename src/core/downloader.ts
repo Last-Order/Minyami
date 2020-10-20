@@ -273,7 +273,7 @@ class Downloader extends EventEmitter {
                                 this.getEncryptionKey(CommonUtils.buildFullUrl(
                                     this.m3u8.m3u8Url, task.key
                                 )),
-                                task.sequenceId || this.m3u8.sequenceId
+                                this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
                             );
                         }
                     } else {
@@ -284,7 +284,7 @@ class Downloader extends EventEmitter {
                                 this.getEncryptionKey(CommonUtils.buildFullUrl(
                                     this.m3u8.m3u8Url, this.m3u8.key
                                 )),
-                                this.m3u8.iv
+                                task.iv
                             );
                         } else {
                             await decrypt(
@@ -293,7 +293,7 @@ class Downloader extends EventEmitter {
                                 this.getEncryptionKey(CommonUtils.buildFullUrl(
                                     this.m3u8.m3u8Url, this.m3u8.key
                                 )),
-                                task.sequenceId || this.m3u8.sequenceId
+                                this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
                             );
                         }
                         this.verbose && this.Log.debug(`Decrypting ${task.filename} succeed`);
