@@ -2,8 +2,7 @@ FROM node:alpine
 
 ARG VERION="3.0.3"
 
-RUN apk add --no-cache openssl && \
-	wget "https://github.com/Last-Order/Minyami/archive/${VERION}.tar.gz" -O "Minyami-${VERION}.tar.gz" && \
+RUN wget "https://github.com/Last-Order/Minyami/archive/${VERION}.tar.gz" -O "Minyami-${VERION}.tar.gz" && \
 	tar -zxf "Minyami-${VERION}.tar.gz" && cd "Minyami-${VERION}" && export npm_config_cache="$(mktemp -d)" && \
 	npm install -g typescript && npm install && tsc && rm -r node_modules && \
 	npm pack && npm i -g minyami-${VERION}.tgz && \

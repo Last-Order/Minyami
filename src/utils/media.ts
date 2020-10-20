@@ -5,6 +5,7 @@ import * as fs from "fs";
 import UA from "./ua";
 import { URL } from "url";
 const SocksProxyAgent = require("socks-proxy-agent");
+const crypto = require("crypto");
 
 /**
  * 合并视频文件
@@ -104,8 +105,8 @@ export function download(
                 responseType: "arraybuffer",
                 httpsAgent: proxy
                     ? new SocksProxyAgent(
-                          `socks5h://${proxy.host}:${proxy.port}`
-                      )
+                        `socks5h://${proxy.host}:${proxy.port}`
+                    )
                     : undefined,
                 headers: {
                     "User-Agent": UA.CHROME_DEFAULT_UA,
@@ -117,7 +118,7 @@ export function download(
             if (
                 response.headers["content-length"] &&
                 parseInt(response.headers["content-length"]) !==
-                    response.data.length
+                response.data.length
             ) {
                 reject(new Error("Bad Response"));
             }
@@ -170,7 +171,10 @@ export async function decrypt(
     key: string,
     iv: string
 ) {
-    return await exec(
-        `openssl aes-128-cbc -d -in "${input}" -out "${output}" -K "${key}" -iv "${iv}"`
-    );
+    const algorithm = 'aes-128-cbc';
+    const decipher = crypto.createDecipheriv(algorithm, Buffer.from(key, 'hex'), Buffer.from(iv, 'hex'));
+    const i = fs.createReadStream(input);
+    const o = fs.createWriteStream(output);
+
+    await i.pipe(decipher).pipe(o);
 }
