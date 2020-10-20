@@ -7,7 +7,7 @@
 
 * mkvmerge (optional, mkv output required)
 
-! Minyami requires Node 10.5.0+
+! Minyami requires Node 10.22.0+
 
 Make sure you had put the binary files into your system `PATH`.
 
