@@ -4,8 +4,8 @@ import { AxiosProxyConfig } from "axios";
 import * as fs from "fs";
 import UA from "./ua";
 import { URL } from "url";
+import * as crypto from "crypto";
 const SocksProxyAgent = require("socks-proxy-agent");
-const crypto = require("crypto");
 
 /**
  * 合并视频文件
@@ -162,8 +162,8 @@ export async function requestRaw(
  * 解密文件
  * @param input
  * @param output
- * @param key
- * @param iv
+ * @param key in hex 
+ * @param iv in hex
  */
 export async function decrypt(
     input: string,
@@ -172,7 +172,21 @@ export async function decrypt(
     iv: string
 ) {
     const algorithm = 'aes-128-cbc';
-    const decipher = crypto.createDecipheriv(algorithm, Buffer.from(key, 'hex'), Buffer.from(iv, 'hex'));
+    if (key.length !== 32) {
+        throw new Error(`Key [${key}] length [${key.length}] or form invalid.`);
+    }
+    if (iv.length > 32) {
+        throw new Error(`IV [${iv}] length [${iv.length}] or form invalid.`);
+    }
+    if (iv.length % 2 == 1) {
+        iv = '0' + iv;
+    }
+    const keyBuffer = Buffer.alloc(16);
+    const ivBuffer = Buffer.alloc(16);
+    keyBuffer.write(key, 'hex');
+    ivBuffer.write(iv, 16 - iv.length / 2, 'hex');
+
+    const decipher = crypto.createDecipheriv(algorithm, keyBuffer, ivBuffer);
     const i = fs.createReadStream(input);
     const o = fs.createWriteStream(output);
 
