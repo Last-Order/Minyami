@@ -4,6 +4,7 @@ import { AxiosProxyConfig } from "axios";
 import * as fs from "fs";
 import UA from "./ua";
 import { URL } from "url";
+import * as crypto from "crypto";
 const SocksProxyAgent = require("socks-proxy-agent");
 
 /**
@@ -104,8 +105,8 @@ export function download(
                 responseType: "arraybuffer",
                 httpsAgent: proxy
                     ? new SocksProxyAgent(
-                          `socks5h://${proxy.host}:${proxy.port}`
-                      )
+                        `socks5h://${proxy.host}:${proxy.port}`
+                    )
                     : undefined,
                 headers: {
                     "User-Agent": UA.CHROME_DEFAULT_UA,
@@ -117,7 +118,7 @@ export function download(
             if (
                 response.headers["content-length"] &&
                 parseInt(response.headers["content-length"]) !==
-                    response.data.length
+                response.data.length
             ) {
                 reject(new Error("Bad Response"));
             }
@@ -161,8 +162,8 @@ export async function requestRaw(
  * 解密文件
  * @param input
  * @param output
- * @param key
- * @param iv
+ * @param key in hex 
+ * @param iv in hex
  */
 export async function decrypt(
     input: string,
@@ -170,7 +171,24 @@ export async function decrypt(
     key: string,
     iv: string
 ) {
-    return await exec(
-        `openssl aes-128-cbc -d -in "${input}" -out "${output}" -K "${key}" -iv "${iv}"`
-    );
+    const algorithm = 'aes-128-cbc';
+    if (key.length !== 32) {
+        throw new Error(`Key [${key}] length [${key.length}] or form invalid.`);
+    }
+    if (iv.length > 32) {
+        throw new Error(`IV [${iv}] length [${iv.length}] or form invalid.`);
+    }
+    if (iv.length % 2 == 1) {
+        iv = '0' + iv;
+    }
+    const keyBuffer = Buffer.alloc(16);
+    const ivBuffer = Buffer.alloc(16);
+    keyBuffer.write(key, 'hex');
+    ivBuffer.write(iv, 16 - iv.length / 2, 'hex');
+
+    const decipher = crypto.createDecipheriv(algorithm, keyBuffer, ivBuffer);
+    const i = fs.createReadStream(input);
+    const o = fs.createWriteStream(output);
+
+    await i.pipe(decipher).pipe(o);
 }

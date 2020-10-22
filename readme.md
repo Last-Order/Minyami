@@ -5,12 +5,11 @@
 
 ## Dependencies
 
-* openssl
 * mkvmerge (optional, mkv output required)
 
-! Minyami requires Node 10.5.0+
+! Minyami requires Node 10.22.0+
 
-Make sure you had put these binary files into your system `PATH`.
+Make sure you had put the binary files into your system `PATH`.
 
 ## Installation
 
@@ -66,12 +65,6 @@ Options:
 Q: Should I keep the browser open when downloading?
 
 A: It's not necessary.
-
-Q: How to get openssl for Windows?
-
-A: You can install openssl via Chocolatey.
-
-`choco install openssl`
 
 ## Use as a library (3.1.0+)
 

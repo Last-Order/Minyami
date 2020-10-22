@@ -1,6 +1,7 @@
-/node_modules/
-/temp/
-/temp_*/
+.github/
+.vscode/
+node_modules/
+src/
 tasks.json
 output.mkv
 Dockerfile
