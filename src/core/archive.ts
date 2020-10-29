@@ -578,8 +578,6 @@ class ArchiveDownloader extends Downloader {
         } catch (error) {
             this.Log.warning("Fail to parse previous tasks, ignored.");
             this.Log.warning(error.message);
-        } finally {
-            this.emit("finished");
         }
     }
 }
