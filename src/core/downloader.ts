@@ -1,14 +1,14 @@
-const path = require('path');
-import Logger from '../utils/log';
+const path = require("path");
+import Logger from "../utils/log";
 import M3U8, { M3U8Chunk } from "./m3u8";
-import { loadM3U8 } from '../utils/m3u8';
-import * as system from '../utils/system';
-import CommonUtils from '../utils/common';
-import { download, decrypt } from '../utils/media';
-import { ActionType } from './action';
-import * as actions from './action';
-import { AxiosRequestConfig } from 'axios';
-import { EventEmitter } from 'events';
+import { loadM3U8 } from "../utils/m3u8";
+import * as system from "../utils/system";
+import CommonUtils from "../utils/common";
+import { download, decrypt } from "../utils/media";
+import { ActionType } from "./action";
+import * as actions from "./action";
+import { AxiosRequestConfig } from "axios";
+import { EventEmitter } from "events";
 
 export interface DownloaderConfig {
     threads?: number;
@@ -21,6 +21,7 @@ export interface DownloaderConfig {
     proxy?: string;
     format?: string;
     nomerge?: boolean;
+    cliMode?: boolean;
 }
 
 export interface ArchiveDownloaderConfig extends DownloaderConfig {
@@ -48,7 +49,6 @@ export interface ChunkAction {
     actionParams: string;
 }
 
-
 export interface ChunkGroup {
     chunks: Chunk[];
     actions?: ChunkAction[];
@@ -60,16 +60,17 @@ export interface ChunkGroup {
 export type ChunkItem = Chunk | ChunkGroup;
 
 export function isChunkGroup(c: ChunkItem): c is ChunkGroup {
-    return !!((c as ChunkGroup).chunks);
+    return !!(c as ChunkGroup).chunks;
 }
 
 class Downloader extends EventEmitter {
     Log: Logger;
+    cliMode: boolean = false;
 
     tempPath: string; // 临时文件目录
     m3u8Path: string; // m3u8文件路径
     m3u8: M3U8; // m3u8实体
-    outputPath: string = './output.ts'; // 输出目录
+    outputPath: string = "./output.ts"; // 输出目录
     threads: number = 5; // 并发数量
 
     allChunks: ChunkItem[];
@@ -82,7 +83,7 @@ class Downloader extends EventEmitter {
     iv: string; // IV
 
     verbose: boolean = false; // 调试输出
-    format: string = 'ts'; // 输出格式
+    format: string = "ts"; // 输出格式
     noMerge: boolean = false;
 
     startedAt: number; // 开始下载时间
@@ -91,8 +92,8 @@ class Downloader extends EventEmitter {
     retries: number = 5; // 重试数量
     timeout: number = 60000; // 超时时间
 
-    proxy: string = '';
-    proxyHost: string = '';
+    proxy: string = "";
+    proxyHost: string = "";
     proxyPort: number = 0;
 
     autoGenerateChunkList: boolean = true;
@@ -104,14 +105,30 @@ class Downloader extends EventEmitter {
     onDownloadError: (error: Error, downloader: Downloader) => void;
 
     /**
-     * 
-     * @param m3u8Path 
+     *
+     * @param m3u8Path
      * @param config
-     * @param config.threads 线程数量 
+     * @param config.threads 线程数量
      */
-    constructor(log: Logger, m3u8Path: string, { threads, output, key, verbose, retries, proxy, format, cookies, headers, nomerge }: DownloaderConfig = {
-        threads: 5
-    }) {
+    constructor(
+        log: Logger,
+        m3u8Path: string,
+        {
+            threads,
+            output,
+            key,
+            verbose,
+            retries,
+            proxy,
+            format,
+            cookies,
+            headers,
+            nomerge,
+            cliMode = false,
+        }: DownloaderConfig = {
+            threads: 5,
+        }
+    ) {
         super();
         this.Log = log;
 
@@ -144,7 +161,7 @@ class Downloader extends EventEmitter {
         }
 
         if (headers) {
-            for (const h of headers.split('\\n')) {
+            for (const h of headers.split("\\n")) {
                 try {
                     const header = /^([^ :]+):(.+)$/.exec(h).slice(1);
                     this.headers[header[0]] = header[1].trim();
@@ -155,10 +172,12 @@ class Downloader extends EventEmitter {
         }
 
         if (proxy) {
-            this.Log.warning(`--proxy is deprecated and will be removed in the future. See https://github.com/Last-Order/Minyami/issues/54.`)
-            const splitedProxyString: string[] = proxy.split(':');
+            this.Log.warning(
+                `--proxy is deprecated and will be removed in the future. See https://github.com/Last-Order/Minyami/issues/54.`
+            );
+            const splitedProxyString: string[] = proxy.split(":");
             this.proxy = proxy;
-            this.proxyHost = splitedProxyString.slice(0, splitedProxyString.length - 1).join('');
+            this.proxyHost = splitedProxyString.slice(0, splitedProxyString.length - 1).join("");
             this.proxyPort = parseInt(splitedProxyString[splitedProxyString.length - 1]);
         }
 
@@ -168,21 +187,27 @@ class Downloader extends EventEmitter {
 
         this.m3u8Path = m3u8Path;
 
-        if (this.format === 'ts' && this.outputPath.endsWith('.mkv')) {
-            this.Log.warning(`Output file name ends with .mkv is not supported in direct muxing mode, auto changing to .ts.`);
-            this.outputPath = this.outputPath + '.ts';
+        if (this.format === "ts" && this.outputPath.endsWith(".mkv")) {
+            this.Log.warning(
+                `Output file name ends with .mkv is not supported in direct muxing mode, auto changing to .ts.`
+            );
+            this.outputPath = this.outputPath + ".ts";
         }
 
-        if (process.platform === "win32") {
-            var rl = require("readline").createInterface({
-                input: process.stdin,
-                output: process.stdout
-            });
+        this.cliMode = cliMode;
 
-            rl.on("SIGINT", function () {
-                // @ts-ignore
-                process.emit("SIGINT");
-            });
+        if (cliMode) {
+            if (process.platform === "win32") {
+                var rl = require("readline").createInterface({
+                    input: process.stdin,
+                    output: process.stdout,
+                });
+
+                rl.on("SIGINT", function () {
+                    // @ts-ignore
+                    process.emit("SIGINT");
+                });
+            }
         }
     }
 
@@ -198,8 +223,8 @@ class Downloader extends EventEmitter {
             const options: AxiosRequestConfig = {};
             if (this.cookies) {
                 options.headers = {
-                    'Cookie': this.cookies
-                }
+                    Cookie: this.cookies,
+                };
             }
             if (Object.keys(this.headers).length > 0) {
                 options.headers = this.headers;
@@ -213,7 +238,7 @@ class Downloader extends EventEmitter {
                 options
             );
         } catch (e) {
-            this.Log.error('Aborted due to critical error.', e);
+            this.Log.error("Aborted due to critical error.", e);
         }
     }
 
@@ -222,10 +247,10 @@ class Downloader extends EventEmitter {
      */
     async clean() {
         try {
-            this.Log.info('Starting cleaning temporary files.');
+            this.Log.info("Starting cleaning temporary files.");
             await system.deleteDirectory(this.tempPath);
         } catch (e) {
-            this.Log.error('Fail to delete temporary directory.');
+            this.Log.error("Fail to delete temporary directory.");
         }
     }
 
@@ -238,8 +263,8 @@ class Downloader extends EventEmitter {
         const options: AxiosRequestConfig = {};
         if (this.cookies) {
             options.headers = {
-                'Cookie': this.cookies
-            }
+                Cookie: this.cookies,
+            };
         }
         if (Object.keys(this.headers).length > 0) {
             options.headers = this.headers;
@@ -260,19 +285,19 @@ class Downloader extends EventEmitter {
                         if (task.iv) {
                             await decrypt(
                                 path.resolve(this.tempPath, `./${task.filename}`),
-                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt',
-                                this.getEncryptionKey(CommonUtils.buildFullUrl(
-                                    this.m3u8.m3u8Url, task.key
-                                )),
+                                path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
+                                this.getEncryptionKey(
+                                    CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key)
+                                ),
                                 task.iv
                             );
                         } else {
                             await decrypt(
                                 path.resolve(this.tempPath, `./${task.filename}`),
-                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt',
-                                this.getEncryptionKey(CommonUtils.buildFullUrl(
-                                    this.m3u8.m3u8Url, task.key
-                                )),
+                                path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
+                                this.getEncryptionKey(
+                                    CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key)
+                                ),
                                 this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
                             );
                         }
@@ -280,19 +305,19 @@ class Downloader extends EventEmitter {
                         if (task.iv) {
                             await decrypt(
                                 path.resolve(this.tempPath, `./${task.filename}`),
-                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt',
-                                this.getEncryptionKey(CommonUtils.buildFullUrl(
-                                    this.m3u8.m3u8Url, this.m3u8.key
-                                )),
+                                path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
+                                this.getEncryptionKey(
+                                    CommonUtils.buildFullUrl(this.m3u8.m3u8Url, this.m3u8.key)
+                                ),
                                 task.iv
                             );
                         } else {
                             await decrypt(
                                 path.resolve(this.tempPath, `./${task.filename}`),
-                                path.resolve(this.tempPath, `./${task.filename}`) + '.decrypt',
-                                this.getEncryptionKey(CommonUtils.buildFullUrl(
-                                    this.m3u8.m3u8Url, this.m3u8.key
-                                )),
+                                path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
+                                this.getEncryptionKey(
+                                    CommonUtils.buildFullUrl(this.m3u8.m3u8Url, this.m3u8.key)
+                                ),
                                 this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
                             );
                         }
@@ -301,9 +326,17 @@ class Downloader extends EventEmitter {
                 }
                 resolve();
             } catch (e) {
-                this.Log.warning(`Downloading or decrypting ${task.filename} failed. Retry later. [${e.code ||
-                    (e.response ? `${e.response.status} ${e.response.statusText}` : undefined)
-                    || e.message || e.constructor.name || 'UNKNOWN'}]`);
+                this.Log.warning(
+                    `Downloading or decrypting ${task.filename} failed. Retry later. [${
+                        e.code ||
+                        (e.response
+                            ? `${e.response.status} ${e.response.statusText}`
+                            : undefined) ||
+                        e.message ||
+                        e.constructor.name ||
+                        "UNKNOWN"
+                    }]`
+                );
                 this.verbose && this.Log.debug(e);
                 reject(e);
             }
@@ -313,10 +346,10 @@ class Downloader extends EventEmitter {
     async handleChunkGroupAction(action: ChunkAction) {
         try {
             switch (action.actionName) {
-                case 'ping': {
+                case "ping": {
                     await actions.ping(action.actionParams);
                 }
-                case 'sleep': {
+                case "sleep": {
                     await actions.sleep(action.actionParams);
                 }
             }
@@ -339,15 +372,20 @@ class Downloader extends EventEmitter {
      * 计算以块计算的下载速度
      */
     calculateSpeedByChunk() {
-        return (this.finishedChunksCount / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
+        return (
+            this.finishedChunksCount / Math.round((new Date().valueOf() - this.startedAt) / 1000)
+        ).toFixed(2);
     }
 
     /**
      * 计算以视频长度为基准下载速度倍率
      */
     calculateSpeedByRatio() {
-        return (this.finishedChunksCount * this.m3u8.getChunkLength() / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
+        return (
+            (this.finishedChunksCount * this.m3u8.getChunkLength()) /
+            Math.round((new Date().valueOf() - this.startedAt) / 1000)
+        ).toFixed(2);
     }
-};
+}
 
 export default Downloader;
