@@ -439,7 +439,11 @@ class ArchiveDownloader extends Downloader {
                 .then(async () => {
                     this.Log.info("End of merging.");
                     this.Log.info("Starting cleaning temporary files.");
-                    await deleteDirectory(this.tempPath);
+                    try {
+                        await deleteDirectory(this.tempPath);
+                    } catch (e) {
+                        this.Log.warning(`Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`);
+                    }
                     try {
                         deleteTask(this.m3u8Path.split("?")[0]);
                     } catch (error) {
