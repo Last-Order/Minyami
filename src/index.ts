@@ -203,7 +203,7 @@ Erii.addOption({
     argument: {
         name: "headers",
         description:
-            'Multiple headers should be splited with \\n. eg. --header "Cookie: a=1\\nUser-Agent: X-UA". Don\'t forget to escape. This option will override --cookies.',
+            'Multiple headers should be splited with \\n. eg. --headers "Cookie: a=1\\nUser-Agent: X-UA". Don\'t forget to escape. This option will override --cookies.',
     },
 });
 
