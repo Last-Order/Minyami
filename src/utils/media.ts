@@ -24,10 +24,7 @@ export function mergeToMKV(fileList = [], output = "./output.mkv") {
         const parameters = fileList.concat(["-o", output, "-q"]);
 
         const tempFilename = `temp_${new Date().valueOf()}.json`;
-        fs.writeFileSync(
-            `./${tempFilename}`,
-            JSON.stringify(parameters, null, 2)
-        );
+        fs.writeFileSync(`./${tempFilename}`, JSON.stringify(parameters, null, 2));
         await exec(`mkvmerge @${tempFilename}`);
         fs.unlinkSync(`./${tempFilename}`);
         resolve();
@@ -45,8 +42,7 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
         const lastIndex = fileList.length - 1;
         const bar = new cliProgress.SingleBar(
             {
-                format:
-                    "[MINYAMI][MERGING] [{bar}] {percentage}% | ETA: {eta}s | {value}/{total}",
+                format: "[MINYAMI][MERGING] [{bar}] {percentage}% | ETA: {eta}s | {value}/{total}",
             },
             cliProgress.Presets.shades_classic
         );
@@ -57,17 +53,14 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
         function write() {
             writable = true;
             while (i <= lastIndex && writable) {
-                writable = writeStream.write(
-                    fs.readFileSync(fileList[i]),
-                    () => {
-                        if (i > lastIndex) {
-                            bar.update(i);
-                            bar.stop();
-                            writeStream.end();
-                            resolve();
-                        }
+                writable = writeStream.write(fs.readFileSync(fileList[i]), () => {
+                    if (i > lastIndex) {
+                        bar.update(i);
+                        bar.stop();
+                        writeStream.end();
+                        resolve();
                     }
-                );
+                });
                 bar.update(i);
                 i++;
             }
@@ -104,9 +97,7 @@ export function download(
                 method: "GET",
                 responseType: "arraybuffer",
                 httpsAgent: proxy
-                    ? new SocksProxyAgent(
-                        `socks5h://${proxy.host}:${proxy.port}`
-                    )
+                    ? new SocksProxyAgent(`socks5h://${proxy.host}:${proxy.port}`)
                     : undefined,
                 headers: {
                     "User-Agent": UA.CHROME_DEFAULT_UA,
@@ -117,8 +108,7 @@ export function download(
             });
             if (
                 response.headers["content-length"] &&
-                parseInt(response.headers["content-length"]) !==
-                response.data.length
+                parseInt(response.headers["content-length"]) !== response.data.length
             ) {
                 reject(new Error("Bad Response"));
             }
@@ -162,33 +152,30 @@ export async function requestRaw(
  * 解密文件
  * @param input
  * @param output
- * @param key in hex 
+ * @param key in hex
  * @param iv in hex
  */
-export async function decrypt(
-    input: string,
-    output: string,
-    key: string,
-    iv: string
-) {
-    const algorithm = 'aes-128-cbc';
-    if (key.length !== 32) {
-        throw new Error(`Key [${key}] length [${key.length}] or form invalid.`);
-    }
-    if (iv.length > 32) {
-        throw new Error(`IV [${iv}] length [${iv.length}] or form invalid.`);
-    }
-    if (iv.length % 2 == 1) {
-        iv = '0' + iv;
-    }
-    const keyBuffer = Buffer.alloc(16);
-    const ivBuffer = Buffer.alloc(16);
-    keyBuffer.write(key, 'hex');
-    ivBuffer.write(iv, 16 - iv.length / 2, 'hex');
+export async function decrypt(input: string, output: string, key: string, iv: string) {
+    return new Promise((resolve) => {
+        const algorithm = "aes-128-cbc";
+        if (key.length !== 32) {
+            throw new Error(`Key [${key}] length [${key.length}] or form invalid.`);
+        }
+        if (iv.length > 32) {
+            throw new Error(`IV [${iv}] length [${iv.length}] or form invalid.`);
+        }
+        if (iv.length % 2 == 1) {
+            iv = "0" + iv;
+        }
+        const keyBuffer = Buffer.alloc(16);
+        const ivBuffer = Buffer.alloc(16);
+        keyBuffer.write(key, "hex");
+        ivBuffer.write(iv, 16 - iv.length / 2, "hex");
 
-    const decipher = crypto.createDecipheriv(algorithm, keyBuffer, ivBuffer);
-    const i = fs.createReadStream(input);
-    const o = fs.createWriteStream(output);
-
-    await i.pipe(decipher).pipe(o);
+        const decipher = crypto.createDecipheriv(algorithm, keyBuffer, ivBuffer);
+        const i = fs.createReadStream(input);
+        const o = fs.createWriteStream(output);
+        const pipe = i.pipe(decipher).pipe(o);
+        pipe.on("finish", resolve);
+    });
 }
