@@ -482,6 +482,7 @@ class ArchiveDownloader extends Downloader {
         this.outputPath = previousTask.outputPath;
         this.threads = previousTask.threads;
         this.cookies = previousTask.cookies;
+        this.headers = previousTask.headers;
         this.key = previousTask.key;
         this.iv = previousTask.iv;
         this.verbose = previousTask.verbose;
@@ -559,6 +560,7 @@ class ArchiveDownloader extends Downloader {
                 outputPath: this.outputPath,
                 threads: this.threads,
                 cookies: this.cookies,
+                headers: this.headers,
                 key: this.key,
                 iv: this.iv,
                 verbose: this.verbose,

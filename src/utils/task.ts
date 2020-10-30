@@ -12,6 +12,7 @@ export interface MinyamiTask {
     threads: number; // 并发数量
 
     cookies: string; // Cookie
+    headers: object; // HTTP Headers
     key: string; // Key
     iv: string; // IV
 
