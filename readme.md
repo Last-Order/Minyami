@@ -41,7 +41,7 @@ Help:
          --cookies <cookies>       Cookies to download
              <cookies>
          --headers <headers>       HTTP Headers used to download
-             <headers>             Multiple headers should be splited with \n. eg. --header "Cookie: a=1\nUser-Agent: X-UA". Don't forget to escape. This option will override --cookies.
+             <headers>             Multiple headers should be splited with \n. eg. --headers "Cookie: a=1\nUser-Agent: X-UA". Don't forget to escape. This option will override --cookies.
          --live                    Download live
          --format <format_name>    (Optional) Set output format. default: ts
              <format_name>         Format name. ts or mkv.
