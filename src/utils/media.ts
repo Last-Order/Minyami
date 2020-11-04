@@ -155,7 +155,7 @@ export async function requestRaw(
  * @param key in hex
  * @param iv in hex
  */
-export async function decrypt(input: string, output: string, key: string, iv: string) {
+export function decrypt(input: string, output: string, key: string, iv: string) {
     return new Promise((resolve) => {
         const algorithm = "aes-128-cbc";
         if (key.length !== 32) {

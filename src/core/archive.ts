@@ -442,7 +442,9 @@ class ArchiveDownloader extends Downloader {
                     try {
                         await deleteDirectory(this.tempPath);
                     } catch (e) {
-                        this.Log.warning(`Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`);
+                        this.Log.warning(
+                            `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
+                        );
                     }
                     try {
                         deleteTask(this.m3u8Path.split("?")[0]);
@@ -457,6 +459,7 @@ class ArchiveDownloader extends Downloader {
                 })
                 .catch(async (e) => {
                     await this.clean();
+                    this.emit("merge-error", e);
                     this.Log.error("Fail to merge video. Please merge video chunks manually.", e);
                 });
         }
@@ -465,6 +468,7 @@ class ArchiveDownloader extends Downloader {
     async resume(taskId: string) {
         const previousTask = getTask(taskId.split("?")[0]);
         if (!previousTask) {
+            this.emit("critical-error");
             this.Log.error("Can't find a task to resume.");
         }
         this.Log.info("Previous task found. Resuming.");

@@ -275,6 +275,7 @@ export default class LiveDownloader extends Downloader {
                     this.emit("finished");
                 })
                 .catch((e) => {
+                    this.emit("critical-error", e);
                     this.Log.error("Fail to merge video. Please merge video chunks manually.", e);
                 });
         }

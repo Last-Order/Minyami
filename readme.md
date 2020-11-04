@@ -1,11 +1,12 @@
 # README
+
 [![Build Status](https://github.com/Last-Order/Minyami/workflows/Node%20CI/badge.svg)](https://github.com/Last-Order/Minyami/actions)
 
 [中文说明](readme.zh-cn.md)
 
 ## Dependencies
 
-* mkvmerge (optional, mkv output required)
+-   mkvmerge (optional, mkv output required)
 
 ! Minyami requires Node 10.22.0+
 
@@ -72,11 +73,12 @@ A: It's not necessary.
 import { ArchiveDownloader } from 'minyami';
 import { LiveDownloader } from 'minyami';
 ```
+
 ### Event: `chunk-downloaded`
 
-* `currentChunkInfo` `<object>` The information of the chunk which is just downloaded. 
+-   `currentChunkInfo` `<object>` The information of the chunk which is just downloaded.
 
-The `'chunk-downloaded'` event is emitted when every media chunk is downloaded. 
+The `'chunk-downloaded'` event is emitted when every media chunk is downloaded.
 
 ### Event: `downloaded`
 
@@ -84,8 +86,19 @@ The `'downloaded'` event is emitted after all chunks are downloaded but before s
 
 ### Event: `finished`
 
-The `'finished'` event is emitted after all the works are done. CLI program exits after this event is emiited.
+The `'finished'` event is emitted after all the works are done. CLI program exits after this event is emitted.
 
+### Event: `merge-error`
+
+- `error: Error` 
+
+The `merge-error` event is emitted when a merge progress is failed.
+
+### Event: `critical-error`
+
+- `error: Error` 
+
+The `critical-error` is emitted when a error that Minyami can't handle happens.
 
 ## Contribution
 

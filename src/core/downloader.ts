@@ -166,7 +166,7 @@ class Downloader extends EventEmitter {
                     const header = /^([^ :]+):(.+)$/.exec(h).slice(1);
                     this.headers[header[0]] = header[1].trim();
                 } catch (e) {
-                    this.Log.error(`HTTP Headers invalid.`);
+                    this.Log.warning(`HTTP Headers invalid. Ignored.`);
                 }
             }
         }
@@ -238,6 +238,7 @@ class Downloader extends EventEmitter {
                 options
             );
         } catch (e) {
+            this.emit("critical-error");
             this.Log.error("Aborted due to critical error.", e);
         }
     }
@@ -250,7 +251,9 @@ class Downloader extends EventEmitter {
             this.Log.info("Starting cleaning temporary files.");
             await system.deleteDirectory(this.tempPath);
         } catch (e) {
-            this.Log.error("Fail to delete temporary directory.");
+            this.Log.warning(
+                `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
+            );
         }
     }
 
