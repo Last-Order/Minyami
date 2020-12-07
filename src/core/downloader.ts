@@ -273,7 +273,7 @@ class Downloader extends EventEmitter {
             options.headers = this.headers;
         }
         options.timeout = Math.min(((task.retryCount || 0) + 1) * this.timeout, this.timeout * 5);
-        return new Promise(async (resolve, reject) => {
+        return new Promise<void>(async (resolve, reject) => {
             this.verbose && this.Log.debug(`Downloading ${task.filename}`);
             try {
                 await download(

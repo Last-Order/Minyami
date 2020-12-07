@@ -13,7 +13,7 @@ const SocksProxyAgent = require("socks-proxy-agent");
  * @param output 输出路径
  */
 export function mergeToMKV(fileList = [], output = "./output.mkv") {
-    return new Promise(async (resolve) => {
+    return new Promise<void>(async (resolve) => {
         if (fileList.length === 0) {
             return;
         }
@@ -33,7 +33,7 @@ export function mergeToMKV(fileList = [], output = "./output.mkv") {
 
 export function mergeToTS(fileList = [], output = "./output.ts") {
     const cliProgress = require("cli-progress");
-    return new Promise(async (resolve) => {
+    return new Promise<void>(async (resolve) => {
         if (fileList.length === 0) {
             resolve();
         }
@@ -86,7 +86,7 @@ export function download(
 ) {
     const CancelToken = axios.CancelToken;
     let source = CancelToken.source();
-    const promise = new Promise(async (resolve, reject) => {
+    const promise = new Promise<void>(async (resolve, reject) => {
         try {
             setTimeout(() => {
                 source && source.cancel();
