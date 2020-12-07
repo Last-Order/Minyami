@@ -125,7 +125,7 @@ export default class Parser {
                         WebSocket: WebSocket,
                         clientOptions: {
                             headers: {
-                                'User-Agent': UA.CHROME_DEFAULT_UA
+                                'User-Agent': UA.CHROME_DEFAULT_UA,
                             },
                             agent
                         }
@@ -135,7 +135,7 @@ export default class Parser {
                         WebSocket: WebSocket,
                         clientOptions: {
                             headers: {
-                                'User-Agent': UA.CHROME_DEFAULT_UA
+                                'User-Agent': UA.CHROME_DEFAULT_UA,
                             }
                         }
                     });
@@ -148,7 +148,9 @@ export default class Parser {
                         if (parsedMessage.type === 'ping') {
                             socket.send(JSON.stringify({
                                 type: 'pong',
-                                body: {}
+                            }));
+                            socket.send(JSON.stringify({
+                                type: 'keepSeat',
                             }));
                         }
                         if (parsedMessage.type === 'stream') {
