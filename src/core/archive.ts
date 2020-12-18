@@ -8,6 +8,7 @@ import Downloader, {
     isChunkGroup,
     Chunk,
     ChunkGroup,
+    DEFAULT_OUTPUT_PATH,
 } from "./downloader";
 import * as fs from "fs";
 import { saveTask, deleteTask, getTask } from "../utils/task";
@@ -434,6 +435,9 @@ class ArchiveDownloader extends Downloader {
                 this.Log.info("Skip merging. Please merge video chunks manually.");
                 this.Log.info(`Temporary files are located at ${this.tempPath}`);
                 this.emit("finished");
+            }
+            if (this.outputPath === DEFAULT_OUTPUT_PATH && fs.existsSync(this.outputPath)) {
+                this.outputPath = `./output_${Date.now()}.ts`;
             }
             muxer(this.outputFileList, this.outputPath)
                 .then(async () => {

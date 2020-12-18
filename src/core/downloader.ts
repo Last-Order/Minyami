@@ -10,6 +10,8 @@ import * as actions from "./action";
 import { AxiosRequestConfig } from "axios";
 import { EventEmitter } from "events";
 
+export const DEFAULT_OUTPUT_PATH = './output.ts';
+
 export interface DownloaderConfig {
     threads?: number;
     output?: string;
@@ -70,7 +72,7 @@ class Downloader extends EventEmitter {
     tempPath: string; // 临时文件目录
     m3u8Path: string; // m3u8文件路径
     m3u8: M3U8; // m3u8实体
-    outputPath: string = "./output.ts"; // 输出目录
+    outputPath: string = DEFAULT_OUTPUT_PATH; // 输出目录
     threads: number = 5; // 并发数量
 
     allChunks: ChunkItem[];

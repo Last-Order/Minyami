@@ -1,6 +1,6 @@
-import Downloader, { DownloaderConfig, Chunk, LiveDownloaderConfig } from "./downloader";
+import Downloader, { Chunk, LiveDownloaderConfig, DEFAULT_OUTPUT_PATH } from "./downloader";
 import M3U8, { M3U8Chunk } from "./m3u8";
-import Logger, { ConsoleLogger } from "../utils/log";
+import { ConsoleLogger } from "../utils/log";
 import { mergeToMKV, mergeToTS, download, decrypt } from "../utils/media";
 import { sleep } from "../utils/system";
 import { URL } from "url";
@@ -265,6 +265,9 @@ export default class LiveDownloader extends Downloader {
             }
             this.Log.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
             const muxer = this.format === "ts" ? mergeToTS : mergeToMKV;
+            if (this.outputPath === DEFAULT_OUTPUT_PATH && fs.existsSync(this.outputPath)) {
+                this.outputPath = `./output_${Date.now()}.ts`;
+            }
             muxer(this.outputFileList, this.outputPath)
                 .then(async () => {
                     this.Log.info("End of merging.");
