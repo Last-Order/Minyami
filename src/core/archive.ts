@@ -465,6 +465,7 @@ class ArchiveDownloader extends Downloader {
                     await this.clean();
                     this.emit("merge-error", e);
                     this.Log.error("Fail to merge video. Please merge video chunks manually.", e);
+                    this.Log.error(`Your temporary files at located at [${path.resolve(this.tempPath)}]`);
                 });
         }
     }

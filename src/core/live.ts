@@ -280,6 +280,7 @@ export default class LiveDownloader extends Downloader {
                 .catch((e) => {
                     this.emit("critical-error", e);
                     this.Log.error("Fail to merge video. Please merge video chunks manually.", e);
+                    this.Log.error(`Your temporary files at located at [${path.resolve(this.tempPath)}]`);
                 });
         }
 
