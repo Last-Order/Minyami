@@ -89,8 +89,13 @@ export default class LiveDownloader extends Downloader {
                 options
             );
         } catch (e) {
-            // Stop downloading
-            this.isEnd = true;
+            if (this.finishedChunksCount > 0) {
+                // Stop downloading
+                this.isEnd = true;
+            } else {
+                this.emit("critical-error");
+                this.Log.error("Aborted due to critical error.", e);
+            }
         }
     }
 
