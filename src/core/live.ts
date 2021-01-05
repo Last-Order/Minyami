@@ -1,9 +1,11 @@
 import Downloader, { Chunk, LiveDownloaderConfig, DEFAULT_OUTPUT_PATH } from "./downloader";
 import M3U8, { M3U8Chunk } from "./m3u8";
 import { ConsoleLogger } from "../utils/log";
-import { mergeToMKV, mergeToTS, download, decrypt } from "../utils/media";
+import { mergeToMKV, mergeToTS } from "../utils/media";
 import { sleep } from "../utils/system";
 import { URL } from "url";
+import { AxiosRequestConfig } from "axios";
+import { loadM3U8 } from "../utils/m3u8";
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -64,6 +66,31 @@ export default class LiveDownloader extends Downloader {
         });
         if (retries) {
             this.retries = retries;
+        }
+    }
+
+    async loadM3U8() {
+        try {
+            const options: AxiosRequestConfig = {};
+            if (this.cookies) {
+                options.headers = {
+                    Cookie: this.cookies,
+                };
+            }
+            if (Object.keys(this.headers).length > 0) {
+                options.headers = this.headers;
+            }
+            this.m3u8 = await loadM3U8(
+                this.Log,
+                this.m3u8Path,
+                this.retries,
+                this.timeout,
+                this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined,
+                options
+            );
+        } catch (e) {
+            // Stop downloading
+            this.isEnd = true;
         }
     }
 
@@ -280,7 +307,9 @@ export default class LiveDownloader extends Downloader {
                 .catch((e) => {
                     this.emit("critical-error", e);
                     this.Log.error("Fail to merge video. Please merge video chunks manually.", e);
-                    this.Log.error(`Your temporary files at located at [${path.resolve(this.tempPath)}]`);
+                    this.Log.error(
+                        `Your temporary files at located at [${path.resolve(this.tempPath)}]`
+                    );
                 });
         }
 

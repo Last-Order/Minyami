@@ -52,7 +52,7 @@ export async function loadM3U8(
                     Log.info("Try again.");
                 } else {
                     Log.warning("Max retries exceeded. Abort.");
-                    throw new Error("Max retries exceeded.");
+                    throw new Error(e);
                 }
             }
         }
