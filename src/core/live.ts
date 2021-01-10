@@ -6,6 +6,7 @@ import { sleep } from "../utils/system";
 import { URL } from "url";
 import { AxiosRequestConfig } from "axios";
 import { loadM3U8 } from "../utils/m3u8";
+import { TaskPool } from "../utils/taskpool";
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -18,11 +19,10 @@ export default class LiveDownloader extends Downloader {
     outputFileList: string[] = [];
     finishedList: string[] = [];
     m3u8: M3U8;
-    chunks: Chunk[] = [];
     runningThreads: number = 0;
+    pool: TaskPool<Chunk, void>;
 
     isEncrypted: boolean = false;
-    isEnd: boolean = false;
     isStarted: boolean = false;
     forceStop: boolean = false;
 
@@ -67,6 +67,64 @@ export default class LiveDownloader extends Downloader {
         if (retries) {
             this.retries = retries;
         }
+
+        this.pool = new TaskPool(this.threads, this.handleTask.bind(this));
+        this.pool.on("success", this.handleTaskSuccess.bind(this));
+        this.pool.on("error", this.handleTaskError.bind(this));
+        this.pool.on("end", this.handleTaskEnd.bind(this));
+    }
+
+    handleTaskSuccess(task: Chunk) {
+        this.finishedChunksCount++;
+        const currentChunkInfo = {
+            taskname: task.filename,
+            finishedChunksCount: this.finishedChunksCount,
+            chunkSpeed: this.calculateSpeedByChunk(),
+            ratioSpeed: this.calculateSpeedByRatio(),
+        };
+        this.Log.info(
+            `Proccessing ${currentChunkInfo.taskname} finished. (${currentChunkInfo.finishedChunksCount} / unknown | Avg Speed: ${currentChunkInfo.chunkSpeed} chunks/s or ${currentChunkInfo.ratioSpeed}x)`
+        );
+        this.emit("chunk-downloaded", currentChunkInfo);
+    }
+
+    handleTaskError(task: Chunk, e: Error) {
+        // 重试计数
+        task.retryCount = (task.retryCount ?? 0) + 1;
+        this.Log.warning(`Processing ${task.filename} failed.`);
+        this.verbose && this.Log.debug(e.message);
+        this.pool.add(task, true); // 对直播流来说 早速重试比较好
+    }
+
+    handleTaskEnd() {
+        // 结束状态 合并文件
+        this.emit("downloaded");
+        if (this.noMerge) {
+            this.Log.info("Skip merging. Please merge video chunks manually.");
+            this.Log.info(`Temporary files are located at ${this.tempPath}`);
+            this.emit("finished");
+        }
+        this.Log.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
+        const muxer = this.format === "ts" ? mergeToTS : mergeToMKV;
+        if (this.outputPath === DEFAULT_OUTPUT_PATH && fs.existsSync(this.outputPath)) {
+            this.outputPath = `./output_${Date.now()}.ts`;
+        }
+        muxer(this.outputFileList, this.outputPath)
+            .then(async () => {
+                this.Log.info("End of merging.");
+                await this.clean();
+                this.Log.info(
+                    `All finished. Check your file at [${path.resolve(this.outputPath)}] .`
+                );
+                this.emit("finished");
+            })
+            .catch((e) => {
+                this.emit("critical-error", e);
+                this.Log.error("Fail to merge video. Please merge video chunks manually.", e);
+                this.Log.error(
+                    `Your temporary files at located at [${path.resolve(this.tempPath)}]`
+                );
+            });
     }
 
     async loadM3U8() {
@@ -91,7 +149,7 @@ export default class LiveDownloader extends Downloader {
         } catch (e) {
             if (this.finishedChunksCount > 0) {
                 // Stop downloading
-                this.isEnd = true;
+                this.pool.stop();
             } else {
                 this.emit("critical-error");
                 this.Log.error("Aborted due to critical error.", e);
@@ -113,7 +171,7 @@ export default class LiveDownloader extends Downloader {
             process.on("SIGINT", async () => {
                 if (!this.forceStop) {
                     this.Log.info("Ctrl+C pressed, waiting for tasks finished.");
-                    this.isEnd = true;
+                    this.pool.stop();
                     this.forceStop = true;
                 } else {
                     this.Log.info("Force stop."); // TODO: reject all download promises
@@ -180,13 +238,13 @@ export default class LiveDownloader extends Downloader {
 
     async cycling() {
         while (true) {
-            if (this.isEnd) {
+            if (this.pool.ended()) {
                 // 结束下载 进入合并流程
                 break;
             }
             if (this.m3u8.isEnd) {
                 // 到达直播末尾
-                this.isEnd = true;
+                this.pool.stop();
             }
             const currentPlaylistChunks: M3U8Chunk[] = [];
             this.m3u8.chunks.forEach((chunk) => {
@@ -227,7 +285,9 @@ export default class LiveDownloader extends Downloader {
                 } as Chunk;
             });
             // 加入待完成的任务列表
-            this.chunks.push(...currentUndownloadedChunks.filter((c) => c !== undefined));
+            currentUndownloadedChunks
+                .filter((c) => c !== undefined)
+                .forEach((c) => this.pool.add(c));
             this.outputFileList.push(
                 ...currentUndownloadedChunks
                     .filter((c) => c !== undefined)
@@ -244,86 +304,10 @@ export default class LiveDownloader extends Downloader {
 
             if (!this.isStarted) {
                 this.isStarted = true;
-                this.checkQueue();
+                this.pool.start();
             }
             this.verbose && this.Log.debug(`Cool down... Wait for next check`);
             await sleep(Math.min(5000, this.m3u8.getChunkLength() * 1000));
-        }
-    }
-
-    checkQueue() {
-        if (this.chunks.length > 0 && this.runningThreads < this.threads) {
-            const task = this.chunks.shift();
-            this.runningThreads++;
-            this.handleTask(task)
-                .then(() => {
-                    this.finishedChunksCount++;
-                    this.runningThreads--;
-                    const currentChunkInfo = {
-                        taskname: task.filename,
-                        finishedChunksCount: this.finishedChunksCount,
-                        chunkSpeed: this.calculateSpeedByChunk(),
-                        ratioSpeed: this.calculateSpeedByRatio(),
-                    };
-
-                    this.Log.info(
-                        `Proccessing ${currentChunkInfo.taskname} finished. (${currentChunkInfo.finishedChunksCount} / unknown | Avg Speed: ${currentChunkInfo.chunkSpeed} chunks/s or ${currentChunkInfo.ratioSpeed}x)`
-                    );
-                    this.emit("chunk-downloaded", currentChunkInfo);
-                    this.checkQueue();
-                })
-                .catch((e) => {
-                    // 重试计数
-                    if (task.retryCount) {
-                        task.retryCount++;
-                    } else {
-                        task.retryCount = 1;
-                    }
-                    this.Log.warning(`Processing ${task.filename} failed.`);
-                    this.verbose && this.Log.debug(e.message);
-                    this.runningThreads--;
-                    this.chunks.unshift(task); // 对直播流来说 早速重试比较好
-                    this.checkQueue();
-                });
-            this.checkQueue();
-        }
-        if (this.chunks.length === 0 && this.runningThreads === 0 && this.isEnd) {
-            // 结束状态 合并文件
-            this.emit("downloaded");
-            if (this.noMerge) {
-                this.Log.info("Skip merging. Please merge video chunks manually.");
-                this.Log.info(`Temporary files are located at ${this.tempPath}`);
-                this.emit("finished");
-            }
-            this.Log.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
-            const muxer = this.format === "ts" ? mergeToTS : mergeToMKV;
-            if (this.outputPath === DEFAULT_OUTPUT_PATH && fs.existsSync(this.outputPath)) {
-                this.outputPath = `./output_${Date.now()}.ts`;
-            }
-            muxer(this.outputFileList, this.outputPath)
-                .then(async () => {
-                    this.Log.info("End of merging.");
-                    await this.clean();
-                    this.Log.info(
-                        `All finished. Check your file at [${path.resolve(this.outputPath)}] .`
-                    );
-                    this.emit("finished");
-                })
-                .catch((e) => {
-                    this.emit("critical-error", e);
-                    this.Log.error("Fail to merge video. Please merge video chunks manually.", e);
-                    this.Log.error(
-                        `Your temporary files at located at [${path.resolve(this.tempPath)}]`
-                    );
-                });
-        }
-
-        if (this.chunks.length === 0 && this.runningThreads === 0 && !this.isEnd) {
-            // 空闲状态 一秒后再检查待完成任务列表
-            this.verbose && this.Log.debug("Sleep 1000ms.");
-            sleep(1000).then(() => {
-                this.checkQueue();
-            });
         }
     }
 }
