@@ -67,11 +67,6 @@ export default class LiveDownloader extends Downloader {
         if (retries) {
             this.retries = retries;
         }
-
-        this.pool = new TaskPool(this.threads, this.handleTask.bind(this));
-        this.pool.on("success", this.handleTaskSuccess.bind(this));
-        this.pool.on("error", this.handleTaskError.bind(this));
-        this.pool.on("end", this.handleTaskEnd.bind(this));
     }
 
     handleTaskSuccess(task: Chunk) {
@@ -88,12 +83,12 @@ export default class LiveDownloader extends Downloader {
         this.emit("chunk-downloaded", currentChunkInfo);
     }
 
-    handleTaskError(task: Chunk, e: Error) {
+    handleTaskError(task: Chunk, err: Error) {
         // 重试计数
         task.retryCount = (task.retryCount ?? 0) + 1;
         this.Log.warning(`Processing ${task.filename} failed.`);
-        this.verbose && this.Log.debug(e.message);
-        this.pool.add(task, true); // 对直播流来说 早速重试比较好
+        this.verbose && this.Log.debug(err.message);
+        this.pool.unshiftTasks(task); // 对直播流来说 早速重试比较好
     }
 
     handleTaskEnd() {
@@ -238,7 +233,7 @@ export default class LiveDownloader extends Downloader {
 
     async cycling() {
         while (true) {
-            if (this.pool.ended()) {
+            if (this.pool.isEnded) {
                 // 结束下载 进入合并流程
                 break;
             }
@@ -285,9 +280,7 @@ export default class LiveDownloader extends Downloader {
                 } as Chunk;
             });
             // 加入待完成的任务列表
-            currentUndownloadedChunks
-                .filter((c) => c !== undefined)
-                .forEach((c) => this.pool.add(c));
+            this.pool.addTasks(...currentUndownloadedChunks.filter((c) => c !== undefined));
             this.outputFileList.push(
                 ...currentUndownloadedChunks
                     .filter((c) => c !== undefined)
@@ -303,6 +296,11 @@ export default class LiveDownloader extends Downloader {
             await this.loadM3U8();
 
             if (!this.isStarted) {
+                this.pool = new TaskPool(this.threads, (task) => this.handleTask(task));
+                this.pool.on("success", (chunk) => this.handleTaskSuccess(chunk));
+                this.pool.on("error", (task, err) => this.handleTaskError(task, err));
+                this.pool.on("end", () => this.handleTaskEnd());
+
                 this.isStarted = true;
                 this.pool.start();
             }

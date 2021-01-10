@@ -29,16 +29,16 @@ export class TaskPool<T, V> extends EventEmitter {
     private threads: number;
     private events: EventEmitter = new EventEmitter();
 
-    constructor(threads: number, fn: TaskRunner<T, V>, items: T[] = []) {
+    constructor(threads: number, runner: TaskRunner<T, V>, items: T[] = []) {
         super();
         this.threads = threads;
-        this.runner = fn;
+        this.runner = runner;
         this.items.push(...items);
     }
 
     async start(): Promise<void> {
         // return directly when end && (idle || forced to end)
-        if (this.end && (this.forceEnd || this.idle())) {
+        if (this.end && (this.forceEnd || this.isIdle)) {
             return;
         }
 
@@ -52,17 +52,17 @@ export class TaskPool<T, V> extends EventEmitter {
             await Promise.race(this.pool);
         }
 
-        if (!this.idle() || (await this.waitForInput())) {
+        if (!this.isIdle || (await this.waitForInput())) {
             return await this.start();
         }
     }
 
     private runTask(item: T) {
         const task = this.runner(item)
-            .then((resp) => {
-                this.emit("success", item, resp);
+            .then((result) => {
+                this.emit("success", item, result);
                 this.pool.splice(this.pool.indexOf(task), 1);
-                return resp;
+                return result;
             })
             .catch((err) => {
                 this.emit("error", item, err);
@@ -72,8 +72,8 @@ export class TaskPool<T, V> extends EventEmitter {
         this.pool.push(task);
     }
 
-    private async waitForInput() {
-        return await new Promise<boolean>((resolve) => {
+    private waitForInput() {
+        return new Promise<boolean>((resolve) => {
             if (this.end) {
                 this.emit("end");
                 resolve(false);
@@ -92,15 +92,21 @@ export class TaskPool<T, V> extends EventEmitter {
         });
     }
 
-    add(item: T, urgent = false) {
+    addTasks(...items: T[]) {
         if (this.end) return;
 
-        const wasIdle = this.idle();
-        if (urgent) {
-            this.items.unshift(item);
-        } else {
-            this.items.push(item);
+        const wasIdle = this.isIdle;
+        this.items.push(...items);
+        if (wasIdle) {
+            this.events.emit("item");
         }
+    }
+
+    unshiftTasks(...items: T[]) {
+        if (this.end) return;
+
+        const wasIdle = this.isIdle;
+        this.items.unshift(...items);
         if (wasIdle) {
             this.events.emit("item");
         }
@@ -114,11 +120,11 @@ export class TaskPool<T, V> extends EventEmitter {
         this.events.emit("done");
     }
 
-    idle() {
+    get isIdle() {
         return this.items.length === 0 && this.pool.length === 0;
     }
 
-    ended() {
-        return this.end && this.idle();
+    get isEnded() {
+        return this.end && this.isIdle;
     }
 }
