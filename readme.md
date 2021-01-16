@@ -80,6 +80,12 @@ import { LiveDownloader } from 'minyami';
 
 The `'chunk-downloaded'` event is emitted when every media chunk is downloaded.
 
+### Event: `chunk-error`
+
+-    `error: Error` 
+
+The `'chunk-error'` event is emitted when failed to download or decrypt media chunks.
+
 ### Event: `downloaded`
 
 The `'downloaded'` event is emitted after all chunks are downloaded but before starting merge.
