@@ -5,7 +5,7 @@ class CommonUtils {
         if (path.startsWith("http")) {
             return path;
         } else if (path.startsWith("//")) {
-            new URL(host).protocol + path;
+            return new URL(host).protocol + path;
         } else if (path.startsWith("/")) {
             return host.match(/(htt(p|ps):\/\/.+?\/)/)[1] + path.slice(1);
         } else if (path.startsWith("./")) {
