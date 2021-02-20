@@ -58,11 +58,15 @@ Erii.bind(
     },
     async (ctx, options) => {
         const path = ctx.getArgument().toString();
+        const logger = new ConsoleLogger();
+        if (options.verbose) {
+            logger.enableDebugMode();
+        }
         if (options.live) {
             const downloader = new LiveDownloader(path, {
                 ...options,
                 cliMode: true,
-                logger: new ConsoleLogger(),
+                logger,
             });
             downloader.on("finished", () => {
                 process.exit();
@@ -72,7 +76,7 @@ Erii.bind(
             const downloader = new ArchiveDownloader(path, {
                 ...options,
                 cliMode: true,
-                logger: new ConsoleLogger(),
+                logger,
             });
             downloader.on("finished", () => {
                 process.exit();

@@ -264,7 +264,7 @@ class Downloader extends EventEmitter {
      * @param task 块下载任务
      */
     handleTask(task: Chunk) {
-        this.verbose && this.Log.debug(`Downloading ${task.url}`);
+         this.Log.debug(`Downloading ${task.url}`);
         const options: AxiosRequestConfig = {};
         if (this.cookies) {
             options.headers = {
@@ -276,7 +276,7 @@ class Downloader extends EventEmitter {
         }
         options.timeout = Math.min(((task.retryCount || 0) + 1) * this.timeout, this.timeout * 5);
         return new Promise<void>(async (resolve, reject) => {
-            this.verbose && this.Log.debug(`Downloading ${task.filename}`);
+             this.Log.debug(`Downloading ${task.filename}`);
             try {
                 await download(
                     task.url,
@@ -284,7 +284,7 @@ class Downloader extends EventEmitter {
                     this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined,
                     options
                 );
-                this.verbose && this.Log.debug(`Downloading ${task.filename} succeed.`);
+                 this.Log.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     if (task.key) {
                         if (task.iv) {
@@ -326,7 +326,7 @@ class Downloader extends EventEmitter {
                                 this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
                             );
                         }
-                        this.verbose && this.Log.debug(`Decrypting ${task.filename} succeed`);
+                         this.Log.debug(`Decrypting ${task.filename} succeed`);
                     }
                 }
                 resolve();
@@ -342,7 +342,7 @@ class Downloader extends EventEmitter {
                         "UNKNOWN"
                     }]`
                 );
-                this.verbose && this.Log.debug(e);
+                 this.Log.debug(e);
                 reject(e);
             }
         });

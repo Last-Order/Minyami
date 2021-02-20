@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import chalk from "chalk";
 abstract class Logger {
     public abstract debug(message: string);
     public abstract info(message: string);
@@ -7,8 +7,9 @@ abstract class Logger {
 }
 
 export class ConsoleLogger extends Logger {
+    private isDebugMode = false;
     debug(message: string) {
-        console.debug(chalk.gray(`[MINYAMI][DEBUG] ${message}`));
+        this.isDebugMode && console.debug(chalk.gray(`[MINYAMI][DEBUG] ${message}`));
     }
 
     info(message: string, infoObj: any = undefined) {
@@ -23,6 +24,10 @@ export class ConsoleLogger extends Logger {
         if (error !== undefined) console.log(error);
         console.info(chalk.red(`[MINYAMI][ERROR] ${message}`));
         process.exit();
+    }
+
+    enableDebugMode() {
+        this.isDebugMode = true;
     }
 }
 

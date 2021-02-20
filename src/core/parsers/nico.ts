@@ -94,7 +94,7 @@ export default class Parser {
                         Parser.updateToken(token, downloader, host);
                         return token;
                     } catch (e) {
-                        downloader.verbose && downloader.Log.debug('Fail to get new token from cas server.');
+                        downloader.Log.debug('Fail to get new token from cas server.');
                         return null;
                     }
                 }
@@ -157,7 +157,7 @@ export default class Parser {
                             // Nico Live v2 API
                             const token = parsedMessage.data.uri.match(/ht2_nicolive=(.+)/)[1];
                             const host = parsedMessage.data.uri.match(/(http(s):\/\/.+\/)/)[1];
-                            downloader.verbose && downloader.Log.info(`Update token: ${token}`);
+                            downloader.Log.info(`Update token: ${token}`);
                             Parser.updateToken(token, downloader, host);
                         }
                     });

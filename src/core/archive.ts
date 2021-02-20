@@ -330,7 +330,7 @@ class ArchiveDownloader extends Downloader {
             let chunk: Chunk;
             if (isChunkGroup(task)) {
                 if (task.actions && task.isNew) {
-                    this.verbose && this.Log.debug(`Handle chunk actions for a new chunk group.`);
+                     this.Log.debug(`Handle chunk actions for a new chunk group.`);
                     task.isNew = false;
                     for (const action of task.actions) {
                         await this.handleChunkGroupAction(action);
@@ -349,7 +349,7 @@ class ArchiveDownloader extends Downloader {
                     }
                 } else {
                     // All chunks finished in group
-                    this.verbose && this.Log.debug(`Skip a empty chunk group.`);
+                     this.Log.debug(`Skip a empty chunk group.`);
                     task.isFinished = true;
                     this.chunks.shift();
                     this.checkQueue();
