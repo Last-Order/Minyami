@@ -136,13 +136,6 @@ export default class LiveDownloader extends Downloader {
                     downloader: this,
                 });
                 this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
-            } else if (key.startsWith("abemafresh")) {
-                this.Log.info("Site comfirmed: FreshTV.");
-                const parser = await import("./parsers/freshtv");
-                parser.default.parse({
-                    downloader: this,
-                });
-                this.Log.info(`Key: ${this.m3u8.key}; IV: ${this.m3u8.iv}.`);
             } else {
                 this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import("./parsers/common");
@@ -175,6 +168,13 @@ export default class LiveDownloader extends Downloader {
             }
         }
         this.emit("parsed");
+        if (this.verbose) {
+            setInterval(() => {
+                this.Log.debug(
+                    `Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunksCount}`
+                );
+            }, 3000);
+        }
         await this.cycling();
     }
 
@@ -207,7 +207,7 @@ export default class LiveDownloader extends Downloader {
                     // pass
                 }
             });
-             this.Log.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
+            this.Log.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
             const currentUndownloadedChunks = currentPlaylistChunks.map((chunk) => {
                 // TODO: Hot fix of Abema Live
                 if (chunk.url.includes("linear-abematv")) {
@@ -246,7 +246,7 @@ export default class LiveDownloader extends Downloader {
                 this.isStarted = true;
                 this.checkQueue();
             }
-             this.Log.debug(`Cool down... Wait for next check`);
+            this.Log.debug(`Cool down... Wait for next check`);
             await sleep(Math.min(5000, this.m3u8.getChunkLength() * 1000));
         }
     }
@@ -273,7 +273,7 @@ export default class LiveDownloader extends Downloader {
                     this.checkQueue();
                 })
                 .catch((e) => {
-                    this.emit('chunk-error', e);
+                    this.emit("chunk-error", e);
                     // 重试计数
                     if (task.retryCount) {
                         task.retryCount++;
@@ -281,7 +281,7 @@ export default class LiveDownloader extends Downloader {
                         task.retryCount = 1;
                     }
                     this.Log.warning(`Processing ${task.filename} failed.`);
-                     this.Log.debug(e.message);
+                    this.Log.debug(e.message);
                     this.runningThreads--;
                     this.chunks.unshift(task); // 对直播流来说 早速重试比较好
                     this.checkQueue();
@@ -321,7 +321,7 @@ export default class LiveDownloader extends Downloader {
 
         if (this.chunks.length === 0 && this.runningThreads === 0 && !this.isEnd) {
             // 空闲状态 一秒后再检查待完成任务列表
-             this.Log.debug("Sleep 1000ms.");
+            this.Log.debug("Sleep 1000ms.");
             sleep(1000).then(() => {
                 this.checkQueue();
             });

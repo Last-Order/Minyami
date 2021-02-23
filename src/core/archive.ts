@@ -92,14 +92,7 @@ class ArchiveDownloader extends Downloader {
         if (this.m3u8.isEncrypted) {
             // Encrypted
             const key = this.m3u8.getKey();
-            if (key.startsWith("abemafresh")) {
-                this.Log.info("Site comfirmed: FreshTV.");
-                const parser = await import("./parsers/freshtv");
-                parser.default.parse({
-                    downloader: this,
-                });
-                this.Log.info(`Key: ${this.m3u8.key}; IV: ${this.m3u8.iv}.`);
-            } else if (key.startsWith("abematv-license")) {
+            if (key.startsWith("abematv-license")) {
                 this.Log.info("Site comfirmed: AbemaTV.");
                 const parser = await import("./parsers/abema");
                 parser.default.parse({
