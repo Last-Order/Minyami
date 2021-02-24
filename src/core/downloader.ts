@@ -1,4 +1,7 @@
-const path = require("path");
+import * as path from "path";
+import * as fs from "fs";
+import { AxiosRequestConfig } from "axios";
+import { EventEmitter } from "events";
 import Logger from "../utils/log";
 import M3U8, { M3U8Chunk } from "./m3u8";
 import { loadM3U8 } from "../utils/m3u8";
@@ -7,10 +10,6 @@ import CommonUtils from "../utils/common";
 import { download, decrypt } from "../utils/media";
 import { ActionType } from "./action";
 import * as actions from "./action";
-import { AxiosRequestConfig } from "axios";
-import { EventEmitter } from "events";
-
-export const DEFAULT_OUTPUT_PATH = './output.ts';
 
 export interface DownloaderConfig {
     threads?: number;
@@ -72,7 +71,7 @@ class Downloader extends EventEmitter {
     tempPath: string; // 临时文件目录
     m3u8Path: string; // m3u8文件路径
     m3u8: M3U8; // m3u8实体
-    outputPath: string = DEFAULT_OUTPUT_PATH; // 输出目录
+    outputPath: string = './output.ts'; // 输出目录
     threads: number = 5; // 并发数量
 
     allChunks: ChunkItem[];
@@ -140,6 +139,13 @@ class Downloader extends EventEmitter {
 
         if (output) {
             this.outputPath = output;
+            if (fs.existsSync(this.outputPath)) {
+                // output filename conflict
+                const pathArr = this.outputPath.split(".");
+                const filePath = pathArr.slice(0, -1).join(".");
+                const ext = pathArr[pathArr.length - 1];
+                this.outputPath = `${filePath}_${Date.now()}.${ext}`;
+            }
         }
 
         if (key) {
@@ -264,7 +270,7 @@ class Downloader extends EventEmitter {
      * @param task 块下载任务
      */
     handleTask(task: Chunk) {
-         this.Log.debug(`Downloading ${task.url}`);
+        this.Log.debug(`Downloading ${task.url}`);
         const options: AxiosRequestConfig = {};
         if (this.cookies) {
             options.headers = {
@@ -276,7 +282,7 @@ class Downloader extends EventEmitter {
         }
         options.timeout = Math.min(((task.retryCount || 0) + 1) * this.timeout, this.timeout * 5);
         return new Promise<void>(async (resolve, reject) => {
-             this.Log.debug(`Downloading ${task.filename}`);
+            this.Log.debug(`Downloading ${task.filename}`);
             try {
                 await download(
                     task.url,
@@ -284,7 +290,7 @@ class Downloader extends EventEmitter {
                     this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined,
                     options
                 );
-                 this.Log.debug(`Downloading ${task.filename} succeed.`);
+                this.Log.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     if (task.key) {
                         if (task.iv) {
@@ -326,7 +332,7 @@ class Downloader extends EventEmitter {
                                 this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
                             );
                         }
-                         this.Log.debug(`Decrypting ${task.filename} succeed`);
+                        this.Log.debug(`Decrypting ${task.filename} succeed`);
                     }
                 }
                 resolve();
@@ -342,7 +348,7 @@ class Downloader extends EventEmitter {
                         "UNKNOWN"
                     }]`
                 );
-                 this.Log.debug(e);
+                this.Log.debug(e);
                 reject(e);
             }
         });
