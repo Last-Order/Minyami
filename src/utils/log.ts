@@ -1,12 +1,6 @@
-import chalk from "chalk";
-abstract class Logger {
-    public abstract debug(message: string);
-    public abstract info(message: string);
-    public abstract warning(message: string);
-    public abstract error(message: string, error?: any);
-}
+import chalk from "chalk"
 
-export class ConsoleLogger extends Logger {
+class ConsoleLogger {
     private isDebugMode = false;
     debug(message: string) {
         this.isDebugMode && console.debug(chalk.gray(`[MINYAMI][DEBUG] ${message}`));
@@ -31,4 +25,4 @@ export class ConsoleLogger extends Logger {
     }
 }
 
-export default Logger;
+export default new ConsoleLogger();

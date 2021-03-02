@@ -17,6 +17,4 @@ export interface ParserAdditionalOptions {
     downloader?: Downloader;
 }
 
-export interface ParserResult {
-    
-}
+export interface ParserResult {}

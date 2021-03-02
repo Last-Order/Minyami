@@ -1,11 +1,10 @@
-import { exec } from "./system";
-import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
-import { AxiosProxyConfig } from "axios";
 import * as fs from "fs";
-import UA from "./ua";
 import { URL } from "url";
 import * as crypto from "crypto";
-const SocksProxyAgent = require("socks-proxy-agent");
+import { SocksProxyAgent } from "socks-proxy-agent";
+import axios, { AxiosRequestConfig, AxiosResponse, AxiosProxyConfig } from "axios";
+import { exec } from "./system";
+import UA from "../constants/ua";
 
 /**
  * 合并视频文件

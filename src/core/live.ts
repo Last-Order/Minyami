@@ -1,14 +1,14 @@
-import Downloader, { Chunk, LiveDownloaderConfig } from "./downloader";
-import M3U8, { M3U8Chunk } from "./m3u8";
-import { ConsoleLogger } from "../utils/log";
-import { mergeToMKV, mergeToTS } from "../utils/media";
-import { sleep } from "../utils/system";
+import * as fs from "fs";
+import * as os from 'os';
+import * as path from 'path';
 import { URL } from "url";
 import { AxiosRequestConfig } from "axios";
+import { mergeToMKV, mergeToTS } from "../utils/media";
+import { sleep } from "../utils/system";
 import { loadM3U8 } from "../utils/m3u8";
-const path = require("path");
-const fs = require("fs");
-const os = require("os");
+import logger from '../utils/log';
+import Downloader, { Chunk, LiveDownloaderConfig } from "./downloader";
+import M3U8, { M3U8Chunk } from "./m3u8";
 
 /**
  * Live Downloader
@@ -48,11 +48,10 @@ export default class LiveDownloader extends Downloader {
             cookies,
             headers,
             nomerge,
-            logger,
             cliMode,
         }: LiveDownloaderConfig
     ) {
-        super(logger || new ConsoleLogger(), m3u8Path, {
+        super(m3u8Path, {
             threads: threads || 5,
             output,
             key,
@@ -81,7 +80,6 @@ export default class LiveDownloader extends Downloader {
                 options.headers = this.headers;
             }
             this.m3u8 = await loadM3U8(
-                this.Log,
                 this.m3u8Path,
                 this.retries,
                 this.timeout,
@@ -94,7 +92,7 @@ export default class LiveDownloader extends Downloader {
                 this.isEnd = true;
             } else {
                 this.emit("critical-error");
-                this.Log.error("Aborted due to critical error.", e);
+                logger.error("Aborted due to critical error.", e);
             }
         }
     }
@@ -112,11 +110,11 @@ export default class LiveDownloader extends Downloader {
         if (this.cliMode) {
             process.on("SIGINT", async () => {
                 if (!this.forceStop) {
-                    this.Log.info("Ctrl+C pressed, waiting for tasks finished.");
+                    logger.info("Ctrl+C pressed, waiting for tasks finished.");
                     this.isEnd = true;
                     this.forceStop = true;
                 } else {
-                    this.Log.info("Force stop."); // TODO: reject all download promises
+                    logger.info("Force stop."); // TODO: reject all download promises
                     this.emit("finished");
                 }
             });
@@ -130,14 +128,14 @@ export default class LiveDownloader extends Downloader {
             this.isEncrypted = true;
             const key = this.m3u8.key;
             if (key.startsWith("abematv-license")) {
-                this.Log.info("Site comfirmed: AbemaTV");
+                logger.info("Site comfirmed: AbemaTV");
                 const parser = await import("./parsers/abema");
                 parser.default.parse({
                     downloader: this,
                 });
-                this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
+                logger.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
             } else {
-                this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
+                logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import("./parsers/common");
                 await parser.default.parse({
                     downloader: this,
@@ -147,20 +145,20 @@ export default class LiveDownloader extends Downloader {
             this.isEncrypted = false;
             // Not encrypted
             if (this.m3u8Path.includes("dmc.nico")) {
-                this.Log.info("Site comfirmed: Niconico.");
+                logger.info("Site comfirmed: Niconico.");
                 const parser = await import("./parsers/nicolive");
                 parser.default.parse({
                     downloader: this,
                 });
             } else if (this.m3u8Path.includes("googlevideo")) {
                 // YouTube
-                this.Log.info("Site comfirmed: YouTube.");
+                logger.info("Site comfirmed: YouTube.");
                 const parser = await import("./parsers/youtube");
                 parser.default.parse({
                     downloader: this,
                 });
             } else {
-                this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
+                logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import("./parsers/common");
                 await parser.default.parse({
                     downloader: this,
@@ -170,7 +168,7 @@ export default class LiveDownloader extends Downloader {
         this.emit("parsed");
         if (this.verbose) {
             setInterval(() => {
-                this.Log.debug(
+                logger.debug(
                     `Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunksCount}`
                 );
             }, 3000);
@@ -207,7 +205,7 @@ export default class LiveDownloader extends Downloader {
                     // pass
                 }
             });
-            this.Log.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
+            logger.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
             const currentUndownloadedChunks = currentPlaylistChunks.map((chunk) => {
                 // TODO: Hot fix of Abema Live
                 if (chunk.url.includes("linear-abematv")) {
@@ -246,7 +244,7 @@ export default class LiveDownloader extends Downloader {
                 this.isStarted = true;
                 this.checkQueue();
             }
-            this.Log.debug(`Cool down... Wait for next check`);
+            logger.debug(`Cool down... Wait for next check`);
             await sleep(Math.min(5000, this.m3u8.getChunkLength() * 1000));
         }
     }
@@ -266,7 +264,7 @@ export default class LiveDownloader extends Downloader {
                         ratioSpeed: this.calculateSpeedByRatio(),
                     };
 
-                    this.Log.info(
+                    logger.info(
                         `Proccessing ${currentChunkInfo.taskname} finished. (${currentChunkInfo.finishedChunksCount} / unknown | Avg Speed: ${currentChunkInfo.chunkSpeed} chunks/s or ${currentChunkInfo.ratioSpeed}x)`
                     );
                     this.emit("chunk-downloaded", currentChunkInfo);
@@ -280,8 +278,8 @@ export default class LiveDownloader extends Downloader {
                     } else {
                         task.retryCount = 1;
                     }
-                    this.Log.warning(`Processing ${task.filename} failed.`);
-                    this.Log.debug(e.message);
+                    logger.warning(`Processing ${task.filename} failed.`);
+                    logger.debug(e.message);
                     this.runningThreads--;
                     this.chunks.unshift(task); // 对直播流来说 早速重试比较好
                     this.checkQueue();
@@ -292,25 +290,25 @@ export default class LiveDownloader extends Downloader {
             // 结束状态 合并文件
             this.emit("downloaded");
             if (this.noMerge) {
-                this.Log.info("Skip merging. Please merge video chunks manually.");
-                this.Log.info(`Temporary files are located at ${this.tempPath}`);
+                logger.info("Skip merging. Please merge video chunks manually.");
+                logger.info(`Temporary files are located at ${this.tempPath}`);
                 this.emit("finished");
             }
-            this.Log.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
+            logger.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
             const muxer = this.format === "ts" ? mergeToTS : mergeToMKV;
             muxer(this.outputFileList, this.outputPath)
                 .then(async () => {
-                    this.Log.info("End of merging.");
+                    logger.info("End of merging.");
                     await this.clean();
-                    this.Log.info(
+                    logger.info(
                         `All finished. Check your file at [${path.resolve(this.outputPath)}] .`
                     );
                     this.emit("finished");
                 })
                 .catch((e) => {
                     this.emit("critical-error", e);
-                    this.Log.error("Fail to merge video. Please merge video chunks manually.", e);
-                    this.Log.error(
+                    logger.error("Fail to merge video. Please merge video chunks manually.", e);
+                    logger.error(
                         `Your temporary files at located at [${path.resolve(this.tempPath)}]`
                     );
                 });
@@ -318,7 +316,7 @@ export default class LiveDownloader extends Downloader {
 
         if (this.chunks.length === 0 && this.runningThreads === 0 && !this.isEnd) {
             // 空闲状态 一秒后再检查待完成任务列表
-            this.Log.debug("Sleep 1000ms.");
+            logger.debug("Sleep 1000ms.");
             sleep(1000).then(() => {
                 this.checkQueue();
             });

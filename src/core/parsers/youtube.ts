@@ -1,9 +1,7 @@
 import { ParserOptions, ParserResult } from "./types";
 
 export default class Parser {
-    static parse({
-        downloader
-    }: ParserOptions): ParserResult {
+    static parse({ downloader }: ParserOptions): ParserResult {
         downloader.onChunkNaming = (chunk) => {
             const chunkIdMatch = chunk.url.match(/\/(\d+?)\/goap/);
             if (chunkIdMatch) {
@@ -11,7 +9,7 @@ export default class Parser {
             } else {
                 throw new Error(`Bad chunk url: ${chunk.url}`);
             }
-        }
+        };
         return {};
     }
 }

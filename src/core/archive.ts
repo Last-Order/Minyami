@@ -1,6 +1,12 @@
-import { ConsoleLogger } from "../utils/log";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { URL } from "url";
 import { mergeToMKV, mergeToTS } from "../utils/media";
 import { deleteDirectory } from "../utils/system";
+import { saveTask, deleteTask, getTask } from "../utils/task";
+import { timeStringToSeconds } from "../utils/time";
+import logger from "../utils/log";
 import M3U8 from "./m3u8";
 import Downloader, {
     ArchiveDownloaderConfig,
@@ -9,12 +15,6 @@ import Downloader, {
     Chunk,
     ChunkGroup,
 } from "./downloader";
-import * as fs from "fs";
-import { saveTask, deleteTask, getTask } from "../utils/task";
-import { timeStringToSeconds } from "../utils/time";
-import { URL } from "url";
-const path = require("path");
-const os = require("os");
 
 class ArchiveDownloader extends Downloader {
     tempPath: string;
@@ -60,11 +60,10 @@ class ArchiveDownloader extends Downloader {
             cookies,
             headers,
             nomerge,
-            logger,
             cliMode,
         }: ArchiveDownloaderConfig = {}
     ) {
-        super(logger || new ConsoleLogger(), m3u8Path, {
+        super(m3u8Path, {
             threads: threads || 5,
             output,
             key,
@@ -92,28 +91,28 @@ class ArchiveDownloader extends Downloader {
             // Encrypted
             const key = this.m3u8.getKey();
             if (key.startsWith("abematv-license")) {
-                this.Log.info("Site comfirmed: AbemaTV.");
+                logger.info("Site comfirmed: AbemaTV.");
                 const parser = await import("./parsers/abema");
                 parser.default.parse({
                     downloader: this,
                 });
-                this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
+                logger.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
             } else if (this.m3u8Path.includes("dmm.com")) {
-                this.Log.info("Site comfirmed: DMM.");
+                logger.info("Site comfirmed: DMM.");
                 const parser = await import("./parsers/dmm");
                 parser.default.parse({
                     downloader: this,
                 });
-                this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.sequenceId}.`);
+                logger.info(`Key: ${this.key}; IV: ${this.m3u8.sequenceId}.`);
             } else if (this.m3u8Path.includes("d22puzix29w08m")) {
-                this.Log.info("Site comfirmed: Hibiki-Radio.");
+                logger.info("Site comfirmed: Hibiki-Radio.");
                 const parser = await import("./parsers/hibiki");
                 parser.default.parse({
                     downloader: this,
                 });
-                this.Log.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
+                logger.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
             } else {
-                this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
+                logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import("./parsers/common");
                 await parser.default.parse({
                     downloader: this,
@@ -123,17 +122,17 @@ class ArchiveDownloader extends Downloader {
             // Not encrypted
             if (this.m3u8Path.includes("dmc.nico")) {
                 // NicoNico
-                this.Log.info("Site comfirmed: NicoNico.");
+                logger.info("Site comfirmed: NicoNico.");
                 const parser = await import("./parsers/nico");
                 if (!this.key) {
-                    this.Log.info("请保持播放页面不要关闭");
-                    this.Log.info("Please do not close the video page.");
-                    this.Log.info(
+                    logger.info("请保持播放页面不要关闭");
+                    logger.info("Please do not close the video page.");
+                    logger.info(
                         `Maybe you should get a audience token to get a better user experience.`
                     );
                 }
                 if (this.threads > 10) {
-                    this.Log.warning(`High threads setting detected. Use at your own risk!`);
+                    logger.warning(`High threads setting detected. Use at your own risk!`);
                 }
                 parser.default.parse({
                     downloader: this,
@@ -141,13 +140,13 @@ class ArchiveDownloader extends Downloader {
                 this.autoGenerateChunkList = false;
             } else if (this.m3u8Path.includes("googlevideo")) {
                 // YouTube
-                this.Log.info("Site comfirmed: YouTube.");
+                logger.info("Site comfirmed: YouTube.");
                 const parser = await import("./parsers/youtube");
                 parser.default.parse({
                     downloader: this,
                 });
             } else {
-                this.Log.warning(`Site is not supported by Minyami Core. Try common parser.`);
+                logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import("./parsers/common");
                 await parser.default.parse({
                     downloader: this,
@@ -175,7 +174,7 @@ class ArchiveDownloader extends Downloader {
 
         await this.parse();
 
-        this.Log.info(`Start downloading with ${this.threads} thread(s).`);
+        logger.info(`Start downloading with ${this.threads} thread(s).`);
         if (this.autoGenerateChunkList) {
             this.chunks = this.m3u8.chunks.map((chunk) => {
                 return {
@@ -286,7 +285,7 @@ class ArchiveDownloader extends Downloader {
         });
         if (this.verbose) {
             setInterval(() => {
-                this.Log.debug(
+                logger.debug(
                     `Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunksCount}, total chunks: ${this.totalChunksCount}`
                 );
             }, 3000);
@@ -322,7 +321,7 @@ class ArchiveDownloader extends Downloader {
             let chunk: Chunk;
             if (isChunkGroup(task)) {
                 if (task.actions && task.isNew) {
-                     this.Log.debug(`Handle chunk actions for a new chunk group.`);
+                    logger.debug(`Handle chunk actions for a new chunk group.`);
                     task.isNew = false;
                     for (const action of task.actions) {
                         await this.handleChunkGroupAction(action);
@@ -341,7 +340,7 @@ class ArchiveDownloader extends Downloader {
                     }
                 } else {
                     // All chunks finished in group
-                     this.Log.debug(`Skip a empty chunk group.`);
+                    logger.debug(`Skip a empty chunk group.`);
                     task.isFinished = true;
                     this.chunks.shift();
                     this.checkQueue();
@@ -366,7 +365,7 @@ class ArchiveDownloader extends Downloader {
                         eta: this.getETA(),
                     };
 
-                    this.Log.info(
+                    logger.info(
                         `Proccessing ${currentChunkInfo.taskname} finished. (${
                             currentChunkInfo.finishedChunksCount
                         } / ${this.totalChunksCount} or ${(
@@ -382,7 +381,7 @@ class ArchiveDownloader extends Downloader {
                     this.checkQueue();
                 })
                 .catch((e) => {
-                    this.emit('chunk-error', e);
+                    this.emit("chunk-error", e);
                     this.runningThreads--;
                     // 重试计数
                     if (chunk.retryCount) {
@@ -419,34 +418,34 @@ class ArchiveDownloader extends Downloader {
                 return;
             }
             this.isDownloaded = true;
-            this.Log.info("All chunks downloaded. Start merging chunks.");
+            logger.info("All chunks downloaded. Start merging chunks.");
             const muxer = this.format === "ts" ? mergeToTS : mergeToMKV;
             // Save before merge
             this.emit("downloaded");
             this.saveTask();
             if (this.noMerge) {
-                this.Log.info("Skip merging. Please merge video chunks manually.");
-                this.Log.info(`Temporary files are located at ${this.tempPath}`);
+                logger.info("Skip merging. Please merge video chunks manually.");
+                logger.info(`Temporary files are located at ${this.tempPath}`);
                 this.emit("finished");
             }
             muxer(this.outputFileList, this.outputPath)
                 .then(async () => {
-                    this.Log.info("End of merging.");
-                    this.Log.info("Starting cleaning temporary files.");
+                    logger.info("End of merging.");
+                    logger.info("Starting cleaning temporary files.");
                     try {
                         await deleteDirectory(this.tempPath);
                     } catch (e) {
-                        this.Log.warning(
+                        logger.warning(
                             `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
                         );
                     }
                     try {
                         deleteTask(this.m3u8Path.split("?")[0]);
                     } catch (error) {
-                        this.Log.warning("Fail to parse previous tasks, ignored.");
-                        this.Log.warning(error.message);
+                        logger.warning("Fail to parse previous tasks, ignored.");
+                        logger.warning(error.message);
                     }
-                    this.Log.info(
+                    logger.info(
                         `All finished. Check your file at [${path.resolve(this.outputPath)}] .`
                     );
                     this.emit("finished");
@@ -454,8 +453,10 @@ class ArchiveDownloader extends Downloader {
                 .catch(async (e) => {
                     await this.clean();
                     this.emit("merge-error", e);
-                    this.Log.error("Fail to merge video. Please merge video chunks manually.", e);
-                    this.Log.error(`Your temporary files at located at [${path.resolve(this.tempPath)}]`);
+                    logger.error("Fail to merge video. Please merge video chunks manually.", e);
+                    logger.error(
+                        `Your temporary files at located at [${path.resolve(this.tempPath)}]`
+                    );
                 });
         }
     }
@@ -464,9 +465,9 @@ class ArchiveDownloader extends Downloader {
         const previousTask = getTask(taskId.split("?")[0]);
         if (!previousTask) {
             this.emit("critical-error");
-            this.Log.error("Can't find a task to resume.");
+            logger.error("Can't find a task to resume.");
         }
-        this.Log.info("Previous task found. Resuming.");
+        logger.info("Previous task found. Resuming.");
 
         if (this.cliMode) {
             process.on("SIGINT", async () => {
@@ -503,7 +504,7 @@ class ArchiveDownloader extends Downloader {
 
         this.isResumed = true;
 
-        this.Log.info(`Start downloading with ${this.threads} thread(s).`);
+        logger.info(`Start downloading with ${this.threads} thread(s).`);
         this.checkQueue();
     }
 
@@ -511,9 +512,9 @@ class ArchiveDownloader extends Downloader {
      * 退出前的清理工作
      */
     async clean() {
-        this.Log.info("Saving task status.");
+        logger.info("Saving task status.");
         this.saveTask();
-        this.Log.info("Please wait.");
+        logger.info("Please wait.");
     }
 
     saveTask() {
@@ -547,7 +548,7 @@ class ArchiveDownloader extends Downloader {
             unfinishedChunksLength += isChunkGroup(chunk) ? chunk.chunks.length : 1;
         }
 
-        this.Log.info(
+        logger.info(
             `Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunksLength}`
         );
 
@@ -577,8 +578,8 @@ class ArchiveDownloader extends Downloader {
                 finishedFilenames: this.finishedFilenames,
             });
         } catch (error) {
-            this.Log.warning("Fail to parse previous tasks, ignored.");
-            this.Log.warning(error.message);
+            logger.warning("Fail to parse previous tasks, ignored.");
+            logger.warning(error.message);
         }
     }
 }

@@ -2,7 +2,7 @@ import { ParserOptions, ParserResult } from "./types";
 const ReconnectingWebSocket = require('@eridanussora/reconnecting-websocket');
 const WebSocket = require('ws');
 const SocksProxyAgent = require('socks-proxy-agent');
-import UA from "../../utils/ua";
+import UA from "../../constants/ua";
 
 export default class Parser {
     static parse({

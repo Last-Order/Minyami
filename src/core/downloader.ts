@@ -2,7 +2,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { AxiosRequestConfig } from "axios";
 import { EventEmitter } from "events";
-import Logger from "../utils/log";
+import logger from "../utils/log";
 import M3U8, { M3U8Chunk } from "./m3u8";
 import { loadM3U8 } from "../utils/m3u8";
 import * as system from "../utils/system";
@@ -27,12 +27,9 @@ export interface DownloaderConfig {
 
 export interface ArchiveDownloaderConfig extends DownloaderConfig {
     slice?: string;
-    logger?: Logger;
 }
 
-export interface LiveDownloaderConfig extends DownloaderConfig {
-    logger?: Logger;
-}
+export interface LiveDownloaderConfig extends DownloaderConfig {}
 
 export interface Chunk {
     url: string;
@@ -65,13 +62,12 @@ export function isChunkGroup(c: ChunkItem): c is ChunkGroup {
 }
 
 class Downloader extends EventEmitter {
-    Log: Logger;
     cliMode: boolean = false;
 
     tempPath: string; // 临时文件目录
     m3u8Path: string; // m3u8文件路径
     m3u8: M3U8; // m3u8实体
-    outputPath: string = './output.ts'; // 输出目录
+    outputPath: string = "./output.ts"; // 输出目录
     threads: number = 5; // 并发数量
 
     allChunks: ChunkItem[];
@@ -112,7 +108,6 @@ class Downloader extends EventEmitter {
      * @param config.threads 线程数量
      */
     constructor(
-        log: Logger,
         m3u8Path: string,
         {
             threads,
@@ -131,7 +126,6 @@ class Downloader extends EventEmitter {
         }
     ) {
         super();
-        this.Log = log;
 
         if (threads) {
             this.threads = threads;
@@ -174,13 +168,13 @@ class Downloader extends EventEmitter {
                     const header = /^([^ :]+):(.+)$/.exec(h).slice(1);
                     this.headers[header[0]] = header[1].trim();
                 } catch (e) {
-                    this.Log.warning(`HTTP Headers invalid. Ignored.`);
+                    logger.warning(`HTTP Headers invalid. Ignored.`);
                 }
             }
         }
 
         if (proxy) {
-            this.Log.warning(
+            logger.warning(
                 `--proxy is deprecated and will be removed in the future. See https://github.com/Last-Order/Minyami/issues/54.`
             );
             const splitedProxyString: string[] = proxy.split(":");
@@ -196,7 +190,7 @@ class Downloader extends EventEmitter {
         this.m3u8Path = m3u8Path;
 
         if (this.format === "ts" && this.outputPath.endsWith(".mkv")) {
-            this.Log.warning(
+            logger.warning(
                 `Output file name ends with .mkv is not supported in direct muxing mode, auto changing to .ts.`
             );
             this.outputPath = this.outputPath + ".ts";
@@ -238,7 +232,6 @@ class Downloader extends EventEmitter {
                 options.headers = this.headers;
             }
             this.m3u8 = await loadM3U8(
-                this.Log,
                 this.m3u8Path,
                 this.retries,
                 this.timeout,
@@ -247,7 +240,7 @@ class Downloader extends EventEmitter {
             );
         } catch (e) {
             this.emit("critical-error");
-            this.Log.error("Aborted due to critical error.", e);
+            logger.error("Aborted due to critical error.", e);
         }
     }
 
@@ -256,10 +249,10 @@ class Downloader extends EventEmitter {
      */
     async clean() {
         try {
-            this.Log.info("Starting cleaning temporary files.");
+            logger.info("Starting cleaning temporary files.");
             await system.deleteDirectory(this.tempPath);
         } catch (e) {
-            this.Log.warning(
+            logger.warning(
                 `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
             );
         }
@@ -270,7 +263,7 @@ class Downloader extends EventEmitter {
      * @param task 块下载任务
      */
     handleTask(task: Chunk) {
-        this.Log.debug(`Downloading ${task.url}`);
+        logger.debug(`Downloading ${task.url}`);
         const options: AxiosRequestConfig = {};
         if (this.cookies) {
             options.headers = {
@@ -282,7 +275,7 @@ class Downloader extends EventEmitter {
         }
         options.timeout = Math.min(((task.retryCount || 0) + 1) * this.timeout, this.timeout * 5);
         return new Promise<void>(async (resolve, reject) => {
-            this.Log.debug(`Downloading ${task.filename}`);
+            logger.debug(`Downloading ${task.filename}`);
             try {
                 await download(
                     task.url,
@@ -290,7 +283,7 @@ class Downloader extends EventEmitter {
                     this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined,
                     options
                 );
-                this.Log.debug(`Downloading ${task.filename} succeed.`);
+                logger.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     if (task.key) {
                         if (task.iv) {
@@ -332,12 +325,12 @@ class Downloader extends EventEmitter {
                                 this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
                             );
                         }
-                        this.Log.debug(`Decrypting ${task.filename} succeed`);
+                        logger.debug(`Decrypting ${task.filename} succeed`);
                     }
                 }
                 resolve();
             } catch (e) {
-                this.Log.warning(
+                logger.warning(
                     `Downloading or decrypting ${task.filename} failed. Retry later. [${
                         e.code ||
                         (e.response
@@ -348,7 +341,7 @@ class Downloader extends EventEmitter {
                         "UNKNOWN"
                     }]`
                 );
-                this.Log.debug(e);
+                logger.debug(e);
                 reject(e);
             }
         });
@@ -364,10 +357,10 @@ class Downloader extends EventEmitter {
                     await actions.sleep(action.actionParams);
                 }
             }
-            this.Log.info(`Chunk group action <${action.actionName}> finished.`);
+            logger.info(`Chunk group action <${action.actionName}> finished.`);
         } catch (e) {
-            this.Log.info(`Chunk group action <${action.actionName}> failed.`);
-            this.Log.info(e);
+            logger.info(`Chunk group action <${action.actionName}> failed.`);
+            logger.info(e);
         }
     }
 
