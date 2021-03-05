@@ -492,8 +492,6 @@ class ArchiveDownloader extends Downloader {
         this.retries = previousTask.retries;
         this.timeout = previousTask.timeout;
         this.proxy = previousTask.proxy;
-        this.proxyHost = previousTask.proxyHost;
-        this.proxyPort = previousTask.proxyPort;
         this.allChunks = previousTask.allChunks;
         this.chunks = previousTask.chunks;
         this.outputFileList = previousTask.outputFileList;
@@ -570,8 +568,6 @@ class ArchiveDownloader extends Downloader {
                 retries: this.retries,
                 timeout: this.timeout,
                 proxy: this.proxy,
-                proxyHost: this.proxyHost,
-                proxyPort: this.proxyPort,
                 allChunks: this.allChunks,
                 chunks: unfinishedChunks,
                 outputFileList: this.outputFileList,

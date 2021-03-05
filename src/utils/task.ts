@@ -26,8 +26,6 @@ export interface MinyamiTask {
     timeout: number; // 超时时间
 
     proxy: string;
-    proxyHost: string;
-    proxyPort: number;
 
     allChunks: ChunkItem[]; // 全部块
     chunks: ChunkItem[]; // 未下载的块

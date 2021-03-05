@@ -4,6 +4,7 @@ import * as crypto from "crypto";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosProxyConfig } from "axios";
 import { exec } from "./system";
+import ProxyAgentHelper from "../utils/agent";
 import UA from "../constants/ua";
 
 /**
@@ -77,12 +78,7 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
  * @param url
  * @param path
  */
-export function download(
-    url: string,
-    path: string,
-    proxy: AxiosProxyConfig = undefined,
-    options: AxiosRequestConfig = {}
-) {
+export function download(url: string, path: string, options: AxiosRequestConfig = {}) {
     const CancelToken = axios.CancelToken;
     let source = CancelToken.source();
     const promise = new Promise<void>(async (resolve, reject) => {
@@ -91,13 +87,12 @@ export function download(
                 source && source.cancel();
                 source = null;
             }, options.timeout || 60000);
+            const proxyAgentInstance = ProxyAgentHelper.getProxyAgentInstance();
             const response = await axios({
                 url,
                 method: "GET",
                 responseType: "arraybuffer",
-                httpsAgent: proxy
-                    ? new SocksProxyAgent(`socks5h://${proxy.host}:${proxy.port}`)
-                    : undefined,
+                httpsAgent: proxyAgentInstance ? proxyAgentInstance : undefined,
                 headers: {
                     "User-Agent": UA.CHROME_DEFAULT_UA,
                     Host: new URL(url).host,
@@ -129,17 +124,15 @@ export function download(
  */
 export async function requestRaw(
     url: string,
-    proxy: AxiosProxyConfig = undefined,
     options: AxiosRequestConfig = {}
 ): Promise<AxiosResponse> {
+    const proxyAgentInstance = ProxyAgentHelper.getProxyAgentInstance();
     return await axios({
         url,
         method: "GET",
         responseType: "stream",
         timeout: 60000,
-        httpsAgent: proxy
-            ? new SocksProxyAgent(`socks5h://${proxy.host}:${proxy.port}`)
-            : undefined,
+        httpsAgent: proxyAgentInstance ? proxyAgentInstance : undefined,
         headers: {
             "User-Agent": UA.CHROME_DEFAULT_UA,
             Host: new URL(url).host,

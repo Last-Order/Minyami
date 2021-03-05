@@ -3,7 +3,8 @@ const WebSocket = require("ws");
 import Axios from "axios";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import UA from "../../constants/ua";
-import logger from '../../utils/log';
+import logger from "../../utils/log";
+import ProxyAgentHelper from "../../utils/agent";
 import { isChunkGroup, ChunkGroup } from "../downloader";
 import { ParserOptions, ParserResult } from "./types";
 
@@ -75,6 +76,7 @@ export default class Parser {
         if (!downloader.m3u8.m3u8Url) {
             throw new Error("Missing m3u8 url for Niconico.");
         }
+        const proxyAgent = ProxyAgentHelper.getProxyAgentInstance();
         if (downloader.key) {
             // NICO Enhanced mode ON!
             logger.info(`Enhanced mode for Nico-TS enabled`);
@@ -101,11 +103,7 @@ export default class Parser {
                                     Cookie: downloader.cookies,
                                     "User-Agent": UA.CHROME_DEFAULT_UA,
                                 },
-                                httpsAgent: downloader.proxy
-                                    ? new SocksProxyAgent(
-                                          `socks5h://${downloader.proxyHost}:${downloader.proxyPort}`
-                                      )
-                                    : undefined,
+                                httpsAgent: proxyAgent ? proxyAgent : undefined,
                             }
                         );
                         const token = response.data.data.streamServer.url.match(
@@ -143,16 +141,13 @@ export default class Parser {
                     socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v2/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
                 }
                 if (downloader.proxy) {
-                    const agent = new SocksProxyAgent(
-                        `socks5h://${downloader.proxyHost}:${downloader.proxyPort}`
-                    );
                     socket = new ReconnectingWebSocket(socketUrl, undefined, {
                         WebSocket: WebSocket,
                         clientOptions: {
                             headers: {
                                 "User-Agent": UA.CHROME_DEFAULT_UA,
                             },
-                            agent,
+                            agent: proxyAgent ? proxyAgent : undefined,
                         },
                     });
                 } else {

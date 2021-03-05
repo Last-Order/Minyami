@@ -1,12 +1,12 @@
 import * as fs from "fs";
-import * as os from 'os';
-import * as path from 'path';
+import * as os from "os";
+import * as path from "path";
 import { URL } from "url";
 import { AxiosRequestConfig } from "axios";
 import { mergeToMKV, mergeToTS } from "../utils/media";
 import { sleep } from "../utils/system";
 import { loadM3U8 } from "../utils/m3u8";
-import logger from '../utils/log';
+import logger from "../utils/log";
 import Downloader, { Chunk, LiveDownloaderConfig } from "./downloader";
 import M3U8, { M3U8Chunk } from "./m3u8";
 
@@ -79,13 +79,7 @@ export default class LiveDownloader extends Downloader {
             if (Object.keys(this.headers).length > 0) {
                 options.headers = this.headers;
             }
-            this.m3u8 = await loadM3U8(
-                this.m3u8Path,
-                this.retries,
-                this.timeout,
-                this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined,
-                options
-            );
+            this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout, options);
         } catch (e) {
             if (this.finishedChunksCount > 0) {
                 // Stop downloading

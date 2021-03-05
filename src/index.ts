@@ -14,8 +14,6 @@ process.on("unhandledRejection", (error: Error) => {
     console.error(error.name, error.message, error.stack);
 });
 
-ProxyAgent.readProxyConfigurationFromEnv();
-
 Erii.setMetaInfo({
     version:
         JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json")).toString())[
@@ -62,6 +60,7 @@ Erii.bind(
         if (options.verbose) {
             logger.enableDebugMode();
         }
+        ProxyAgent.readProxyConfigurationFromEnv();
         if (options.live) {
             const downloader = new LiveDownloader(path, {
                 ...options,
@@ -267,7 +266,7 @@ Erii.addOption({
 });
 
 Erii.addOption({
-    name: ["nomerge"],
+    name: ["nomerge", "keep"],
     command: "download",
     description: "Do not merge m3u8 chunks.",
 });

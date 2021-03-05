@@ -8,6 +8,7 @@ import { loadM3U8 } from "../utils/m3u8";
 import * as system from "../utils/system";
 import CommonUtils from "../utils/common";
 import { download, decrypt } from "../utils/media";
+import ProxyAgentHelper from "../utils/agent";
 import { ActionType } from "./action";
 import * as actions from "./action";
 
@@ -90,8 +91,6 @@ class Downloader extends EventEmitter {
     timeout: number = 60000; // 超时时间
 
     proxy: string = "";
-    proxyHost: string = "";
-    proxyPort: number = 0;
 
     autoGenerateChunkList: boolean = true;
 
@@ -174,13 +173,10 @@ class Downloader extends EventEmitter {
         }
 
         if (proxy) {
-            logger.warning(
-                `--proxy is deprecated and will be removed in the future. See https://github.com/Last-Order/Minyami/issues/54.`
-            );
-            const splitedProxyString: string[] = proxy.split(":");
             this.proxy = proxy;
-            this.proxyHost = splitedProxyString.slice(0, splitedProxyString.length - 1).join("");
-            this.proxyPort = parseInt(splitedProxyString[splitedProxyString.length - 1]);
+            ProxyAgentHelper.setProxy(proxy, {
+                allowNonPrefixSocksProxy: true,
+            });
         }
 
         if (nomerge) {
@@ -231,13 +227,7 @@ class Downloader extends EventEmitter {
             if (Object.keys(this.headers).length > 0) {
                 options.headers = this.headers;
             }
-            this.m3u8 = await loadM3U8(
-                this.m3u8Path,
-                this.retries,
-                this.timeout,
-                this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined,
-                options
-            );
+            this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout, options);
         } catch (e) {
             this.emit("critical-error");
             logger.error("Aborted due to critical error.", e);
@@ -280,53 +270,19 @@ class Downloader extends EventEmitter {
                 await download(
                     task.url,
                     path.resolve(this.tempPath, `./${task.filename}`),
-                    this.proxy ? { host: this.proxyHost, port: this.proxyPort } : undefined,
                     options
                 );
                 logger.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
-                    if (task.key) {
-                        if (task.iv) {
-                            await decrypt(
-                                path.resolve(this.tempPath, `./${task.filename}`),
-                                path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
-                                this.getEncryptionKey(
-                                    CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key)
-                                ),
-                                task.iv
-                            );
-                        } else {
-                            await decrypt(
-                                path.resolve(this.tempPath, `./${task.filename}`),
-                                path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
-                                this.getEncryptionKey(
-                                    CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key)
-                                ),
-                                this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
-                            );
-                        }
-                    } else {
-                        if (task.iv) {
-                            await decrypt(
-                                path.resolve(this.tempPath, `./${task.filename}`),
-                                path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
-                                this.getEncryptionKey(
-                                    CommonUtils.buildFullUrl(this.m3u8.m3u8Url, this.m3u8.key)
-                                ),
-                                task.iv
-                            );
-                        } else {
-                            await decrypt(
-                                path.resolve(this.tempPath, `./${task.filename}`),
-                                path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
-                                this.getEncryptionKey(
-                                    CommonUtils.buildFullUrl(this.m3u8.m3u8Url, this.m3u8.key)
-                                ),
-                                this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
-                            );
-                        }
-                        logger.debug(`Decrypting ${task.filename} succeed`);
-                    }
+                    await decrypt(
+                        path.resolve(this.tempPath, `./${task.filename}`),
+                        path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
+                        this.getEncryptionKey(
+                            CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key || this.m3u8.key)
+                        ),
+                        task.iv || this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
+                    );
+                    logger.debug(`Decrypting ${task.filename} succeed`);
                 }
                 resolve();
             } catch (e) {

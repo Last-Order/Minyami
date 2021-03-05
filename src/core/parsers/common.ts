@@ -41,24 +41,10 @@ export default class Parser {
                     if (Object.keys(downloader.headers).length > 0) {
                         options.headers = downloader.headers;
                     }
-                    if (downloader.proxy) {
-                        response = await requestRaw(
-                            url,
-                            {
-                                host: downloader.proxyHost,
-                                port: downloader.proxyPort,
-                            },
-                            {
-                                responseType: "arraybuffer",
-                                ...options,
-                            }
-                        );
-                    } else {
-                        response = await requestRaw(url, null, {
-                            responseType: "arraybuffer",
-                            ...options,
-                        });
-                    }
+                    response = await requestRaw(url, {
+                        responseType: "arraybuffer",
+                        ...options,
+                    });
                     const hexKey = Array.from(new Uint8Array(response.data))
                         .map((i) =>
                             i.toString(16).length === 1 ? "0" + i.toString(16) : i.toString(16)

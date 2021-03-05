@@ -3,16 +3,17 @@ import { URL } from "url";
 import axios, { AxiosRequestConfig, AxiosProxyConfig } from "axios";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import M3U8 from "../core/m3u8";
-import logger from '../utils/log';
+import ProxyAgentHelper from "../utils/agent";
+import logger from "../utils/log";
 import UA from "../constants/ua";
 
 export async function loadM3U8(
     path: string,
     retries: number = 1,
     timeout = 60000,
-    proxy: AxiosProxyConfig = undefined,
     options: AxiosRequestConfig = {}
 ) {
+    const proxyAgent = ProxyAgentHelper.getProxyAgentInstance();
     let m3u8Content;
     if (path.startsWith("http")) {
         logger.info("Start fetching M3U8 file.");
@@ -20,9 +21,7 @@ export async function loadM3U8(
             try {
                 const response = await axios.get(path, {
                     timeout,
-                    httpsAgent: proxy
-                        ? new SocksProxyAgent(`socks5h://${proxy.host}:${proxy.port}`)
-                        : undefined,
+                    httpsAgent: proxyAgent ? proxyAgent : undefined,
                     headers: {
                         "User-Agent": UA.CHROME_DEFAULT_UA,
                         Host: new URL(path).host,
