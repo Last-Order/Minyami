@@ -7,12 +7,7 @@ import ProxyAgentHelper from "../utils/agent";
 import logger from "../utils/log";
 import UA from "../constants/ua";
 
-export async function loadM3U8(
-    path: string,
-    retries: number = 1,
-    timeout = 60000,
-    options: AxiosRequestConfig = {}
-) {
+export async function loadM3U8(path: string, retries: number = 1, timeout = 60000, options: AxiosRequestConfig = {}) {
     const proxyAgent = ProxyAgentHelper.getProxyAgentInstance();
     let m3u8Content;
     if (path.startsWith("http")) {
@@ -35,15 +30,11 @@ export async function loadM3U8(
                 logger.warning(
                     `Fail to fetch M3U8 file: [${
                         e.code ||
-                        (e.response
-                            ? `${e.response.status} ${e.response.statusText}`
-                            : undefined) ||
+                        (e.response ? `${e.response.status} ${e.response.statusText}` : undefined) ||
                         "UNKNOWN"
                     }]`
                 );
-                logger.warning(
-                    "If you are downloading a live stream, this may result in a broken output video."
-                );
+                logger.warning("If you are downloading a live stream, this may result in a broken output video.");
                 retries--;
                 if (retries >= 0) {
                     logger.info("Try again.");

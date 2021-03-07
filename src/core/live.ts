@@ -38,18 +38,7 @@ export default class LiveDownloader extends Downloader {
      */
     constructor(
         m3u8Path: string,
-        {
-            threads,
-            output,
-            key,
-            verbose,
-            retries,
-            proxy,
-            cookies,
-            headers,
-            nomerge,
-            cliMode,
-        }: LiveDownloaderConfig
+        { threads, output, key, verbose, retries, proxy, cookies, headers, nomerge, cliMode }: LiveDownloaderConfig
     ) {
         super(m3u8Path, {
             threads: threads || 5,
@@ -184,14 +173,8 @@ export default class LiveDownloader extends Downloader {
             this.m3u8.chunks.forEach((chunk) => {
                 try {
                     // 去重
-                    if (
-                        !this.finishedList.includes(
-                            this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url
-                        )
-                    ) {
-                        this.finishedList.push(
-                            this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url
-                        );
+                    if (!this.finishedList.includes(this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url)) {
+                        this.finishedList.push(this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url);
                         currentPlaylistChunks.push(chunk);
                     }
                 } catch (e) {
@@ -294,17 +277,13 @@ export default class LiveDownloader extends Downloader {
                 .then(async () => {
                     logger.info("End of merging.");
                     await this.clean();
-                    logger.info(
-                        `All finished. Check your file at [${path.resolve(this.outputPath)}] .`
-                    );
+                    logger.info(`All finished. Check your file at [${path.resolve(this.outputPath)}] .`);
                     this.emit("finished");
                 })
                 .catch((e) => {
                     this.emit("critical-error", e);
                     logger.error("Fail to merge video. Please merge video chunks manually.", e);
-                    logger.error(
-                        `Your temporary files at located at [${path.resolve(this.tempPath)}]`
-                    );
+                    logger.error(`Your temporary files at located at [${path.resolve(this.tempPath)}]`);
                 });
         }
 

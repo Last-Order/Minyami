@@ -267,19 +267,13 @@ class Downloader extends EventEmitter {
         return new Promise<void>(async (resolve, reject) => {
             logger.debug(`Downloading ${task.filename}`);
             try {
-                await download(
-                    task.url,
-                    path.resolve(this.tempPath, `./${task.filename}`),
-                    options
-                );
+                await download(task.url, path.resolve(this.tempPath, `./${task.filename}`), options);
                 logger.debug(`Downloading ${task.filename} succeed.`);
                 if (this.m3u8.isEncrypted) {
                     await decrypt(
                         path.resolve(this.tempPath, `./${task.filename}`),
                         path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
-                        this.getEncryptionKey(
-                            CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key || this.m3u8.key)
-                        ),
+                        this.getEncryptionKey(CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key || this.m3u8.key)),
                         task.iv || this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
                     );
                     logger.debug(`Decrypting ${task.filename} succeed`);
@@ -289,9 +283,7 @@ class Downloader extends EventEmitter {
                 logger.warning(
                     `Downloading or decrypting ${task.filename} failed. Retry later. [${
                         e.code ||
-                        (e.response
-                            ? `${e.response.status} ${e.response.statusText}`
-                            : undefined) ||
+                        (e.response ? `${e.response.status} ${e.response.statusText}` : undefined) ||
                         e.message ||
                         e.constructor.name ||
                         "UNKNOWN"
@@ -332,9 +324,7 @@ class Downloader extends EventEmitter {
      * 计算以块计算的下载速度
      */
     calculateSpeedByChunk() {
-        return (
-            this.finishedChunksCount / Math.round((new Date().valueOf() - this.startedAt) / 1000)
-        ).toFixed(2);
+        return (this.finishedChunksCount / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
     }
 
     /**

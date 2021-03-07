@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 import * as fs from "fs";
-import * as os from 'os';
-import * as path from 'path';
+import * as os from "os";
+import * as path from "path";
 import Erii from "erii";
 import ArchiveDownloader from "./core/archive";
 import LiveDownloader from "./core/live";
 import { exec, deleteDirectory } from "./utils/system";
 import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
-import ProxyAgent from './utils/agent';
+import ProxyAgent from "./utils/agent";
 
 process.on("unhandledRejection", (error: Error) => {
     console.error(error.name, error.message, error.stack);
@@ -16,9 +16,8 @@ process.on("unhandledRejection", (error: Error) => {
 
 Erii.setMetaInfo({
     version:
-        JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json")).toString())[
-            "version"
-        ] + "\nうめにゃん~ (虎>ω<)",
+        JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json")).toString())["version"] +
+        "\nうめにゃん~ (虎>ω<)",
     name: "Minyami / A lovely video downloader",
 });
 

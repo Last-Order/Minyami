@@ -9,21 +9,17 @@ export default class Parser {
         return new Promise(async (resolve, reject) => {
             if (downloader.m3u8.isEncrypted) {
                 const keys = {};
-                keys[CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, downloader.m3u8.key)] =
-                    downloader.key || "";
+                keys[CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, downloader.m3u8.key)] = downloader.key || "";
                 // collect all key urls
                 for (const chunk of downloader.m3u8.chunks) {
                     if (chunk.key && !keys[chunk.key]) {
-                        keys[CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, chunk.key)] =
-                            downloader.key || "";
+                        keys[CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, chunk.key)] = downloader.key || "";
                     }
                 }
                 // download all keys
                 let counter = 1;
                 for (const url of Object.keys(keys)) {
-                    logger.info(
-                        `Downloading decrypt keys. (${counter} / ${Object.keys(keys).length})`
-                    );
+                    logger.info(`Downloading decrypt keys. (${counter} / ${Object.keys(keys).length})`);
                     if (downloader.key) {
                         downloader.saveEncryptionKey(
                             CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, url),
@@ -46,14 +42,9 @@ export default class Parser {
                         ...options,
                     });
                     const hexKey = Array.from(new Uint8Array(response.data))
-                        .map((i) =>
-                            i.toString(16).length === 1 ? "0" + i.toString(16) : i.toString(16)
-                        )
+                        .map((i) => (i.toString(16).length === 1 ? "0" + i.toString(16) : i.toString(16)))
                         .join("");
-                    downloader.saveEncryptionKey(
-                        CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, url),
-                        hexKey
-                    );
+                    downloader.saveEncryptionKey(CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, url), hexKey);
                     counter++;
                 }
                 resolve({});

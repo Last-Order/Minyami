@@ -8,13 +8,7 @@ import { saveTask, deleteTask, getTask } from "../utils/task";
 import { timeStringToSeconds } from "../utils/time";
 import logger from "../utils/log";
 import M3U8 from "./m3u8";
-import Downloader, {
-    ArchiveDownloaderConfig,
-    ChunkItem,
-    isChunkGroup,
-    Chunk,
-    ChunkGroup,
-} from "./downloader";
+import Downloader, { ArchiveDownloaderConfig, ChunkItem, isChunkGroup, Chunk, ChunkGroup } from "./downloader";
 
 class ArchiveDownloader extends Downloader {
     tempPath: string;
@@ -127,9 +121,7 @@ class ArchiveDownloader extends Downloader {
                 if (!this.key) {
                     logger.info("请保持播放页面不要关闭");
                     logger.info("Please do not close the video page.");
-                    logger.info(
-                        `Maybe you should get a audience token to get a better user experience.`
-                    );
+                    logger.info(`Maybe you should get a audience token to get a better user experience.`);
                 }
                 if (this.threads > 10) {
                     logger.warning(`High threads setting detected. Use at your own risk!`);
@@ -197,10 +189,7 @@ class ArchiveDownloader extends Downloader {
                 }
                 if (isChunkGroup(chunk)) {
                     // 处理一组块
-                    if (
-                        nowTime + chunk.chunks.length * this.m3u8.getChunkLength() <
-                        this.sliceStart
-                    ) {
+                    if (nowTime + chunk.chunks.length * this.m3u8.getChunkLength() < this.sliceStart) {
                         // 加上整个块都还没有到开始时间
                         nowTime += chunk.chunks.length * this.m3u8.getChunkLength();
                         continue;
@@ -261,24 +250,16 @@ class ArchiveDownloader extends Downloader {
         this.chunks.forEach((chunkItem) => {
             if (!isChunkGroup(chunkItem)) {
                 if (this.m3u8.isEncrypted) {
-                    this.outputFileList.push(
-                        path.resolve(this.tempPath, `./${chunkItem.filename}.decrypt`)
-                    );
+                    this.outputFileList.push(path.resolve(this.tempPath, `./${chunkItem.filename}.decrypt`));
                 } else {
-                    this.outputFileList.push(
-                        path.resolve(this.tempPath, `./${chunkItem.filename}`)
-                    );
+                    this.outputFileList.push(path.resolve(this.tempPath, `./${chunkItem.filename}`));
                 }
             } else {
                 for (const chunk of chunkItem.chunks) {
                     if (this.m3u8.isEncrypted) {
-                        this.outputFileList.push(
-                            path.resolve(this.tempPath, `./${chunk.filename}.decrypt`)
-                        );
+                        this.outputFileList.push(path.resolve(this.tempPath, `./${chunk.filename}.decrypt`));
                     } else {
-                        this.outputFileList.push(
-                            path.resolve(this.tempPath, `./${chunk.filename}`)
-                        );
+                        this.outputFileList.push(path.resolve(this.tempPath, `./${chunk.filename}`));
                     }
                 }
             }
@@ -369,8 +350,7 @@ class ArchiveDownloader extends Downloader {
                         `Proccessing ${currentChunkInfo.taskname} finished. (${
                             currentChunkInfo.finishedChunksCount
                         } / ${this.totalChunksCount} or ${(
-                            (currentChunkInfo.finishedChunksCount /
-                                currentChunkInfo.totalChunksCount) *
+                            (currentChunkInfo.finishedChunksCount / currentChunkInfo.totalChunksCount) *
                             100
                         ).toFixed(2)}% | Avg Speed: ${currentChunkInfo.chunkSpeed} chunks/s or ${
                             currentChunkInfo.ratioSpeed
@@ -445,18 +425,14 @@ class ArchiveDownloader extends Downloader {
                         logger.warning("Fail to parse previous tasks, ignored.");
                         logger.warning(error.message);
                     }
-                    logger.info(
-                        `All finished. Check your file at [${path.resolve(this.outputPath)}] .`
-                    );
+                    logger.info(`All finished. Check your file at [${path.resolve(this.outputPath)}] .`);
                     this.emit("finished");
                 })
                 .catch(async (e) => {
                     await this.clean();
                     this.emit("merge-error", e);
                     logger.error("Fail to merge video. Please merge video chunks manually.", e);
-                    logger.error(
-                        `Your temporary files at located at [${path.resolve(this.tempPath)}]`
-                    );
+                    logger.error(`Your temporary files at located at [${path.resolve(this.tempPath)}]`);
                 });
         }
     }
@@ -546,9 +522,7 @@ class ArchiveDownloader extends Downloader {
             unfinishedChunksLength += isChunkGroup(chunk) ? chunk.chunks.length : 1;
         }
 
-        logger.info(
-            `Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunksLength}`
-        );
+        logger.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunksLength}`);
 
         try {
             saveTask({

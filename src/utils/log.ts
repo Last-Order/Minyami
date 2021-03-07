@@ -1,4 +1,4 @@
-import chalk from "chalk"
+import chalk from "chalk";
 
 class ConsoleLogger {
     private isDebugMode = false;
@@ -6,7 +6,7 @@ class ConsoleLogger {
         this.isDebugMode && console.debug(chalk.gray(`[MINYAMI][DEBUG] ${message}`));
     }
 
-    info(message: string, infoObj: any = undefined) {
+    info(message: string) {
         console.info(chalk.white(`[MINYAMI][INFO] ${message}`));
     }
 
@@ -14,7 +14,7 @@ class ConsoleLogger {
         console.warn(chalk.yellow(`[MINYAMI][WARN] ${message}`));
     }
 
-    error(message: string, error: any = undefined) {
+    error(message: string, error?: Error) {
         if (error !== undefined) console.log(error);
         console.info(chalk.red(`[MINYAMI][ERROR] ${message}`));
         process.exit();

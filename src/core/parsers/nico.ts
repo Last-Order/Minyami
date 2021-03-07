@@ -35,10 +35,7 @@ export default class Parser {
                             `ht2_nicolive=${token}`
                         );
                         if (host) {
-                            action.actionParams = action.actionParams.replace(
-                                /(http(s):\/\/.+\/)/gi,
-                                host
-                            );
+                            action.actionParams = action.actionParams.replace(/(http(s):\/\/.+\/)/gi, host);
                         }
                     }
                 });
@@ -61,10 +58,7 @@ export default class Parser {
                                 `ht2_nicolive=${token}`
                             );
                             if (host) {
-                                action.actionParams = action.actionParams.replace(
-                                    /(http(s):\/\/.+\/)/gi,
-                                    host
-                                );
+                                action.actionParams = action.actionParams.replace(/(http(s):\/\/.+\/)/gi, host);
                             }
                         }
                     });
@@ -106,12 +100,8 @@ export default class Parser {
                                 httpsAgent: proxyAgent ? proxyAgent : undefined,
                             }
                         );
-                        const token = response.data.data.streamServer.url.match(
-                            /ht2_nicolive=(.+)/
-                        )[1];
-                        const host = response.data.data.streamServer.url.match(
-                            /(http(s):\/\/.+\/)/
-                        )[1];
+                        const token = response.data.data.streamServer.url.match(/ht2_nicolive=(.+)/)[1];
+                        const host = response.data.data.streamServer.url.match(/(http(s):\/\/.+\/)/)[1];
                         Parser.updateToken(token, downloader, host);
                         return token;
                     } catch (e) {
@@ -217,9 +207,7 @@ export default class Parser {
             if (downloader.chunks.length === 0) {
                 // 生成 Fake M3U8
                 const chunkLength = downloader.m3u8.getChunkLength();
-                const videoLength = parseFloat(
-                    downloader.m3u8.m3u8Content.match(/#DMC-STREAM-DURATION:(.+)/)[1]
-                );
+                const videoLength = parseFloat(downloader.m3u8.m3u8Content.match(/#DMC-STREAM-DURATION:(.+)/)[1]);
                 const firstChunkFilename = downloader.m3u8.chunks[0].url.match(/^(.+ts)/)[1];
                 let offset;
                 if (firstChunkFilename === "0.ts") {
@@ -239,18 +227,12 @@ export default class Parser {
                 for (let time = 0; time < videoLength; time += chunkLength) {
                     if (counter === 0) {
                         startTime = time.toString();
-                        const pingUrl = downloader.m3u8Path.replace(
-                            /start=\d+/gi,
-                            `start=${startTime}`
-                        );
+                        const pingUrl = downloader.m3u8Path.replace(/start=\d+/gi, `start=${startTime}`);
                         chunkGroup = {
                             actions: [
                                 {
                                     actionName: "ping",
-                                    actionParams: pingUrl.replace(
-                                        "1/ts/playlist.m3u8",
-                                        "master.m3u8"
-                                    ),
+                                    actionParams: pingUrl.replace("1/ts/playlist.m3u8", "master.m3u8"),
                                 },
                             ],
                             chunks: [],

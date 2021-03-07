@@ -1,8 +1,7 @@
 import * as fs from "fs";
 import { URL } from "url";
 import * as crypto from "crypto";
-import { SocksProxyAgent } from "socks-proxy-agent";
-import axios, { AxiosRequestConfig, AxiosResponse, AxiosProxyConfig } from "axios";
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import { exec } from "./system";
 import ProxyAgentHelper from "../utils/agent";
 import UA from "../constants/ua";
@@ -122,10 +121,7 @@ export function download(url: string, path: string, options: AxiosRequestConfig 
  * @param url
  * @param proxy
  */
-export async function requestRaw(
-    url: string,
-    options: AxiosRequestConfig = {}
-): Promise<AxiosResponse> {
+export async function requestRaw(url: string, options: AxiosRequestConfig = {}): Promise<AxiosResponse> {
     const proxyAgentInstance = ProxyAgentHelper.getProxyAgentInstance();
     return await axios({
         url,
