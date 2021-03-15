@@ -1,4 +1,3 @@
-import { URL } from "url";
 import CommonUtils from "../utils/common";
 
 /**

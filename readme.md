@@ -26,10 +26,10 @@ Please also install the following extension to work with Minyami
 Help:
      Commands                      Description                   Alias
 
-     --help <command>              Show help documentation       --h
+     --help <command>              Show help documentation       -h
          <command>                 Show help of a specified comma
      --version                     Show version
-     --download <input_path>       Download video                --d
+     --download <input_path>       Download video                -d
          <input_path>              m3u8 file path
          --threads <limit>         Threads limit
              <limit>               (Optional) Limit of threads, defaults to 5
@@ -46,12 +46,12 @@ Help:
          --live                    Download live
          --format <format_name>    (Optional) Set output format. default: ts
              <format_name>         Format name. ts or mkv.
-         --proxy <socks-proxy>     Download via Socks proxy
-             <socks-proxy>         Set Socks Proxy in [<host>:<port>] format. eg. --proxy "127.0.0.1:1080".
+         --proxy <proxy-server>    Download via Socks proxy (Deprecated)
+             <proxy-server>        Set proxy in [protocol://<host>:<port>] format. eg. --proxy "http://127.0.0.1:1080".
          --slice <range>           Download specified part of the stream
              <range>               Set time range in [<hh:mm:ss>-<hh:mm:ss> format]. eg. --slice "45:00-53:00"
-         --nomerge                 Do not merge m3u8 chunks.
-     --resume <input_path>         Resume a download. (Archive)  --r
+         --nomerge, keep           Do not merge m3u8 chunks.
+     --resume <input_path>         Resume a download. (Archive)  -r
          <input_path>              m3u8 file path
      --clean                       Clean cache files
 
@@ -59,6 +59,7 @@ Options:
 
      Options                       Description
      --verbose, debug              Debug output
+
 ```
 
 ## FAQ
@@ -66,6 +67,10 @@ Options:
 Q: Should I keep the browser open when downloading?
 
 A: It's not necessary.
+
+Q: How to set proxy for Minyami.
+
+A: You can use `--proxy` to set proxy server for Minyami. HTTP/SOCKS5 proxy are supported. Or you can use environment variables `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` to provide proxy configuration for Minyami.
 
 ## Use as a library (3.1.0+)
 

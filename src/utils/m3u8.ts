@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import { URL } from "url";
-import axios, { AxiosRequestConfig, AxiosProxyConfig } from "axios";
-import { SocksProxyAgent } from "socks-proxy-agent";
+import axios, { AxiosRequestConfig } from "axios";
 import M3U8 from "../core/m3u8";
 import ProxyAgentHelper from "../utils/agent";
 import logger from "../utils/log";

@@ -10,6 +10,12 @@ class ProxyAgentHelper {
 
     constructor() {}
 
+    /**
+     * Set up proxy server and initialize the proxy agent instance
+     * @param proxy
+     * @param params
+     * @param params.allowNonPrefixSocksProxy Treat proxy server without protocol as socks5 proxy for backward compatibility
+     */
     setProxy(proxy: string, { allowNonPrefixSocksProxy = false } = {}) {
         if (!proxy) {
             return;
@@ -45,12 +51,10 @@ class ProxyAgentHelper {
 
     /**
      * Read proxy configuration from environment variables.
-     * By default, HTTP_PROXY and HTTPS_PROXY will be used.
+     * By default, ALL_PROXY, HTTP_PROXY and HTTPS_PROXY will be used.
      */
     readProxyConfigurationFromEnv() {
-        if (process.env.HTTP_PROXY || process.env.HTTPS_PROXY) {
-            this.setProxy(process.env.HTTP_PROXY || process.env.HTTPS_PROXY);
-        }
+        this.setProxy(process.env.ALL_PROXY || process.env.HTTP_PROXY || process.env.HTTPS_PROXY);
     }
 }
 
