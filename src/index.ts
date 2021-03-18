@@ -231,7 +231,7 @@ Erii.addOption({
 Erii.addOption({
     name: ["proxy"],
     command: "download",
-    description: "Download via Socks proxy (Deprecated)",
+    description: "Use the specified HTTP/HTTPS/SOCKS proxy",
     argument: {
         name: "proxy-server",
         description: 'Set proxy in [protocol://<host>:<port>] format. eg. --proxy "http://127.0.0.1:1080".',
