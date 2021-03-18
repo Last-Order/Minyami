@@ -46,7 +46,7 @@ Help:
          --live                    Download live
          --format <format_name>    (Optional) Set output format. default: ts
              <format_name>         Format name. ts or mkv.
-         --proxy <proxy-server>    Download via Socks proxy (Deprecated)
+         --proxy <proxy-server>    Use the specified HTTP/HTTPS/SOCKS proxy
              <proxy-server>        Set proxy in [protocol://<host>:<port>] format. eg. --proxy "http://127.0.0.1:1080".
          --slice <range>           Download specified part of the stream
              <range>               Set time range in [<hh:mm:ss>-<hh:mm:ss> format]. eg. --slice "45:00-53:00"

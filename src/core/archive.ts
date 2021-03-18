@@ -173,7 +173,7 @@ class ArchiveDownloader extends Downloader {
                     url: chunk.url,
                     filename: this.onChunkNaming
                         ? this.onChunkNaming(chunk)
-                        : new URL(chunk.url).pathname.split("/").slice(-1)[0],
+                        : new URL(chunk.url).pathname.split("/").slice(-1)[0].slice(8 - 255),
                     key: chunk.key,
                     iv: chunk.iv,
                     sequenceId: chunk.sequenceId,
