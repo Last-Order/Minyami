@@ -440,8 +440,8 @@ class ArchiveDownloader extends Downloader {
     async resume(taskId: string) {
         const previousTask = getTask(taskId.split("?")[0]);
         if (!previousTask) {
-            this.emit("critical-error");
             logger.error("Can't find a task to resume.");
+            this.emit("critical-error");
         }
         logger.info("Previous task found. Resuming.");
 

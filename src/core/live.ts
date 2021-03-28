@@ -74,8 +74,8 @@ export default class LiveDownloader extends Downloader {
                 // Stop downloading
                 this.isEnd = true;
             } else {
-                this.emit("critical-error");
                 logger.error("Aborted due to critical error.", e);
+                this.emit("critical-error");
             }
         }
     }
@@ -281,9 +281,9 @@ export default class LiveDownloader extends Downloader {
                     this.emit("finished");
                 })
                 .catch((e) => {
-                    this.emit("critical-error", e);
                     logger.error("Fail to merge video. Please merge video chunks manually.", e);
                     logger.error(`Your temporary files at located at [${path.resolve(this.tempPath)}]`);
+                    this.emit("critical-error", e);
                 });
         }
 

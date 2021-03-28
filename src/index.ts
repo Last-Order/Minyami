@@ -69,6 +69,9 @@ Erii.bind(
             downloader.on("finished", () => {
                 process.exit();
             });
+            downloader.on("critical-error", () => {
+                process.exit();
+            });
             await downloader.download();
         } else {
             const downloader = new ArchiveDownloader(path, {
@@ -77,6 +80,9 @@ Erii.bind(
                 logger,
             });
             downloader.on("finished", () => {
+                process.exit();
+            });
+            downloader.on("critical-error", () => {
                 process.exit();
             });
             await downloader.init();
@@ -100,6 +106,9 @@ Erii.bind(
             cliMode: true,
         });
         downloader.on("finished", () => {
+            process.exit();
+        });
+        downloader.on("critical-error", () => {
             process.exit();
         });
         downloader.resume(path);

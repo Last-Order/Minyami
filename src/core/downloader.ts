@@ -229,8 +229,8 @@ class Downloader extends EventEmitter {
             }
             this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout, options);
         } catch (e) {
-            this.emit("critical-error");
             logger.error("Aborted due to critical error.", e);
+            this.emit("critical-error");
         }
     }
 
