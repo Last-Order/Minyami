@@ -23,5 +23,6 @@ jobs:
         npm ci
         npm i -g typescript
         npm run build
+        node ./dist/index.js --version
       env:
         CI: true
