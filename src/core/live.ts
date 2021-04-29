@@ -226,6 +226,13 @@ export default class LiveDownloader extends Downloader {
         }
     }
 
+    /**
+     * Stop downloading for external use
+     */
+    stopDownload() {
+        this.isEnd = true;
+    }
+
     checkQueue() {
         if (this.chunks.length > 0 && this.runningThreads < this.threads) {
             const task = this.chunks.shift();
