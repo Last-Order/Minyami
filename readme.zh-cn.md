@@ -9,9 +9,7 @@
 
 ## 安装
 
-```
-npm install minyami -g
-```
+`npm -g i minyami` 或 `yarn global add minyami`
 
 此外，请安装插件配合 Minyami 使用。
 

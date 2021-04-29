@@ -14,7 +14,7 @@ Make sure you had put the binary files into your system `PATH`.
 
 ## Installation
 
-`npm install minyami -g`
+`npm -g i minyami` or `yarn global add minyami`
 
 Please also install the following extension to work with Minyami
 
