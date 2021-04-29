@@ -3,13 +3,13 @@
 ## 依赖
 * mkvmerge (可选，mkv 格式输出需要)
 
+! Minyami 要求使用处于 活跃/维护LTS 或 当前版 状态的 最新版 Node.js。推荐选用 活跃LTS。详见[这里](https://nodejs.org/zh-cn/about/releases/)。
+
 需安装并确保系统变量`PATH`中添加可执行程序所在的路径。
 
 ## 安装
 
-```
-npm install minyami -g
-```
+`npm -g i minyami` 或 `yarn global add minyami`
 
 此外，请安装插件配合 Minyami 使用。
 

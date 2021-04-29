@@ -8,13 +8,13 @@
 
 -   mkvmerge (optional, mkv output required)
 
-! Minyami requires Node 10.22.0+
+! Minyami requires Node Active/Maintenance LTS latest or Current lastest. Active LTS is recommended. Details [here](https://nodejs.org/en/about/releases/).
 
 Make sure you had put the binary files into your system `PATH`.
 
 ## Installation
 
-`npm install minyami -g`
+`npm -g i minyami` or `yarn global add minyami`
 
 Please also install the following extension to work with Minyami
 
