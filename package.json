@@ -35,7 +35,7 @@
         "erii": "^2.0.3",
         "https-proxy-agent": "^5.0.0",
         "socks-proxy-agent": "^5.0.0",
-        "ws": "^6.2.1"
+        "ws": "^7.4.6"
     },
     "devDependencies": {
         "@types/node": "^13.13.45",
