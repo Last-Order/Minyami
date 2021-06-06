@@ -28,18 +28,8 @@ export default class Parser {
                         continue;
                     }
                     let response;
-                    const options: AxiosRequestConfig = {};
-                    if (downloader.cookies) {
-                        options.headers = {
-                            Cookie: downloader.cookies,
-                        };
-                    }
-                    if (Object.keys(downloader.headers).length > 0) {
-                        options.headers = downloader.headers;
-                    }
                     response = await requestRaw(url, {
                         responseType: "arraybuffer",
-                        ...options,
                     });
                     const hexKey = Array.from(new Uint8Array(response.data))
                         .map((i) => (i.toString(16).length === 1 ? "0" + i.toString(16) : i.toString(16)))

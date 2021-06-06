@@ -59,16 +59,7 @@ export default class LiveDownloader extends Downloader {
 
     async loadM3U8() {
         try {
-            const options: AxiosRequestConfig = {};
-            if (this.cookies) {
-                options.headers = {
-                    Cookie: this.cookies,
-                };
-            }
-            if (Object.keys(this.headers).length > 0) {
-                options.headers = this.headers;
-            }
-            this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout, options);
+            this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout);
         } catch (e) {
             if (this.finishedChunksCount > 0) {
                 // Stop downloading

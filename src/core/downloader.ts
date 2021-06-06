@@ -1,6 +1,6 @@
 import * as path from "path";
 import * as fs from "fs";
-import { AxiosRequestConfig } from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 import { EventEmitter } from "events";
 import logger from "../utils/log";
 import M3U8, { M3U8Chunk } from "./m3u8";
@@ -170,6 +170,12 @@ class Downloader extends EventEmitter {
                     logger.warning(`HTTP Headers invalid. Ignored.`);
                 }
             }
+            // Apply global custom headers
+            axios.defaults.headers.common = {
+                ...axios.defaults.headers.common,
+                ...(this.cookies ? { Cookie: this.cookies } : {}), // Cookies 优先级低于 Custom Headers
+                ...this.headers,
+            };
         }
 
         if (proxy) {
@@ -218,16 +224,7 @@ class Downloader extends EventEmitter {
 
     async loadM3U8() {
         try {
-            const options: AxiosRequestConfig = {};
-            if (this.cookies) {
-                options.headers = {
-                    Cookie: this.cookies,
-                };
-            }
-            if (Object.keys(this.headers).length > 0) {
-                options.headers = this.headers;
-            }
-            this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout, options);
+            this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout);
         } catch (e) {
             logger.error("Aborted due to critical error.", e);
             this.emit("critical-error");
@@ -255,14 +252,6 @@ class Downloader extends EventEmitter {
     handleTask(task: Chunk) {
         logger.debug(`Downloading ${task.url}`);
         const options: AxiosRequestConfig = {};
-        if (this.cookies) {
-            options.headers = {
-                Cookie: this.cookies,
-            };
-        }
-        if (Object.keys(this.headers).length > 0) {
-            options.headers = this.headers;
-        }
         options.timeout = Math.min(((task.retryCount || 0) + 1) * this.timeout, this.timeout * 5);
         return new Promise<void>(async (resolve, reject) => {
             logger.debug(`Downloading ${task.filename}`);

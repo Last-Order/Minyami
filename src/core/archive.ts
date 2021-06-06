@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import axios from "axios";
 import { URL } from "url";
 import { mergeToMKV, mergeToTS } from "../utils/media";
 import { deleteDirectory } from "../utils/system";
@@ -173,7 +174,10 @@ class ArchiveDownloader extends Downloader {
                     url: chunk.url,
                     filename: this.onChunkNaming
                         ? this.onChunkNaming(chunk)
-                        : new URL(chunk.url).pathname.split("/").slice(-1)[0].slice(8 - 255),
+                        : new URL(chunk.url).pathname
+                              .split("/")
+                              .slice(-1)[0]
+                              .slice(8 - 255),
                     key: chunk.key,
                     iv: chunk.iv,
                     sequenceId: chunk.sequenceId,
@@ -472,6 +476,14 @@ class ArchiveDownloader extends Downloader {
         this.chunks = previousTask.chunks;
         this.outputFileList = previousTask.outputFileList;
         this.finishedFilenames = previousTask.finishedFilenames;
+        if (this.headers && Object.keys(this.headers).length > 0) {
+            // Apply global custom headers
+            axios.defaults.headers.common = {
+                ...axios.defaults.headers.common,
+                ...(this.cookies ? { Cookie: this.cookies } : {}), // Cookies 优先级低于 Custom Headers
+                ...this.headers,
+            };
+        }
         // Load M3U8
         await this.loadM3U8();
         await this.parse();
