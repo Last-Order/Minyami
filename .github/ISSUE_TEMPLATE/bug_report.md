@@ -4,6 +4,10 @@ about: Create a report to help us improve
 
 ---
 
+<!--
+欢迎使用英语！Japanese is OK! 中国語も大歓迎！
+-->
+
 **Basic Information**
 * Node.js version: 
 * Minyami version: 
