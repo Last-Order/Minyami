@@ -1,7 +1,6 @@
 const ReconnectingWebSocket = require("@eridanussora/reconnecting-websocket");
 const WebSocket = require("ws");
 import Axios from "axios";
-import { SocksProxyAgent } from "socks-proxy-agent";
 import UA from "../../constants/ua";
 import logger from "../../utils/log";
 import ProxyAgentHelper from "../../utils/agent";
@@ -74,133 +73,68 @@ export default class Parser {
         if (downloader.key) {
             // NICO Enhanced mode ON!
             logger.info(`Enhanced mode for Nico-TS enabled`);
-            if (downloader.key.includes("CAS_MODE")) {
-                // 试验放送
-                const liveId: string = downloader.key.match(/(lv\d+)/)[1];
-                const getNewToken = async (): Promise<string | null> => {
-                    const tokenServer = `https://api.cas.nicovideo.jp/v1/services/live/programs/${liveId}/watching-archive`;
-                    try {
-                        const response = await Axios.post(
-                            tokenServer,
-                            {
-                                actionTrackId: "f9c2ff58de_1547108086372",
-                                streamProtocol: "https",
-                                streamQuality: "ultrahigh",
-                                streamCapacity: "ultrahigh",
-                            },
-                            {
-                                responseType: "json",
-                                headers: {
-                                    "X-Frontend-Id": "91",
-                                    "X-Connection-Environment": "ethernet",
-                                    "Content-Type": "application/json",
-                                    Cookie: downloader.cookies,
-                                    "User-Agent": UA.CHROME_DEFAULT_UA,
-                                },
-                                httpsAgent: proxyAgent ? proxyAgent : undefined,
-                            }
-                        );
-                        const token = response.data.data.streamServer.url.match(/ht2_nicolive=(.+)/)[1];
-                        const host = response.data.data.streamServer.url.match(/(http(s):\/\/.+\/)/)[1];
-                        Parser.updateToken(token, downloader, host);
-                        return token;
-                    } catch (e) {
-                        logger.debug("Fail to get new token from cas server.");
-                        return null;
-                    }
+            const [audienceToken, quality = "super_high"] = downloader.key.split(",");
+            logger.debug(`audienceToken=${audienceToken}, quality=${quality}`);
+            const liveId = audienceToken.match(/(.+?)_/)[1];
+            const isChannelLive = !liveId.startsWith("lv");
+            const socketUrl = isChannelLive
+                ? `wss://a.live2.nicovideo.jp/unama/wsapi/v2/watch/${liveId}/timeshift?audience_token=${audienceToken}`
+                : `wss://a.live2.nicovideo.jp/wsapi/v2/watch/${liveId}/timeshift?audience_token=${audienceToken}`;
+            const socket = new ReconnectingWebSocket(socketUrl, undefined, {
+                WebSocket: WebSocket,
+                clientOptions: {
+                    headers: {
+                        "User-Agent": UA.CHROME_DEFAULT_UA,
+                    },
+                    ...(proxyAgent ? { agent: proxyAgent } : {}),
+                },
+            });
+            socket.addEventListener("message", (message: any) => {
+                const parsedMessage = JSON.parse(message.data);
+                // Send heartbeat packet to keep alive
+                if (parsedMessage.type === "ping") {
+                    socket.send(
+                        JSON.stringify({
+                            type: "pong",
+                        })
+                    );
+                    socket.send(
+                        JSON.stringify({
+                            type: "keepSeat",
+                        })
+                    );
+                }
+                if (parsedMessage.type === "stream") {
+                    // Nico Live v2 API
+                    const token = parsedMessage.data.uri.match(/ht2_nicolive=(.+)/)[1];
+                    const host = parsedMessage.data.uri.match(/(http(s):\/\/.+\/)/)[1];
+                    Parser.updateToken(token, downloader, host);
+                }
+            });
+            socket.addEventListener("open", () => {
+                const payload = {
+                    type: "startWatching",
+                    data: {
+                        stream: {
+                            quality,
+                            protocol: "hls",
+                            latency: "low",
+                            chasePlay: false,
+                        },
+                        room: { protocol: "webSocket", commentable: true },
+                        reconnect: false,
+                    },
                 };
                 const freshTokenInterval = setInterval(() => {
-                    getNewToken();
-                }, 80000 / downloader.threads);
+                    socket.send(JSON.stringify(payload));
+                }, 50000 / downloader.threads);
                 downloader.once("downloaded", () => {
                     clearInterval(freshTokenInterval);
                 });
                 downloader.once("finished", () => {
                     clearInterval(freshTokenInterval);
                 });
-            } else {
-                // 旧生放送
-                const liveId = downloader.key.match(/(.+?)_/)[1];
-                const isChannelLive = !liveId.startsWith("lv");
-                let socketUrl, socket;
-                let listened = false;
-                if (!isChannelLive) {
-                    socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v2/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
-                } else {
-                    // Channel Live
-                    socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v2/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
-                }
-                if (downloader.proxy) {
-                    socket = new ReconnectingWebSocket(socketUrl, undefined, {
-                        WebSocket: WebSocket,
-                        clientOptions: {
-                            headers: {
-                                "User-Agent": UA.CHROME_DEFAULT_UA,
-                            },
-                            agent: proxyAgent ? proxyAgent : undefined,
-                        },
-                    });
-                } else {
-                    socket = new ReconnectingWebSocket(socketUrl, undefined, {
-                        WebSocket: WebSocket,
-                        clientOptions: {
-                            headers: {
-                                "User-Agent": UA.CHROME_DEFAULT_UA,
-                            },
-                        },
-                    });
-                }
-                if (listened === false) {
-                    socket.addEventListener("message", (message: any) => {
-                        listened = true;
-                        const parsedMessage = JSON.parse(message.data);
-                        // Send heartbeat packet to keep alive
-                        if (parsedMessage.type === "ping") {
-                            socket.send(
-                                JSON.stringify({
-                                    type: "pong",
-                                })
-                            );
-                            socket.send(
-                                JSON.stringify({
-                                    type: "keepSeat",
-                                })
-                            );
-                        }
-                        if (parsedMessage.type === "stream") {
-                            // Nico Live v2 API
-                            const token = parsedMessage.data.uri.match(/ht2_nicolive=(.+)/)[1];
-                            const host = parsedMessage.data.uri.match(/(http(s):\/\/.+\/)/)[1];
-                            logger.info(`Update token: ${token}`);
-                            Parser.updateToken(token, downloader, host);
-                        }
-                    });
-                    socket.addEventListener("open", () => {
-                        const payload = {
-                            type: "startWatching",
-                            data: {
-                                stream: {
-                                    quality: "super_high",
-                                    protocol: "hls",
-                                    latency: "low",
-                                    chasePlay: false,
-                                },
-                                room: { protocol: "webSocket", commentable: true },
-                                reconnect: false,
-                            },
-                        };
-                        const freshTokenInterval = setInterval(() => {
-                            socket.send(JSON.stringify(payload));
-                        }, 50000 / downloader.threads);
-                        downloader.once("downloaded", () => {
-                            clearInterval(freshTokenInterval);
-                        });
-                        downloader.once("finished", () => {
-                            clearInterval(freshTokenInterval);
-                        });
-                    });
-                }
-            }
+            });
         }
         const prefix = downloader.m3u8.m3u8Url.match(/^(.+\/)/)[1];
         if (downloader) {
