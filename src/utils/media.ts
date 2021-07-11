@@ -93,7 +93,6 @@ export function download(url: string, path: string, options: AxiosRequestConfig 
                 responseType: "arraybuffer",
                 httpsAgent: proxyAgentInstance ? proxyAgentInstance : undefined,
                 headers: {
-                    "User-Agent": UA.CHROME_DEFAULT_UA,
                     Host: new URL(url).host,
                 },
                 cancelToken: source.token,
@@ -130,7 +129,6 @@ export async function requestRaw(url: string, options: AxiosRequestConfig = {}):
         timeout: 60000,
         httpsAgent: proxyAgentInstance ? proxyAgentInstance : undefined,
         headers: {
-            "User-Agent": UA.CHROME_DEFAULT_UA,
             Host: new URL(url).host,
         },
         ...options,

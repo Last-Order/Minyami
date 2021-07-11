@@ -45,7 +45,7 @@ Help:
              <proxy-server>        代理地址，格式为 [protocol://<host>:<port>] 例如 --proxy "http://127.0.0.1:1080"
          --slice <range>           下载部分内容
              <range>               设置时间范围，格式为 [<hh:mm:ss>-<hh:mm:ss> format] 例如 --slice "45:00-53:00"
-         --nomerge                 不合并视频分块。
+         --nomerge, keep           不合并视频分块。
      --resume <input_path>         恢复下载 (不适用于直播)  --r
          <input_path>              m3u8 文件路径
      --clean                       清除缓存文件和任务信息
@@ -55,3 +55,17 @@ Help:
      选项名                       描述
      --verbose, debug             调试输出
 ```
+
+## 常见问题
+
+Q: 下载时需要保持视频窗口打开吗？
+
+A: 不需要。
+
+Q: 如何设置代理？
+
+A: 可以使用`--proxy`参数设置代理，详见上方用法。目前支持`HTTP/HTTPS/SOCKS5`代理。您也可以使用环境变量设置代理，默认读取`HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY`。
+
+Q: 如何设置临时文件目录？
+
+A: 通过环境变量可以设置临时文件目录。详见 [Issue #80](https://github.com/Last-Order/Minyami/issues/80#issuecomment-869132412)。

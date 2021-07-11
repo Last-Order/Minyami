@@ -17,7 +17,6 @@ export async function loadM3U8(path: string, retries: number = 1, timeout = 6000
                     timeout,
                     httpsAgent: proxyAgent ? proxyAgent : undefined,
                     headers: {
-                        "User-Agent": UA.CHROME_DEFAULT_UA,
                         Host: new URL(path).host,
                     },
                     ...options,

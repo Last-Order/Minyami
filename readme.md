@@ -72,6 +72,10 @@ Q: How to set proxy for Minyami.
 
 A: You can use `--proxy` to set proxy server for Minyami. HTTP/SOCKS5 proxy are supported. Or you can use environment variables `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` to provide proxy configuration for Minyami.
 
+Q: How to set temporary file location.
+
+A: You can use environment variables to set the directory of temporary files. See [Issue #80](https://github.com/Last-Order/Minyami/issues/80#issuecomment-869132412).
+
 ## Use as a library (3.1.0+)
 
 ```TypeScript
