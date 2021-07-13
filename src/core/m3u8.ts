@@ -55,11 +55,11 @@ export default class M3U8 {
                     } else {
                         if (inHeaderPart) {
                             this.isEncrypted = true;
-                            this.key = line.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
-                            this.iv = line.match(/IV=0x(.+)/) && line.match(/IV=0x(.+)/)[1];
+                            this.key = line.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+?)"/)[1];
+                            this.iv = line.match(/IV=0x([^,]+)/) && line.match(/IV=0x([^,]+)/)[1];
                         } else {
-                            key = line.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
-                            iv = line.match(/IV=0x(.+)/) && line.match(/IV=0x(.+)/)[1];
+                            key = line.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+?)"/)[1];
+                            iv = line.match(/IV=0x([^,]+)/) && line.match(/IV=0x([^,]+)/)[1];
                         }
                     }
                 }
