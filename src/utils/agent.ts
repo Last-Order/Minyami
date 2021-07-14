@@ -3,12 +3,12 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import logger from "./log";
 
-class InvalidProxyServerError extends Error {}
+class InvalidProxyServerError extends Error { }
 
 class ProxyAgentHelper {
     proxyAgentInstance: Agent = null;
 
-    constructor() {}
+    constructor() { }
 
     /**
      * Set up proxy server and initialize the proxy agent instance
@@ -24,24 +24,29 @@ class ProxyAgentHelper {
             // HTTP Proxy
             this.proxyAgentInstance = new HttpsProxyAgent(proxy);
             logger.debug(`HTTP/HTTPS Proxy set: ${proxy}`);
-        } else if (proxy.startsWith("socks5://")) {
+        } else if (proxy.startsWith("socks")) {
+            if (proxy.startsWith("socks4")) {
+                throw new InvalidProxyServerError("Socks4 is not supported. Please use HTTP or Socks5 proxy.")
+            }
             // Socks5 Proxy
             try {
-                const [_, host, port] = proxy.match(/socks5[h]*[:：]\/\/(.+)[:：](\d+)/);
+                const [_, host, port] = proxy.match(/socks5?(?:(?<=5)h)?[:：]\/\/(.+)[:：](\d+)/);
                 this.proxyAgentInstance = new SocksProxyAgent(`socks5h://${host}:${port}`);
-                logger.debug(`Socks5 Proxy set: ${proxy}`);
+                logger.debug(`Socks5 Proxy set: socks5h://${host}:${port}`);
             } catch (e) {
                 throw new InvalidProxyServerError("Proxy server invalid.");
             }
-        } else if (allowNonPrefixSocksProxy) {
+        } else if (allowNonPrefixSocksProxy && !proxy.match(/\//)) {
             // For compatibility, use proxy without protocol as socks5 proxy
             try {
                 const [_, host, port] = proxy.match(/(.+)[:：](\d+)/);
                 this.proxyAgentInstance = new SocksProxyAgent(`socks5h://${host}:${port}`);
-                logger.debug(`Socks5 Proxy set: ${proxy}`);
+                logger.debug(`Socks5 Proxy set: socks5h://${host}:${port}`);
             } catch (e) {
                 throw new InvalidProxyServerError("Proxy server invalid.");
             }
+        } else {
+            throw new InvalidProxyServerError("Proxy server invalid.");
         }
     }
 
