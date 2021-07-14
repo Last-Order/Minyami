@@ -18,7 +18,7 @@
         "/dist/"
     ],
     "engines": {
-        "node": "~12 || ~14 || ~15 || ~16"
+        "node": "~12 || ~14 || ~16"
     },
     "author": {
         "email": "sora@sound.moe",
