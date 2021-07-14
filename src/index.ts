@@ -240,7 +240,7 @@ Erii.addOption({
 Erii.addOption({
     name: ["proxy"],
     command: "download",
-    description: "Use the specified HTTP/HTTPS/SOCKS proxy",
+    description: "Use the specified HTTP/HTTPS/SOCKS5 proxy",
     argument: {
         name: "proxy-server",
         description: 'Set proxy in [protocol://<host>:<port>] format. eg. --proxy "http://127.0.0.1:1080".',
