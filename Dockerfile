@@ -6,7 +6,7 @@ WORKDIR /Minyami
 
 RUN npm i -g typescript && npm ci && tsc && \
     npm pack && \
-    find . -type f -name minyami-?.?.?.tgz -exec mv \{} ./minyami.tgz \;
+    mv minyami-`node -p "require('./package.json').version"`.tgz minyami.tgz
 
 
 FROM node:alpine
