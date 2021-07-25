@@ -351,7 +351,7 @@ class ArchiveDownloader extends Downloader {
                     };
 
                     logger.info(
-                        `Proccessing ${currentChunkInfo.taskname} finished. (${
+                        `Processing ${currentChunkInfo.taskname} finished. (${
                             currentChunkInfo.finishedChunksCount
                         } / ${this.totalChunksCount} or ${(
                             (currentChunkInfo.finishedChunksCount / currentChunkInfo.totalChunksCount) *
