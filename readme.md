@@ -42,7 +42,7 @@ Help:
          --cookies <cookies>       Cookies to download
              <cookies>
          --headers <headers>       HTTP Headers used to download
-             <headers>             Multiple headers should be splited with \n. eg. --headers "Cookie: a=1\nUser-Agent: X-UA". Don't forget to escape. This option will override --cookies.
+             <headers>             Custom headers. eg. --headers "User-Agent: xxxxx". This option will override --cookies.
          --live                    Download live
          --format <format_name>    (Optional) Set output format. default: ts
              <format_name>         Format name. ts or mkv.
@@ -76,6 +76,10 @@ Q: How to set temporary file location.
 
 A: You can use environment variables to set the directory of temporary files. See [Issue #80](https://github.com/Last-Order/Minyami/issues/80#issuecomment-869132412).
 
+Q: How to set multiple HTTP headers.
+
+A: By providing multiple --headers option. For example, `minyami -d xxxx --headers "Cookie: xxxx" --headers "User-Agent: yyy"`.
+
 ## Use as a library (3.1.0+)
 
 ```TypeScript
@@ -91,7 +95,7 @@ The `'chunk-downloaded'` event is emitted when every media chunk is downloaded.
 
 ### Event: `chunk-error`
 
--    `error: Error` 
+-   `error: Error`
 
 The `'chunk-error'` event is emitted when failed to download or decrypt media chunks.
 
@@ -105,13 +109,13 @@ The `'finished'` event is emitted after all the works are done. CLI program exit
 
 ### Event: `merge-error`
 
-- `error: Error` 
+-   `error: Error`
 
 The `merge-error` event is emitted when a merge progress is failed.
 
 ### Event: `critical-error`
 
-- `error: Error` 
+-   `error: Error`
 
 The `critical-error` is emitted when a error that Minyami can't handle happens.
 

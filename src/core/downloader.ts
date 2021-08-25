@@ -19,7 +19,7 @@ export interface DownloaderConfig {
     key?: string;
     verbose?: boolean;
     cookies?: string;
-    headers?: string;
+    headers?: string | string[];
     retries?: number;
     proxy?: string;
     format?: string;
@@ -163,12 +163,15 @@ class Downloader extends EventEmitter {
         }
 
         if (headers) {
-            for (const h of headers.split("\\n")) {
-                try {
-                    const header = /^([^ :]+):(.+)$/.exec(h).slice(1);
-                    this.headers[header[0]] = header[1].trim();
-                } catch (e) {
-                    logger.warning(`HTTP Headers invalid. Ignored.`);
+            const headerConfigArr = Array.isArray(headers) ? headers : [headers];
+            for (const headerConfig of headerConfigArr) {
+                for (const h of headerConfig.split("\\n")) {
+                    try {
+                        const header = /^([^ :]+):(.+)$/.exec(h).slice(1);
+                        this.headers[header[0]] = header[1].trim();
+                    } catch (e) {
+                        logger.warning(`HTTP Headers invalid. Ignored.`);
+                    }
                 }
             }
             // Apply global custom headers

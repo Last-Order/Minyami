@@ -37,7 +37,7 @@ Help:
          --cookies <cookies>       (可选) 视频下载 Cookies
              <cookies>
          --headers <headers>       手动设定 HTTP Headers
-             <headers>             多个 Header 使用 "\n" 分隔，例如："Cookie: a=1\nUser-Agent: X-UA"
+             <headers>             自定义 HTTP Header，例如："User-Agent: X-UA"
          --live                    直播下载模式
          --format <format_name>    (可选) 输出格式，默认为 ts
              <format_name>         格式名称，ts 或 mkv
@@ -69,3 +69,7 @@ A: 可以使用`--proxy`参数设置代理，详见上方用法。目前支持`H
 Q: 如何设置临时文件目录？
 
 A: 通过环境变量可以设置临时文件目录。详见 [Issue #80](https://github.com/Last-Order/Minyami/issues/80#issuecomment-869132412)。
+
+Q: 如何设置多个 HTTP Header？
+
+A: 通过设置多个`--headers`，例如`minyami -d xxxx --headers "Cookie: xxxx" --headers "User-Agent: yyy"`。
