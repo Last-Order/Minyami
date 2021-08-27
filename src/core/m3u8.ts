@@ -85,6 +85,9 @@ export default class M3U8 {
                         throw new M3U8ParseError("Missing full url for m3u8.");
                     }
                 }
+                if (line.startsWith("#EXT-X-STREAM-INF")) {
+                    throw new M3U8ParseError("Instead of giving Minyami a master M3U8, please input a playlist.");
+                }
             } else {
                 // normal video chunk
                 if (!line) {

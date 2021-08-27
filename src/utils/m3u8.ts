@@ -4,7 +4,6 @@ import axios, { AxiosRequestConfig } from "axios";
 import M3U8 from "../core/m3u8";
 import ProxyAgentHelper from "../utils/agent";
 import logger from "../utils/log";
-import UA from "../constants/ua";
 
 export async function loadM3U8(path: string, retries: number = 1, timeout = 60000, options: AxiosRequestConfig = {}) {
     const proxyAgent = ProxyAgentHelper.getProxyAgentInstance();
