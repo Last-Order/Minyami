@@ -175,12 +175,6 @@ export default class LiveDownloader extends Downloader {
             });
             logger.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
             const currentUndownloadedChunks = currentPlaylistChunks.map((chunk) => {
-                // TODO: Hot fix of Abema Live
-                if (chunk.url.includes("linear-abematv")) {
-                    if (chunk.url.includes("tsad")) {
-                        return undefined;
-                    }
-                }
                 return {
                     filename: this.onChunkNaming
                         ? this.onChunkNaming(chunk)

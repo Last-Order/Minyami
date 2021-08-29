@@ -11,6 +11,9 @@ export default class Parser {
             CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, downloader.m3u8.key),
             downloader.key
         );
+        downloader.m3u8.chunks = downloader.m3u8.chunks.filter((chunk) => {
+            return !chunk.url.includes("/tspgsl/") && !chunk.url.includes("/tsad/");
+        });
         return {};
     }
 }
