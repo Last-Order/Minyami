@@ -27,8 +27,7 @@ export default class Parser {
                         );
                         continue;
                     }
-                    let response;
-                    response = await requestRaw(url, {
+                    const response = await requestRaw(url, {
                         responseType: "arraybuffer",
                     });
                     const hexKey = Array.from(new Uint8Array(response.data))
