@@ -208,12 +208,12 @@ Erii.addOption({
 });
 
 Erii.addOption({
-    name: ["headers"],
+    name: ["header", "H"],
     command: "download",
-    description: "HTTP Headers used to download",
+    description: "HTTP Header used to download",
     argument: {
-        name: "headers",
-        description: 'Custom headers. eg. --headers "User-Agent: xxxxx". This option will override --cookies.',
+        name: "header",
+        description: 'Custom header. eg. "User-Agent: xxxxx". This option will override --cookies.',
     },
 });
 
