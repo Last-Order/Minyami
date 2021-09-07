@@ -142,7 +142,9 @@ export class Playlist {
                 } else if (parsedTagBody["METHOD"] === "AES-128") {
                     isEncrypted = true;
                     key = parsedTagBody["URI"];
-                    iv = parsedTagBody["IV"].match(/0x([^,]+)/)[1];
+                    if (parsedTagBody["IV"]) {
+                        iv = parsedTagBody["IV"].match(/0x([^,]+)/)[1];
+                    }
                     this.encryptKeys.push(key);
                 } else {
                     console.log(parsedTagBody["METHOD"]);
