@@ -97,7 +97,7 @@ export class MasterPlaylist {
 export class Playlist {
     m3u8Content: string;
     m3u8Url: string;
-    isEnd: boolean;
+    isEnd: boolean = false;
     chunks: (M3U8Chunk | EncryptedM3U8Chunk)[] = [];
     encryptKeys: string[] = [];
 
@@ -171,7 +171,7 @@ export class Playlist {
                     sequenceId: 0,
                 });
             }
-            if (currentLine.startsWith("EXT-X-ENDLIST")) {
+            if (currentLine.startsWith("#EXT-X-ENDLIST")) {
                 this.isEnd = true;
                 break;
             }
