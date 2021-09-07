@@ -3,14 +3,14 @@ import * as fs from "fs";
 import axios, { AxiosRequestConfig } from "axios";
 import { EventEmitter } from "events";
 import logger from "../utils/log";
-import M3U8, { M3U8Chunk } from "./m3u8";
 import { loadM3U8 } from "../utils/m3u8";
 import * as system from "../utils/system";
 import CommonUtils from "../utils/common";
 import { download, decrypt } from "../utils/media";
 import ProxyAgentHelper from "../utils/agent";
 import UA from "../constants/ua";
-import { ActionType } from "./action";
+import { EncryptedM3U8Chunk, M3U8Chunk, MasterPlaylist, Playlist } from "./m3u8";
+import type { ActionType } from "./action";
 import * as actions from "./action";
 
 export interface DownloaderConfig {
@@ -36,11 +36,11 @@ export interface LiveDownloaderConfig extends DownloaderConfig {}
 export interface Chunk {
     url: string;
     filename: string;
-    isEncrypted?: boolean;
+    isEncrypted: boolean;
     parentGroup?: ChunkGroup;
     key?: string;
     iv?: string;
-    sequenceId?: string;
+    sequenceId?: number;
     retryCount?: number;
 }
 
@@ -68,7 +68,7 @@ class Downloader extends EventEmitter {
 
     tempPath: string; // 临时文件目录
     m3u8Path: string; // m3u8文件路径
-    m3u8: M3U8; // m3u8实体
+    m3u8: Playlist; // M3U8 Playlist
     outputPath: string = "./output.ts"; // 输出目录
     threads: number = 5; // 并发数量
 
@@ -98,7 +98,7 @@ class Downloader extends EventEmitter {
     encryptionKeys = {};
 
     // Hooks
-    onChunkNaming: (chunk: M3U8Chunk) => string;
+    onChunkNaming: (chunk: M3U8Chunk | EncryptedM3U8Chunk) => string;
     onDownloadError: (error: Error, downloader: Downloader) => void;
 
     /**
@@ -231,7 +231,16 @@ class Downloader extends EventEmitter {
 
     async loadM3U8() {
         try {
-            this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout);
+            const m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout);
+            if (m3u8 instanceof MasterPlaylist) {
+                const streams = m3u8.streams;
+                const bestStream = streams.sort((a, b) => b.bandwidth - a.bandwidth)[0];
+                logger.info("Master playlist input detected. Auto selecting best quality streams.");
+                logger.debug(`Best stream: ${bestStream.url}; Bandwidth: ${bestStream.bandwidth}`);
+                this.m3u8 = (await loadM3U8(bestStream.url, this.retries, this.timeout)) as Playlist;
+            } else {
+                this.m3u8 = m3u8;
+            }
         } catch (e) {
             logger.error("Aborted due to critical error.", e);
             this.emit("critical-error");
@@ -265,12 +274,12 @@ class Downloader extends EventEmitter {
             try {
                 await download(task.url, path.resolve(this.tempPath, `./${task.filename}`), options);
                 logger.debug(`Downloading ${task.filename} succeed.`);
-                if (this.m3u8.isEncrypted) {
+                if (task.isEncrypted) {
                     await decrypt(
                         path.resolve(this.tempPath, `./${task.filename}`),
                         path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
-                        this.getEncryptionKey(CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key || this.m3u8.key)),
-                        task.iv || this.m3u8.iv || task.sequenceId || this.m3u8.sequenceId
+                        this.getEncryptionKey(CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key)),
+                        task.iv || task.sequenceId.toString()
                     );
                     logger.debug(`Decrypting ${task.filename} succeed`);
                 }

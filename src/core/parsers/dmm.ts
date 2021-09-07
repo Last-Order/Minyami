@@ -7,10 +7,9 @@ export default class Parser {
         if (!downloader.key) {
             throw new Error("To download DMM, you need to set a key manually");
         }
-        downloader.saveEncryptionKey(
-            CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, downloader.m3u8.key),
-            downloader.key
-        );
+        for (const key of downloader.m3u8.encryptKeys) {
+            downloader.saveEncryptionKey(CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, key), downloader.key);
+        }
         return {};
     }
 }

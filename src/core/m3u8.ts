@@ -1,31 +1,108 @@
 import CommonUtils from "../utils/common";
 
-/**
- * M3U8 Parser
- */
+export class M3U8ParseError extends Error {}
 
 export interface M3U8Chunk {
     url: string;
-    key?: string;
-    iv?: string;
-    sequenceId?: string;
+    sequenceId: number;
+    length: number;
+    isEncrypted: false;
 }
 
-export class M3U8ParseError extends Error {}
-
-export default class M3U8 {
-    m3u8Content: string;
-    m3u8Url: string;
-    isEncrypted: boolean;
-    isEnd: boolean;
+export interface EncryptedM3U8Chunk {
+    url: string;
+    sequenceId: number;
+    length: number;
     key: string;
     iv: string;
-    sequenceId: string;
-    chunks: M3U8Chunk[] = [];
-    properties: {};
+    isEncrypted: true;
+}
 
-    constructor(m3u8: string, m3u8Url: string = "") {
-        this.m3u8Content = m3u8;
+export interface Stream {
+    url: string;
+    bandwidth: number;
+    codecs?: string;
+    frameRate?: number;
+    resolution?: { width: number; height: number };
+}
+
+const getTagBody = (line: string) => line.split(":").slice(1).join(':');
+
+const parseTagBody = (body: string): Record<string, string> => {
+    const matchResult = body.match(/([^=,]+)(=([^",]|(".+?"))*)?/g);
+    const result = {};
+    if (matchResult.length > 0) {
+        for (const match of matchResult) {
+            const [key, ...value] = match.split("=");
+            const valueStr = value.join("=");
+            result[key] = valueStr.startsWith('"') ? valueStr.slice(1, valueStr.length - 1) : valueStr;
+        }
+    }
+    return result;
+};
+
+export class MasterPlaylist {
+    m3u8Content: string;
+    m3u8Url: string;
+    streams: Stream[] = [];
+
+    constructor({ m3u8Content, m3u8Url }: { m3u8Content: string; m3u8Url: string }) {
+        this.m3u8Content = m3u8Content;
+        this.m3u8Url = m3u8Url;
+        this.parse();
+    }
+
+    private parse() {
+        const lines = this.m3u8Content.split("\n");
+        for (let i = 0; i <= lines.length - 1; i++) {
+            /**
+             * v8 引擎内部对 split/slice 出的字符串有一个对 parent 的引用
+             * 并且默认不会被 GC 当 parent string 很长时会造成内存泄漏
+             * 此处复制了一次字符串避免此情况
+             * See also: https://github.com/nodejs/help/issues/711
+             */
+            const currentLine = lines[i].split("").join("").trim();
+            if (currentLine.startsWith("#EXT-X-STREAM-INF")) {
+                // stream information
+                const nextLine = lines[i + 1];
+                if (!nextLine) {
+                    throw new M3U8ParseError("Invalid M3U8 file.");
+                }
+                const tagBody = getTagBody(currentLine);
+                const parsedTagBody = parseTagBody(tagBody);
+                if (!parsedTagBody["BANDWIDTH"]) {
+                    /**
+                     * @see https://datatracker.ietf.org/doc/html/rfc8216#section-4.3.4.2
+                     * Every EXT-X-STREAM-INF tag MUST include the BANDWIDTH attribute.
+                     */
+                    throw new M3U8ParseError("Missing BANDWIDTH attribute for streams.");
+                }
+                if (!nextLine.startsWith("http") && !this.m3u8Url) {
+                    throw new M3U8ParseError("Missing full url for M3U8.");
+                }
+                const url = CommonUtils.buildFullUrl(this.m3u8Url, nextLine);
+                const streamInfo: Stream = {
+                    url,
+                    bandwidth: +parsedTagBody["BANDWIDTH"],
+                    ...(parsedTagBody["CODECS"] ? { codecs: parsedTagBody["CODECS"] } : {}),
+                    ...(parsedTagBody["FRAME-RATE"] ? { frameRate: +parsedTagBody["FRAME-RATE"] } : {}),
+                };
+                this.streams.push(streamInfo);
+            }
+            // TODO: Support #EXT-X-MEDIA
+        }
+    }
+}
+
+export class Playlist {
+    m3u8Content: string;
+    m3u8Url: string;
+    isEnd: boolean;
+    chunks: (M3U8Chunk | EncryptedM3U8Chunk)[] = [];
+    encryptKeys: string[] = [];
+
+    constructor({ m3u8Content, m3u8Url = "" }: { m3u8Content: string; m3u8Url?: string }) {
+        this.m3u8Content = m3u8Content;
         this.m3u8Url = m3u8Url;
         this.parse();
     }
@@ -33,110 +110,125 @@ export default class M3U8 {
     /**
      * 解析基本属性
      */
-    parse() {
-        this.isEncrypted = this.m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/) !== null;
-        this.isEnd = this.m3u8Content.match(/EXT-X-ENDLIST/) !== null;
-
-        let inHeaderPart = true;
-        let key: string, iv: string, sequenceId: string;
-        for (let line of this.m3u8Content.split("\n")) {
+    private parse() {
+        let key: string,
+            iv: string,
+            sequenceId = 0,
+            isEncrypted = false;
+        const lines = this.m3u8Content.split("\n");
+        for (let i = 0; i <= lines.length - 1; i++) {
             /**
              * v8 引擎内部对 split/slice 出的字符串有一个对 parent 的引用
              * 并且默认不会被 GC 当 parent string 很长时会造成内存泄漏
              * 此处复制了一次字符串避免此情况
              * See also: https://github.com/nodejs/help/issues/711
              */
-            line = line.split("").join("").trim();
-            if (line.startsWith("#")) {
-                // it is a m3u8 property
-                if (line.startsWith("#EXT-X-KEY")) {
-                    if (line.startsWith("#EXT-X-KEY:METHOD=NONE")) {
-                        // No Encryption
-                    } else {
-                        if (inHeaderPart) {
-                            this.isEncrypted = true;
-                            this.key = line.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+?)"/)[1];
-                            this.iv = line.match(/IV=0x([^,]+)/) && line.match(/IV=0x([^,]+)/)[1];
-                        } else {
-                            key = line.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+?)"/)[1];
-                            iv = line.match(/IV=0x([^,]+)/) && line.match(/IV=0x([^,]+)/)[1];
-                        }
-                    }
-                }
-                if (line.startsWith("#EXT-X-MEDIA-SEQUENCE")) {
-                    if (inHeaderPart) {
-                        this.sequenceId = line.match(/#EXT-X-MEDIA-SEQUENCE:(\d+)/)[1];
-                    } else {
-                        sequenceId = line.match(/#EXT-X-MEDIA-SEQUENCE:(\d+)/)[1];
-                    }
-                }
-                if (line.startsWith("#EXT-X-MAP:URI=")) {
-                    // Initial segment
-                    const initialSegmentUrl = line.match(/URI="(.+)"/)[1];
-                    if (initialSegmentUrl.startsWith("http")) {
-                        this.chunks.push({
-                            url: initialSegmentUrl,
-                        });
-                    } else if (this.m3u8Url) {
-                        this.chunks.push({
-                            url: CommonUtils.buildFullUrl(this.m3u8Url, initialSegmentUrl),
-                        });
-                    } else {
-                        throw new M3U8ParseError("Missing full url for m3u8.");
-                    }
-                }
-                if (line.startsWith("#EXT-X-STREAM-INF")) {
-                    throw new M3U8ParseError("Instead of giving Minyami a master M3U8, please input a playlist.");
-                }
-            } else {
-                // normal video chunk
-                if (!line) {
-                    continue;
-                }
-                inHeaderPart = false;
-                const newChunk: M3U8Chunk = {
-                    url: "",
-                };
-
-                if (line.startsWith("http")) {
-                    newChunk.url = line;
-                } else if (this.m3u8Url) {
-                    newChunk.url = CommonUtils.buildFullUrl(this.m3u8Url, line);
+            const currentLine = lines[i].split("").join("").trim();
+            if (currentLine.startsWith("#EXT-X-MEDIA-SEQUENCE")) {
+                /**
+                 * @see https://datatracker.ietf.org/doc/html/rfc8216#section-4.3.3.2
+                 */
+                const tagBody = getTagBody(currentLine);
+                sequenceId = parseInt(tagBody);
+            }
+            if (currentLine.startsWith("#EXT-X-KEY")) {
+                /**
+                 * @see https://datatracker.ietf.org/doc/html/rfc8216#section-4.3.2.4
+                 */
+                const tagBody = getTagBody(currentLine);
+                const parsedTagBody = parseTagBody(tagBody);
+                if (parsedTagBody["METHOD"] === "NONE") {
+                    isEncrypted = false;
+                } else if (parsedTagBody["METHOD"] === "AES-128") {
+                    isEncrypted = true;
+                    key = parsedTagBody["URI"];
+                    iv = parsedTagBody["IV"].match(/0x([^,]+)/)[1];
+                    this.encryptKeys.push(key);
                 } else {
-                    throw new M3U8ParseError("Missing full url for m3u8.");
+                    console.log(parsedTagBody["METHOD"])
+                    // SAMPLE-AES is rare in production and it's not supported by Minyami.
+                    throw new M3U8ParseError("Unsupported encrypt method.");
                 }
-                if (key) {
-                    newChunk.key = key;
+            }
+            if (currentLine.startsWith("#EXT-X-MAP")) {
+                /**
+                 * Initial segment
+                 * @see https://datatracker.ietf.org/doc/html/rfc8216#section-4.3.2.5
+                 */
+                const tagBody = getTagBody(currentLine);
+                const parsedTagBody = parseTagBody(tagBody);
+                const initialSegmentUrl = parsedTagBody["URI"];
+                if (!initialSegmentUrl) {
+                    throw new M3U8ParseError("Missing URL for initialization segment");
                 }
-                if (iv) {
-                    newChunk.iv = iv;
+                if (!initialSegmentUrl.startsWith("http") && !this.m3u8Url) {
+                    throw new M3U8ParseError("Missing full url for M3U8.");
                 }
-                if (sequenceId) {
-                    newChunk.sequenceId = sequenceId;
+                this.chunks.push({
+                    url: CommonUtils.buildFullUrl(this.m3u8Url, initialSegmentUrl),
+                    isEncrypted: false,
+                    length: 0,
+                    sequenceId: 0,
+                });
+            }
+            if (currentLine.startsWith("EXT-X-ENDLIST")) {
+                this.isEnd = true;
+                break;
+            }
+            if (currentLine.startsWith("#EXTINF")) {
+                const tagBody = getTagBody(currentLine);
+                const chunkLength = parseFloat(tagBody.split(",")[0]);
+                const nextLine = lines[i + 1];
+                if (!nextLine) {
+                    throw new M3U8ParseError("Invalid M3U8 file.");
                 }
-                this.chunks.push(newChunk);
+                if (!nextLine.startsWith("http") && !this.m3u8Url) {
+                    throw new M3U8ParseError("Missing full url for M3U8.");
+                }
+                if (isEncrypted) {
+                    this.chunks.push({
+                        url: CommonUtils.buildFullUrl(this.m3u8Url, nextLine),
+                        length: chunkLength,
+                        isEncrypted: true,
+                        key,
+                        iv,
+                        sequenceId,
+                    });
+                } else {
+                    this.chunks.push({
+                        url: CommonUtils.buildFullUrl(this.m3u8Url, nextLine),
+                        length: chunkLength,
+                        isEncrypted: false,
+                        sequenceId,
+                    });
+                }
+                /**
+                 * @see https://datatracker.ietf.org/doc/html/rfc8216#section-3
+                 * The Media Sequence Number of the first segment in the Media Playlist is either 0 or declared in the * Playlist (Section 4.3.3.2). The Media Sequence Number of every other segment is equal to the Media * Sequence Number of the segment that precedes it plus one.
+                 */
+                sequenceId++;
             }
         }
     }
 
-    /**
-     * 获得加密Key
-     */
-    getKey() {
-        return this.isEncrypted && this.m3u8Content.match(/EXT-X-KEY:METHOD=AES-128,URI="(.+)"/)[1];
+    // TODO: use more accurate length of each chunk
+    public getChunkLength(): number {
+        return (this.chunks[1] || this.chunks[0]).length;
     }
+}
 
-    /**
-     * 获得加密IV
-     */
-    getIV() {
-        return this.isEncrypted && this.m3u8Content.match(/IV=0x(.+)/)?.[1];
+export default class M3U8 {
+    m3u8Content: string;
+    m3u8Url: string;
+    constructor({ m3u8Content, m3u8Url }: { m3u8Content: string; m3u8Url?: string }) {
+        this.m3u8Content = m3u8Content;
+        this.m3u8Url = m3u8Url;
     }
-
-    /**
-     * 获得块长度
-     */
-    getChunkLength() {
-        return parseFloat(this.m3u8Content.match(/#EXTINF:(.+?)(,|$)/m)?.[1] ?? "5.000");
+    parse() {
+        if (this.m3u8Content.includes("#EXT-X-STREAM-INF")) {
+            return new MasterPlaylist({ m3u8Content: this.m3u8Content, m3u8Url: this.m3u8Url });
+        } else {
+            return new Playlist({ m3u8Content: this.m3u8Content, m3u8Url: this.m3u8Url });
+        }
     }
 }

@@ -7,14 +7,11 @@ import { ParserOptions, ParserResult } from "./types";
 export default class Parser {
     static parse({ downloader }: ParserOptions): Promise<ParserResult> {
         return new Promise(async (resolve, reject) => {
-            if (downloader.m3u8.isEncrypted) {
+            if (downloader.m3u8.encryptKeys.length > 0) {
                 const keys = {};
-                keys[CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, downloader.m3u8.key)] = downloader.key || "";
                 // collect all key urls
-                for (const chunk of downloader.m3u8.chunks) {
-                    if (chunk.key && !keys[chunk.key]) {
-                        keys[CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, chunk.key)] = downloader.key || "";
-                    }
+                for (const key of downloader.m3u8.encryptKeys) {
+                    keys[CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, key)] = downloader.key || "";
                 }
                 // download all keys
                 let counter = 1;

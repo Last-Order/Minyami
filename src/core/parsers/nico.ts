@@ -1,6 +1,5 @@
 const ReconnectingWebSocket = require("@eridanussora/reconnecting-websocket");
 const WebSocket = require("ws");
-import Axios from "axios";
 import UA from "../../constants/ua";
 import logger from "../../utils/log";
 import ProxyAgentHelper from "../../utils/agent";
@@ -188,6 +187,7 @@ export default class Parser {
                                       `start=${startTime}&`
                                   )}`),
                         filename: `${time.toString()}${offset}.ts`,
+                        isEncrypted: false,
                     });
                     counter++;
                     if (counter === 4) {

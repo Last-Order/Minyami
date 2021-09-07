@@ -2,13 +2,12 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { URL } from "url";
-import { AxiosRequestConfig } from "axios";
 import { mergeToMKV, mergeToTS } from "../utils/media";
 import { sleep } from "../utils/system";
 import { loadM3U8 } from "../utils/m3u8";
 import logger from "../utils/log";
 import Downloader, { Chunk, LiveDownloaderConfig } from "./downloader";
-import M3U8, { M3U8Chunk } from "./m3u8";
+import { EncryptedM3U8Chunk, M3U8Chunk, MasterPlaylist, Playlist } from "./m3u8";
 
 /**
  * Live Downloader
@@ -17,7 +16,7 @@ import M3U8, { M3U8Chunk } from "./m3u8";
 export default class LiveDownloader extends Downloader {
     outputFileList: string[] = [];
     finishedList: string[] = [];
-    m3u8: M3U8;
+    m3u8: Playlist;
     chunks: Chunk[] = [];
     runningThreads: number = 0;
 
@@ -59,7 +58,7 @@ export default class LiveDownloader extends Downloader {
 
     async loadM3U8() {
         try {
-            this.m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout);
+            this.m3u8 = (await loadM3U8(this.m3u8Path, this.retries, this.timeout)) as Playlist;
         } catch (e) {
             if (this.finishedChunksCount > 0) {
                 // Stop downloading
@@ -94,20 +93,35 @@ export default class LiveDownloader extends Downloader {
             });
         }
 
-        await this.loadM3U8();
+        try {
+            // first time loading playlist
+            const m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout);
+            if (m3u8 instanceof MasterPlaylist) {
+                const streams = m3u8.streams;
+                const bestStream = streams.sort((a, b) => b.bandwidth - a.bandwidth)[0];
+                logger.info("Master playlist input detected. Auto selecting best quality streams.");
+                logger.debug(`Best stream: ${bestStream.url}; Bandwidth: ${bestStream.bandwidth}`);
+                this.m3u8 = (await loadM3U8(bestStream.url, this.retries, this.timeout)) as Playlist;
+                this.m3u8Path = bestStream.url;
+            } else {
+                this.m3u8 = m3u8;
+            }
+        } catch (e) {
+            logger.error("Aborted due to critical error.", e);
+            this.emit("critical-error");
+        }
 
         this.timeout = Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000);
 
-        if (this.m3u8.isEncrypted) {
+        if (this.m3u8.encryptKeys.length > 0) {
             this.isEncrypted = true;
-            const key = this.m3u8.key;
+            const key = this.encryptionKeys[0];
             if (key.startsWith("abematv-license")) {
                 logger.info("Site comfirmed: AbemaTV");
                 const parser = await import("./parsers/abema");
                 parser.default.parse({
                     downloader: this,
                 });
-                logger.info(`Key: ${this.key}; IV: ${this.m3u8.iv}.`);
             } else {
                 logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 const parser = await import("./parsers/common");
@@ -160,7 +174,7 @@ export default class LiveDownloader extends Downloader {
                 // 到达直播末尾
                 this.isEnd = true;
             }
-            const currentPlaylistChunks: M3U8Chunk[] = [];
+            const currentPlaylistChunks: (M3U8Chunk | EncryptedM3U8Chunk)[] = [];
             this.m3u8.chunks.forEach((chunk) => {
                 try {
                     // 去重
@@ -175,24 +189,34 @@ export default class LiveDownloader extends Downloader {
             });
             logger.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
             const currentUndownloadedChunks = currentPlaylistChunks.map((chunk) => {
-                return {
-                    filename: this.onChunkNaming
-                        ? this.onChunkNaming(chunk)
-                        : new URL(chunk.url).pathname.split("/").slice(-1)[0].slice(8 - 255),
-                    isEncrypted: this.m3u8.isEncrypted,
-                    key: chunk.key,
-                    iv: chunk.iv,
-                    sequenceId: chunk.sequenceId,
-                    url: chunk.url,
-                } as Chunk;
+                const filename = this.onChunkNaming
+                    ? this.onChunkNaming(chunk)
+                    : new URL(chunk.url).pathname
+                          .split("/")
+                          .slice(-1)[0]
+                          .slice(8 - 255);
+                return chunk.isEncrypted
+                    ? {
+                          filename,
+                          isEncrypted: true,
+                          key: chunk.key,
+                          iv: chunk.iv,
+                          sequenceId: chunk.sequenceId,
+                          url: chunk.url,
+                      }
+                    : {
+                          filename,
+                          isEncrypted: false,
+                          sequenceId: chunk.sequenceId,
+                          url: chunk.url,
+                      };
             });
             // 加入待完成的任务列表
-            this.chunks.push(...currentUndownloadedChunks.filter((c) => c !== undefined));
+            this.chunks.push(...currentUndownloadedChunks);
             this.outputFileList.push(
                 ...currentUndownloadedChunks
-                    .filter((c) => c !== undefined)
                     .map((chunk) => {
-                        if (this.m3u8.isEncrypted) {
+                        if (chunk.isEncrypted) {
                             return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
                         } else {
                             return path.resolve(this.tempPath, `./${chunk.filename}`);
