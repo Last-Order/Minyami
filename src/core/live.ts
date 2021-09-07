@@ -214,14 +214,13 @@ export default class LiveDownloader extends Downloader {
             // 加入待完成的任务列表
             this.chunks.push(...currentUndownloadedChunks);
             this.outputFileList.push(
-                ...currentUndownloadedChunks
-                    .map((chunk) => {
-                        if (chunk.isEncrypted) {
-                            return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
-                        } else {
-                            return path.resolve(this.tempPath, `./${chunk.filename}`);
-                        }
-                    })
+                ...currentUndownloadedChunks.map((chunk) => {
+                    if (chunk.isEncrypted) {
+                        return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
+                    } else {
+                        return path.resolve(this.tempPath, `./${chunk.filename}`);
+                    }
+                })
             );
 
             await this.loadM3U8();

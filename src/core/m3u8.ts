@@ -26,7 +26,7 @@ export interface Stream {
     resolution?: { width: number; height: number };
 }
 
-const getTagBody = (line: string) => line.split(":").slice(1).join(':');
+const getTagBody = (line: string) => line.split(":").slice(1).join(":");
 
 const parseTagBody = (body: string): Record<string, string> => {
     const matchResult = body.match(/([^=,]+)(=([^",]|(".+?"))*)?/g);
@@ -145,7 +145,7 @@ export class Playlist {
                     iv = parsedTagBody["IV"].match(/0x([^,]+)/)[1];
                     this.encryptKeys.push(key);
                 } else {
-                    console.log(parsedTagBody["METHOD"])
+                    console.log(parsedTagBody["METHOD"]);
                     // SAMPLE-AES is rare in production and it's not supported by Minyami.
                     throw new M3U8ParseError("Unsupported encrypt method.");
                 }

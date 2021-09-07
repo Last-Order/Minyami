@@ -3,12 +3,12 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import logger from "./log";
 
-class InvalidProxyServerError extends Error { }
+class InvalidProxyServerError extends Error {}
 
 class ProxyAgentHelper {
     proxyAgentInstance: Agent = null;
 
-    constructor() { }
+    constructor() {}
 
     /**
      * Set up proxy server and initialize the proxy agent instance
@@ -26,7 +26,7 @@ class ProxyAgentHelper {
             logger.debug(`HTTP/HTTPS Proxy set: ${proxy}`);
         } else if (proxy.startsWith("socks")) {
             if (proxy.startsWith("socks4")) {
-                throw new InvalidProxyServerError("Socks4 is not supported. Please use HTTP or Socks5 proxy.")
+                throw new InvalidProxyServerError("Socks4 is not supported. Please use HTTP or Socks5 proxy.");
             }
             // Socks5 Proxy
             try {

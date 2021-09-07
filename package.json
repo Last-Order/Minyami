@@ -9,7 +9,9 @@
         "url": "https://github.com/Last-Order/Minyami"
     },
     "scripts": {
-        "build": "tsc --newLine lf"
+        "build": "tsc --newLine lf",
+        "lint": "prettier ./src/**/* --check",
+        "lint-fix": "prettier ./src/**/* --write"
     },
     "bin": {
         "minyami": "./dist/index.js"
@@ -39,6 +41,7 @@
     },
     "devDependencies": {
         "@types/node": "^13.13.45",
+        "prettier": "^2.3.2",
         "typescript": "^4.4.2"
     }
 }

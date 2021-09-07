@@ -237,6 +237,7 @@ class ArchiveDownloader extends Downloader {
                     }
                 }
             }
+
             this.chunks = newChunkList;
         }
 
