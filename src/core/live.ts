@@ -172,7 +172,7 @@ export default class LiveDownloader extends Downloader {
             }
             if (this.m3u8.isEnd) {
                 // 到达直播末尾
-                logger.info('Stream ended. Waiting for current tasks finished.')
+                logger.info("Stream ended. Waiting for current tasks finished.");
                 this.isEnd = true;
             }
             const currentPlaylistChunks: (M3U8Chunk | EncryptedM3U8Chunk)[] = [];
