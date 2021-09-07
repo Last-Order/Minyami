@@ -279,7 +279,7 @@ class Downloader extends EventEmitter {
                         path.resolve(this.tempPath, `./${task.filename}`),
                         path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
                         this.getEncryptionKey(CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key)),
-                        task.iv || task.sequenceId.toString()
+                        task.iv || task.sequenceId.toString(16)
                     );
                     logger.debug(`Decrypting ${task.filename} succeed`);
                 }
