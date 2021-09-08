@@ -30,7 +30,7 @@
     "dependencies": {
         "@eridanussora/reconnecting-websocket": "^4.4.2",
         "agent-base": "^6.0.2",
-        "axios": "^0.21.1",
+        "axios": "^0.21.4",
         "chalk": "^2.4.2",
         "cli-progress": "^3.8.2",
         "crypto-js": "^3.3.0",
