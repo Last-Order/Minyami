@@ -147,10 +147,15 @@ export default class LiveDownloader extends Downloader {
                 });
             } else {
                 logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
-                const parser = await import("./parsers/common");
-                await parser.default.parse({
-                    downloader: this,
-                });
+                try {
+                    const parser = await import("./parsers/common");
+                    await parser.default.parse({
+                        downloader: this,
+                    });
+                } catch (e) {
+                    logger.error("Aborted due to critical error.", e);
+                    this.emit("critical-error");
+                }
             }
         }
         this.emit("parsed");
