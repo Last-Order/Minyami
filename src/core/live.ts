@@ -262,7 +262,7 @@ export default class LiveDownloader extends Downloader {
                     };
 
                     logger.info(
-                        `Processing ${currentChunkInfo.taskname} finished. (${currentChunkInfo.finishedChunksCount} downloaded | Avg Speed: ${currentChunkInfo.chunkSpeed} chunks/s or ${currentChunkInfo.ratioSpeed}x)`
+                        `Processing ${currentChunkInfo.taskname} finished. (${currentChunkInfo.finishedChunksCount} chunks downloaded | Avg Speed: ${currentChunkInfo.chunkSpeed} chunks/s or ${currentChunkInfo.ratioSpeed}x)`
                     );
                     this.emit("chunk-downloaded", currentChunkInfo);
                     this.checkQueue();
