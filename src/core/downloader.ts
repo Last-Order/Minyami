@@ -283,6 +283,7 @@ class Downloader extends EventEmitter {
                     );
                     logger.debug(`Decrypting ${task.filename} succeed`);
                 }
+                this.finishedChunksCount++;
                 resolve();
             } catch (e) {
                 logger.warning(

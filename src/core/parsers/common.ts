@@ -1,4 +1,3 @@
-import { AxiosRequestConfig } from "axios";
 import { requestRaw } from "../../utils/media";
 import CommonUtils from "../../utils/common";
 import logger from "../../utils/log";

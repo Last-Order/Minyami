@@ -351,7 +351,6 @@ class ArchiveDownloader extends Downloader {
             this.runningThreads++;
             this.handleTask(chunk)
                 .then(() => {
-                    this.finishedChunksCount++;
                     this.runningThreads--;
                     const currentChunkInfo = {
                         taskname: chunk.filename,
