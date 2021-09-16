@@ -11,7 +11,8 @@
     "scripts": {
         "build": "tsc --newLine lf",
         "lint": "prettier ./src/**/* --check",
-        "lint-fix": "prettier ./src/**/* --write"
+        "lint-fix": "prettier ./src/**/* --write",
+        "prepare": "husky install"
     },
     "bin": {
         "minyami": "./dist/index.js"
@@ -41,7 +42,12 @@
     },
     "devDependencies": {
         "@types/node": "^13.13.45",
+        "husky": "^7.0.2",
+        "lint-staged": "^11.1.2",
         "prettier": "^2.3.2",
         "typescript": "^4.4.2"
+    },
+    "lint-staged": {
+        "./src/**/*.ts": "npm run lint"
     }
 }
