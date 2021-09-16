@@ -188,6 +188,7 @@ export default class Parser {
                                   )}`),
                         filename: `${time.toString()}${offset}.ts`,
                         isEncrypted: false,
+                        length: 5.0,
                     });
                     counter++;
                     if (counter === 4) {

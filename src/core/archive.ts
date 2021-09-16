@@ -186,12 +186,14 @@ class ArchiveDownloader extends Downloader {
                           iv: chunk.iv,
                           sequenceId: chunk.sequenceId,
                           isEncrypted: true,
+                          length: chunk.length
                       }
                     : {
                           url: chunk.url,
                           filename,
                           sequenceId: chunk.sequenceId,
                           isEncrypted: false,
+                          length: chunk.length
                       };
             });
         }
@@ -283,7 +285,7 @@ class ArchiveDownloader extends Downloader {
         if (this.verbose) {
             setInterval(() => {
                 logger.debug(
-                    `Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunksCount}, total chunks: ${this.totalChunksCount}`
+                    `Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunkCount}, total chunks: ${this.totalChunksCount}`
                 );
             }, 3000);
         }
@@ -296,7 +298,7 @@ class ArchiveDownloader extends Downloader {
     getETA() {
         const usedTime = new Date().valueOf() - this.startedAt;
         const remainingTimeInSeconds = Math.round(
-            ((usedTime / this.finishedChunksCount) * this.totalChunksCount - usedTime) / 1000
+            ((usedTime / this.finishedChunkCount) * this.totalChunksCount - usedTime) / 1000
         );
         if (remainingTimeInSeconds < 60) {
             return `${remainingTimeInSeconds}s`;
@@ -354,7 +356,7 @@ class ArchiveDownloader extends Downloader {
                     this.runningThreads--;
                     const currentChunkInfo = {
                         taskname: chunk.filename,
-                        finishedChunksCount: this.finishedChunksCount,
+                        finishedChunksCount: this.finishedChunkCount,
                         totalChunksCount: this.totalChunksCount,
                         chunkSpeed: this.calculateSpeedByChunk(),
                         ratioSpeed: this.calculateSpeedByRatio(),
@@ -406,7 +408,7 @@ class ArchiveDownloader extends Downloader {
         }
         if (
             this.chunks.length === 0 &&
-            this.totalChunksCount === this.finishedChunksCount &&
+            this.totalChunksCount === this.finishedChunkCount &&
             this.runningThreads === 0
         ) {
             if (this.isDownloaded) {
@@ -478,7 +480,7 @@ class ArchiveDownloader extends Downloader {
         this.iv = previousTask.iv;
         this.verbose = previousTask.verbose;
         this.startedAt = new Date().valueOf();
-        this.finishedChunksCount = 0;
+        this.finishedChunkCount = 0;
         this.totalChunksCount = previousTask.totalChunksCount - previousTask.finishedChunksCount;
         this.retries = previousTask.retries;
         this.timeout = previousTask.timeout;
@@ -545,7 +547,7 @@ class ArchiveDownloader extends Downloader {
             unfinishedChunksLength += isChunkGroup(chunk) ? chunk.chunks.length : 1;
         }
 
-        logger.info(`Downloaded: ${this.finishedChunksCount}; Waiting for download: ${unfinishedChunksLength}`);
+        logger.info(`Downloaded: ${this.finishedChunkCount}; Waiting for download: ${unfinishedChunksLength}`);
 
         try {
             saveTask({

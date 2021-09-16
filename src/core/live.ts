@@ -60,7 +60,7 @@ export default class LiveDownloader extends Downloader {
         try {
             this.m3u8 = (await loadM3U8(this.m3u8Path, this.retries, this.timeout)) as Playlist;
         } catch (e) {
-            if (this.finishedChunksCount > 0) {
+            if (this.finishedChunkCount > 0) {
                 // Stop downloading
                 this.isEnd = true;
             } else {
@@ -162,7 +162,7 @@ export default class LiveDownloader extends Downloader {
         if (this.verbose) {
             setInterval(() => {
                 logger.debug(
-                    `Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunksCount}`
+                    `Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunkCount}`
                 );
             }, 3000);
         }
@@ -209,12 +209,14 @@ export default class LiveDownloader extends Downloader {
                           iv: chunk.iv,
                           sequenceId: chunk.sequenceId,
                           url: chunk.url,
+                          length: chunk.length,
                       }
                     : {
                           filename,
                           isEncrypted: false,
                           sequenceId: chunk.sequenceId,
                           url: chunk.url,
+                          length: chunk.length,
                       };
             });
             // 加入待完成的任务列表
@@ -256,7 +258,7 @@ export default class LiveDownloader extends Downloader {
                     this.runningThreads--;
                     const currentChunkInfo = {
                         taskname: task.filename,
-                        finishedChunksCount: this.finishedChunksCount,
+                        finishedChunksCount: this.finishedChunkCount,
                         chunkSpeed: this.calculateSpeedByChunk(),
                         ratioSpeed: this.calculateSpeedByRatio(),
                     };
@@ -291,7 +293,7 @@ export default class LiveDownloader extends Downloader {
                 logger.info(`Temporary files are located at ${this.tempPath}`);
                 this.emit("finished");
             }
-            logger.info(`${this.finishedChunksCount} chunks downloaded. Start merging chunks.`);
+            logger.info(`${this.finishedChunkCount} chunks downloaded. Start merging chunks.`);
             const muxer = this.format === "ts" ? mergeToTS : mergeToMKV;
             muxer(this.outputFileList, this.outputPath)
                 .then(async () => {

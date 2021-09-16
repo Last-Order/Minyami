@@ -40,6 +40,7 @@ export interface Chunk {
     parentGroup?: ChunkGroup;
     key?: string;
     iv?: string;
+    length: number;
     sequenceId?: number;
     retryCount?: number;
 }
@@ -86,7 +87,9 @@ class Downloader extends EventEmitter {
     noMerge: boolean = false;
 
     startedAt: number; // 开始下载时间
-    finishedChunksCount: number = 0; // 已完成的块数量
+    totalChunkLength: number = 0; // 块总长度
+    finishedChunkCount: number = 0; // 已完成的块数量
+    finishedChunkLength: number = 0; // 已完成的块总长度
 
     retries: number = 5; // 重试数量
     timeout: number = 60000; // 超时时间
@@ -241,6 +244,10 @@ class Downloader extends EventEmitter {
             } else {
                 this.m3u8 = m3u8;
             }
+            this.totalChunkLength = this.m3u8.chunks.reduce(
+                (prevLength, currentChunk) => prevLength + currentChunk.length,
+                0
+            );
         } catch (e) {
             logger.error("Aborted due to critical error.", e);
             this.emit("critical-error");
@@ -283,7 +290,8 @@ class Downloader extends EventEmitter {
                     );
                     logger.debug(`Decrypting ${task.filename} succeed`);
                 }
-                this.finishedChunksCount++;
+                this.finishedChunkCount++;
+                this.finishedChunkLength += task.length;
                 resolve();
             } catch (e) {
                 logger.warning(
@@ -330,17 +338,14 @@ class Downloader extends EventEmitter {
      * 计算以块计算的下载速度
      */
     calculateSpeedByChunk() {
-        return (this.finishedChunksCount / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
+        return (this.finishedChunkCount / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
     }
 
     /**
      * 计算以视频长度为基准下载速度倍率
      */
     calculateSpeedByRatio() {
-        return (
-            (this.finishedChunksCount * this.m3u8.getChunkLength()) /
-            Math.round((new Date().valueOf() - this.startedAt) / 1000)
-        ).toFixed(2);
+        return (this.finishedChunkLength / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
     }
 }
 
