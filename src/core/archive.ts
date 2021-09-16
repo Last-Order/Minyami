@@ -186,14 +186,14 @@ class ArchiveDownloader extends Downloader {
                           iv: chunk.iv,
                           sequenceId: chunk.sequenceId,
                           isEncrypted: true,
-                          length: chunk.length
+                          length: chunk.length,
                       }
                     : {
                           url: chunk.url,
                           filename,
                           sequenceId: chunk.sequenceId,
                           isEncrypted: false,
-                          length: chunk.length
+                          length: chunk.length,
                       };
             });
         }

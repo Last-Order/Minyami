@@ -179,7 +179,7 @@ export class Playlist {
             }
             if (currentLine.startsWith("#EXTINF")) {
                 const tagBody = getTagBody(currentLine);
-                const chunkLength = parseFloat(tagBody.split(",")[0]) || 5.00;
+                const chunkLength = parseFloat(tagBody.split(",")[0]) || 5.0;
                 const nextLine = lines[i + 1];
                 if (!nextLine) {
                     throw new M3U8ParseError("Invalid M3U8 file.");
