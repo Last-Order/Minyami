@@ -195,12 +195,7 @@ export default class LiveDownloader extends Downloader {
             });
             logger.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
             const currentUndownloadedChunks = currentPlaylistChunks.map((chunk) => {
-                const filename = this.onChunkNaming
-                    ? this.onChunkNaming(chunk)
-                    : new URL(chunk.url).pathname
-                          .split("/")
-                          .slice(-1)[0]
-                          .slice(8 - 255);
+                const filename = this.onChunkNaming(chunk);
                 return chunk.isEncrypted
                     ? {
                           filename,

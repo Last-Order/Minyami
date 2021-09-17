@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as fs from "fs";
+import { URL } from "url";
 import axios, { AxiosRequestConfig } from "axios";
 import { EventEmitter } from "events";
 import logger from "../utils/log";
@@ -101,15 +102,13 @@ class Downloader extends EventEmitter {
     encryptionKeys = {};
 
     // Hooks
-    onChunkNaming: (chunk: M3U8Chunk | EncryptedM3U8Chunk) => string;
-    onDownloadError: (error: Error, downloader: Downloader) => void;
+    protected onChunkNaming: (chunk: M3U8Chunk | EncryptedM3U8Chunk) => string = (chunk) => {
+        return new URL(chunk.url).pathname
+            .split("/")
+            .slice(-1)[0]
+            .slice(8 - 255);
+    };
 
-    /**
-     *
-     * @param m3u8Path
-     * @param config
-     * @param config.threads 线程数量
-     */
     constructor(
         m3u8Path: string,
         {
@@ -326,12 +325,22 @@ class Downloader extends EventEmitter {
         }
     }
 
+    /**
+     * ======================
+     * Some hooks for parsers
+     * ======================
+     */
+
     saveEncryptionKey(url: string, key: string) {
         this.encryptionKeys[url] = key;
     }
 
     getEncryptionKey(url: string) {
         return this.encryptionKeys[url];
+    }
+
+    setOnChunkNaming(handler: (chunk: M3U8Chunk | EncryptedM3U8Chunk) => string) {
+        this.onChunkNaming = handler;
     }
 
     /**

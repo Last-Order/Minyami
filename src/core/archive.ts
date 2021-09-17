@@ -172,12 +172,7 @@ class ArchiveDownloader extends Downloader {
         logger.info(`Start downloading with ${this.threads} thread(s).`);
         if (this.autoGenerateChunkList) {
             this.chunks = this.m3u8.chunks.map((chunk) => {
-                const filename = this.onChunkNaming
-                    ? this.onChunkNaming(chunk)
-                    : new URL(chunk.url).pathname
-                          .split("/")
-                          .slice(-1)[0]
-                          .slice(8 - 255);
+                const filename = this.onChunkNaming(chunk);
                 return chunk.isEncrypted
                     ? {
                           url: chunk.url,
