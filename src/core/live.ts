@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { URL } from "url";
 import { mergeToMKV, mergeToTS } from "../utils/media";
 import { sleep } from "../utils/system";
 import { loadM3U8 } from "../utils/m3u8";

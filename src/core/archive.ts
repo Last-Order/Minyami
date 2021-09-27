@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import axios from "axios";
-import { URL } from "url";
 import { mergeToMKV, mergeToTS } from "../utils/media";
 import { deleteDirectory } from "../utils/system";
 import { saveTask, deleteTask, getTask } from "../utils/task";

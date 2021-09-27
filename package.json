@@ -33,11 +33,11 @@
         "agent-base": "^6.0.2",
         "axios": "^0.21.4",
         "chalk": "^2.4.2",
-        "cli-progress": "^3.8.2",
+        "cli-progress": "^3.9.1",
         "crypto-js": "^3.3.0",
         "erii": "^2.0.3",
         "https-proxy-agent": "^5.0.0",
-        "socks-proxy-agent": "^6.0.0",
+        "socks-proxy-agent": "^6.1.0",
         "ws": "^7.4.6"
     },
     "devDependencies": {
