@@ -3,34 +3,52 @@ import * as path from "path";
 import { ChunkItem } from "../core/downloader";
 
 export interface MinyamiTask {
-    id: string; // 唯一标识符
+    /** 唯一标识符 */
+    id: string;
 
-    tempPath: string; // 临时文件目录
-    m3u8Path: string; // m3u8文件路径
+    /** 临时文件目录 */
+    tempPath: string;
+    /** m3u8文件路径 */
+    m3u8Path: string;
 
-    outputPath: string; // 输出目录
-    threads: number; // 并发数量
+    /** 输出目录 */
+    outputPath: string;
+    /** 并发数量 */
+    threads: number;
 
-    cookies: string; // Cookie
-    headers: object; // HTTP Headers
-    key: string; // Key
-    iv: string; // IV
+    /** Cookie */
+    cookies: string;
+    /** HTTP Headers */
+    headers: object;
+    key: string;
 
-    verbose: boolean; // 调试输出
+    /** 是否打印调试信息 */
+    verbose: boolean;
 
-    startedAt: number; // 开始下载时间
-    finishedChunksCount: number; // 已完成的块数量
-    totalChunksCount: number; // 全部块数量
+    /** 开始下载时间 */
+    startedAt: number;
+    /** 已完成的块数量 */
+    finishedChunksCount: number;
+    /** 已完成的块总长度 */
+    finishedChunkLength: number;
+    /** 全部块数量 */
+    totalChunksCount: number;
 
-    retries: number; // 重试数量
-    timeout: number; // 超时时间
+    /** 重试次数 */
+    retries: number;
+    /** 超时时间 */
+    timeout: number;
 
     proxy: string;
 
-    allChunks: ChunkItem[]; // 全部块
-    chunks: ChunkItem[]; // 未下载的块
-    outputFileList: string[]; // 输出文件列表
-    finishedFilenames: { [index: string]: any }; // 已完成文件名
+    /** 全部块 */
+    allChunks: ChunkItem[];
+    /** 未下载的块 */
+    chunks: ChunkItem[];
+    /** 输出文件列表 */
+    outputFileList: string[];
+    /** 已完成文件名 */
+    finishedFilenames: { [index: string]: any };
 }
 
 /**

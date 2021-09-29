@@ -100,6 +100,7 @@ export class Playlist {
     isEnd: boolean = false;
     chunks: (M3U8Chunk | EncryptedM3U8Chunk)[] = [];
     encryptKeys: string[] = [];
+    averageChunkLength = 0;
 
     constructor({ m3u8Content, m3u8Url = "" }: { m3u8Content: string; m3u8Url?: string }) {
         this.m3u8Content = m3u8Content;
@@ -213,9 +214,15 @@ export class Playlist {
         }
     }
 
-    // TODO: use more accurate length of each chunk
+    /**
+     * average length of chunks
+     * @returns
+     */
     public getChunkLength(): number {
-        return (this.chunks[1] || this.chunks[0]).length;
+        if (this.averageChunkLength) {
+            return this.averageChunkLength;
+        }
+        return this.chunks.reduce((prevLength, chunk) => prevLength + chunk.length, 0) / this.chunks.length;
     }
 }
 

@@ -68,32 +68,46 @@ export function isChunkGroup(c: ChunkItem): c is ChunkGroup {
 class Downloader extends EventEmitter {
     cliMode: boolean = false;
 
-    tempPath: string; // 临时文件目录
-    m3u8Path: string; // m3u8文件路径
-    m3u8: Playlist; // M3U8 Playlist
-    outputPath: string = "./output.ts"; // 输出目录
-    threads: number = 5; // 并发数量
+    /** 临时文件目录 */
+    tempPath: string;
+    /** m3u8文件路径 */
+    m3u8Path: string;
+    /** M3U8 Playlist */
+    m3u8: Playlist;
+    /** 输出目录 */
+    outputPath: string = "./output.ts";
+    /** 并发数量 */
+    threads: number = 5;
 
     allChunks: ChunkItem[];
     chunks: ChunkItem[];
     pickedChunks: ChunkItem[];
 
-    cookies: string; // Cookies
-    headers: object = {}; // HTTP Headers
-    key: string; // Key
-    iv: string; // IV
+    /** Cookies */
+    cookies: string;
+    /** HTTP Headers */
+    headers: object = {};
+    key: string;
 
-    verbose: boolean = false; // 调试输出
-    format: string = "ts"; // 输出格式
+    /** 是否打印调试信息 */
+    verbose: boolean = false;
+    /** 输出格式 */
+    format: string = "ts";
     noMerge: boolean = false;
 
-    startedAt: number; // 开始下载时间
-    totalChunkLength: number = 0; // 块总长度
-    finishedChunkCount: number = 0; // 已完成的块数量
-    finishedChunkLength: number = 0; // 已完成的块总长度
+    /** 开始下载时间 */
+    startedAt: number;
+    /** 块总长度 */
+    totalChunkLength: number = 0;
+    /** 已完成的块数量 */
+    finishedChunkCount: number = 0;
+    /** 已完成的块总长度 */
+    finishedChunkLength: number = 0;
 
-    retries: number = 5; // 重试数量
-    timeout: number = 60000; // 超时时间
+    /** 重试数量 */
+    retries: number = 5;
+    /** 超时时间 */
+    timeout: number = 60000;
 
     proxy: string = "";
 

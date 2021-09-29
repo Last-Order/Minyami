@@ -199,10 +199,14 @@ class ArchiveDownloader extends Downloader {
                     break;
                 }
                 if (isChunkGroup(chunk)) {
+                    const chunkGroupTotalLength = chunk.chunks.reduce(
+                        (prevLength, chunk) => prevLength + chunk.length,
+                        0
+                    );
                     // 处理一组块
-                    if (nowTime + chunk.chunks.length * this.m3u8.getChunkLength() < this.sliceStart) {
+                    if (nowTime + chunkGroupTotalLength < this.sliceStart) {
                         // 加上整个块都还没有到开始时间
-                        nowTime += chunk.chunks.length * this.m3u8.getChunkLength();
+                        nowTime += chunkGroupTotalLength;
                         continue;
                     } else {
                         // 组中至少有一个已经在时间范围内
@@ -213,16 +217,13 @@ class ArchiveDownloader extends Downloader {
                             isNew: true,
                         };
                         for (const c of chunk.chunks) {
-                            if (
-                                nowTime + this.m3u8.getChunkLength() >= this.sliceStart &&
-                                nowTime + this.m3u8.getChunkLength() < this.sliceEnd
-                            ) {
+                            if (nowTime + c.length >= this.sliceStart && nowTime + c.length < this.sliceEnd) {
                                 // 添加已经在时间范围内的块
                                 newChunkItem.chunks.push(c);
-                                nowTime += this.m3u8.getChunkLength();
+                                nowTime += c.length;
                             } else {
                                 // 跳过时间范围外的块
-                                nowTime += this.m3u8.getChunkLength();
+                                nowTime += c.length;
                                 continue;
                             }
                         }
@@ -232,9 +233,9 @@ class ArchiveDownloader extends Downloader {
                     // 处理普通块
                     if (nowTime >= this.sliceStart) {
                         newChunkList.push(chunk);
-                        nowTime += this.m3u8.getChunkLength();
+                        nowTime += chunk.length;
                     } else {
-                        nowTime += this.m3u8.getChunkLength();
+                        nowTime += chunk.length;
                     }
                 }
             }
@@ -471,10 +472,8 @@ class ArchiveDownloader extends Downloader {
         this.cookies = previousTask.cookies;
         this.headers = previousTask.headers;
         this.key = previousTask.key;
-        this.iv = previousTask.iv;
         this.verbose = previousTask.verbose;
         this.startedAt = new Date().valueOf();
-        this.finishedChunkCount = 0;
         this.totalChunksCount = previousTask.totalChunksCount - previousTask.finishedChunksCount;
         this.retries = previousTask.retries;
         this.timeout = previousTask.timeout;
@@ -553,10 +552,10 @@ class ArchiveDownloader extends Downloader {
                 cookies: this.cookies,
                 headers: this.headers,
                 key: this.key,
-                iv: this.iv,
                 verbose: this.verbose,
                 startedAt: this.startedAt,
                 finishedChunksCount: this.totalChunksCount - unfinishedChunksLength,
+                finishedChunkLength: this.finishedChunkLength,
                 totalChunksCount: this.totalChunksCount,
                 retries: this.retries,
                 timeout: this.timeout,
