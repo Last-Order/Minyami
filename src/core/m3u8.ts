@@ -169,9 +169,11 @@ export class Playlist {
                 }
                 this.chunks.push({
                     url: CommonUtils.buildFullUrl(this.m3u8Url, initialSegmentUrl),
-                    isEncrypted: false,
+                    isEncrypted: true,
                     length: 0,
                     sequenceId: 0,
+                    key,
+                    iv,
                 });
             }
             if (currentLine.startsWith("#EXT-X-ENDLIST")) {
