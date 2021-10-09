@@ -114,7 +114,7 @@ export default class LiveDownloader extends Downloader {
 
         if (this.m3u8.encryptKeys.length > 0) {
             this.isEncrypted = true;
-            const key = this.encryptionKeys[0];
+            const key = this.m3u8.encryptKeys[0];
             if (key.startsWith("abematv-license")) {
                 logger.info("Site comfirmed: AbemaTV");
                 const parser = await import("./parsers/abema");
