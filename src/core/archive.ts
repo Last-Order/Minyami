@@ -421,7 +421,7 @@ class ArchiveDownloader extends Downloader {
                 this.emit("finished");
             }
             muxer(this.outputFileList, this.outputPath)
-                .then(async () => {
+                .then(async (outputPath) => {
                     logger.info("End of merging.");
                     logger.info("Starting cleaning temporary files.");
                     try {
@@ -437,7 +437,7 @@ class ArchiveDownloader extends Downloader {
                         logger.warning("Fail to parse previous tasks, ignored.");
                         logger.warning(error.message);
                     }
-                    logger.info(`All finished. Check your file at [${path.resolve(this.outputPath)}] .`);
+                    logger.info(`All finished. Check your file at [${path.resolve(outputPath)}] .`);
                     this.emit("finished");
                 })
                 .catch(async (e) => {

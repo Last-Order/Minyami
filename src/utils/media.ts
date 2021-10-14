@@ -4,7 +4,7 @@ import * as crypto from "crypto";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import { exec } from "./system";
 import ProxyAgentHelper from "../utils/agent";
-import UA from "../constants/ua";
+import CommonUtils from "./common";
 
 /**
  * 合并视频文件
@@ -12,7 +12,8 @@ import UA from "../constants/ua";
  * @param output 输出路径
  */
 export function mergeToMKV(fileList = [], output = "./output.mkv") {
-    return new Promise<void>(async (resolve) => {
+    const outputPath = CommonUtils.getAvailableOutputPath(output);
+    return new Promise<string>(async (resolve) => {
         if (fileList.length === 0) {
             return;
         }
@@ -20,24 +21,25 @@ export function mergeToMKV(fileList = [], output = "./output.mkv") {
             return index === 0 ? file : `+${file}`;
         });
 
-        const parameters = fileList.concat(["-o", output, "-q"]);
+        const parameters = fileList.concat(["-o", outputPath, "-q"]);
 
         const tempFilename = `temp_${new Date().valueOf()}.json`;
         fs.writeFileSync(`./${tempFilename}`, JSON.stringify(parameters, null, 2));
         await exec(`mkvmerge @${tempFilename}`);
         fs.unlinkSync(`./${tempFilename}`);
-        resolve();
+        resolve(outputPath);
     });
 }
 
 export function mergeToTS(fileList = [], output = "./output.ts") {
     const cliProgress = require("cli-progress");
-    return new Promise<void>(async (resolve) => {
+    const outputPath = CommonUtils.getAvailableOutputPath(output);
+    return new Promise<string>(async (resolve) => {
         if (fileList.length === 0) {
-            resolve();
+            resolve(outputPath);
         }
 
-        const writeStream = fs.createWriteStream(output);
+        const writeStream = fs.createWriteStream(outputPath);
         const lastIndex = fileList.length - 1;
         const bar = new cliProgress.SingleBar(
             {
@@ -57,7 +59,7 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
                         bar.update(i);
                         bar.stop();
                         writeStream.end();
-                        resolve();
+                        resolve(outputPath);
                     }
                 });
                 bar.update(i);

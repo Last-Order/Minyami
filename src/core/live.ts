@@ -290,10 +290,10 @@ export default class LiveDownloader extends Downloader {
             logger.info(`${this.finishedChunkCount} chunks downloaded. Start merging chunks.`);
             const muxer = this.format === "ts" ? mergeToTS : mergeToMKV;
             muxer(this.outputFileList, this.outputPath)
-                .then(async () => {
+                .then(async (outputPath) => {
                     logger.info("End of merging.");
                     await this.clean();
-                    logger.info(`All finished. Check your file at [${path.resolve(this.outputPath)}] .`);
+                    logger.info(`All finished. Check your file at [${path.resolve(outputPath)}] .`);
                     this.emit("finished");
                 })
                 .catch((e) => {

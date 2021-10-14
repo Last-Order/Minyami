@@ -151,14 +151,6 @@ class Downloader extends EventEmitter {
             this.outputPath = output;
         }
 
-        if (fs.existsSync(this.outputPath)) {
-            // output filename conflict
-            const pathArr = this.outputPath.split(".");
-            const filePath = pathArr.slice(0, -1).join(".");
-            const ext = pathArr[pathArr.length - 1];
-            this.outputPath = `${filePath}_${Date.now()}.${ext}`;
-        }
-
         if (key) {
             this.key = key;
         }
