@@ -36,7 +36,7 @@ export default class Parser {
                         downloader.saveEncryptionKey(CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, url), hexKey);
                         break;
                     } catch (e) {
-                        if (retryCounter > 0) {
+                        if (retryCounter > 1) {
                             retryCounter--;
                             logger.debug(e);
                             logger.info("Download decryption key failed, retry.");
