@@ -148,7 +148,6 @@ export class Playlist {
                     }
                     this.encryptKeys.push(key);
                 } else {
-                    console.log(parsedTagBody["METHOD"]);
                     // SAMPLE-AES is rare in production and it's not supported by Minyami.
                     throw new M3U8ParseError("Unsupported encrypt method.");
                 }
@@ -224,7 +223,9 @@ export class Playlist {
         if (this.averageChunkLength) {
             return this.averageChunkLength;
         }
-        return this.chunks.reduce((prevLength, chunk) => prevLength + chunk.length, 0) / this.chunks.length;
+        const result = this.chunks.reduce((prevLength, chunk) => prevLength + chunk.length, 0) / this.chunks.length;
+        this.averageChunkLength = result;
+        return result;
     }
 }
 

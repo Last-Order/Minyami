@@ -1,6 +1,5 @@
 const ReconnectingWebSocket = require("@eridanussora/reconnecting-websocket");
 const WebSocket = require("ws");
-const SocksProxyAgent = require("socks-proxy-agent");
 import ProxyAgentHelper from "../../utils/agent";
 import UA from "../../constants/ua";
 import { ParserOptions, ParserResult } from "./types";
