@@ -1,6 +1,6 @@
 {
     "name": "minyami",
-    "version": "4.4.6",
+    "version": "4.4.7",
     "description": "",
     "main": "dist/exports.js",
     "types": "dist/exports.d.ts",
@@ -21,7 +21,7 @@
         "/dist/"
     ],
     "engines": {
-        "node": "~12 || ~14 || ~16"
+        "node": "~12 || ~14 || ~16 || ~17"
     },
     "author": {
         "email": "sora@sound.moe",
