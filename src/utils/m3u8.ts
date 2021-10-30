@@ -11,6 +11,12 @@ export async function loadM3U8(path: string, retries: number = 1, timeout = 6000
     if (path.startsWith("http")) {
         logger.info("Start fetching M3U8 file.");
         while (retries >= 0) {
+            const CancelToken = axios.CancelToken;
+            let source = CancelToken.source();
+            setTimeout(() => {
+                source && source.cancel();
+                source = null;
+            }, timeout);
             try {
                 const response = await axios.get(path, {
                     timeout,
@@ -18,6 +24,7 @@ export async function loadM3U8(path: string, retries: number = 1, timeout = 6000
                     headers: {
                         Host: new URL(path).host,
                     },
+                    cancelToken: source.token,
                     ...options,
                 });
                 logger.info("M3U8 file fetched.");
@@ -28,6 +35,7 @@ export async function loadM3U8(path: string, retries: number = 1, timeout = 6000
                     `Fail to fetch M3U8 file: [${
                         e.code ||
                         (e.response ? `${e.response.status} ${e.response.statusText}` : undefined) ||
+                        e.message ||
                         "UNKNOWN"
                     }]`
                 );
@@ -39,6 +47,8 @@ export async function loadM3U8(path: string, retries: number = 1, timeout = 6000
                     logger.warning("Max retries exceeded. Abort.");
                     throw new Error(e);
                 }
+            } finally {
+                source = null;
             }
         }
         const m3u8 = new M3U8({ m3u8Content, m3u8Url: path });
