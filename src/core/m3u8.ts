@@ -87,6 +87,13 @@ export class MasterPlaylist {
                     ...(parsedTagBody["CODECS"] ? { codecs: parsedTagBody["CODECS"] } : {}),
                     ...(parsedTagBody["FRAME-RATE"] ? { frameRate: +parsedTagBody["FRAME-RATE"] } : {}),
                 };
+                if (parsedTagBody["RESOLUTION"] && parsedTagBody["RESOLUTION"].includes("x")) {
+                    const [x, y] = parsedTagBody["RESOLUTION"].split("x").map((n) => parseInt(n));
+                    streamInfo.resolution = {
+                        width: x,
+                        height: y,
+                    };
+                }
                 this.streams.push(streamInfo);
             }
             // TODO: Support #EXT-X-MEDIA
