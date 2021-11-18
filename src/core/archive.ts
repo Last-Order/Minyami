@@ -171,7 +171,13 @@ class ArchiveDownloader extends Downloader {
             });
         }
 
-        await this.parse();
+        try {
+            await this.parse();
+        } catch (e) {
+            logger.error("Failed to parse M3U8 file.");
+            logger.debug(e);
+            return;
+        }
 
         logger.info(`Start downloading with ${this.threads} thread(s).`);
         if (this.autoGenerateChunkList) {
@@ -497,7 +503,13 @@ class ArchiveDownloader extends Downloader {
         }
         // Load M3U8
         await this.loadM3U8();
-        await this.parse();
+        try {
+            await this.parse();
+        } catch (e) {
+            logger.error("Fail to parse M3U8 file.");
+            logger.debug(e);
+            return;
+        }
 
         this.isResumed = true;
 
