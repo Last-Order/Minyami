@@ -256,7 +256,7 @@ class Downloader extends EventEmitter {
             );
         } catch (e) {
             logger.error("Aborted due to critical error.", e);
-            this.emit("critical-error");
+            this.emit("critical-error", e);
         }
     }
 

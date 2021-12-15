@@ -64,7 +64,7 @@ export default class LiveDownloader extends Downloader {
                 this.isEnd = true;
             } else {
                 logger.error("Aborted due to critical error.", e);
-                this.emit("critical-error");
+                this.emit("critical-error", e);
             }
         }
     }
@@ -107,7 +107,7 @@ export default class LiveDownloader extends Downloader {
             }
         } catch (e) {
             logger.error("Aborted due to critical error.", e);
-            this.emit("critical-error");
+            this.emit("critical-error", e);
         }
 
         this.timeout = Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000);
@@ -130,7 +130,7 @@ export default class LiveDownloader extends Downloader {
                     });
                 } catch (e) {
                     logger.error("Aborted due to critical error.", e);
-                    this.emit("critical-error");
+                    this.emit("critical-error", e);
                 }
             }
         } else {
@@ -158,7 +158,7 @@ export default class LiveDownloader extends Downloader {
                     });
                 } catch (e) {
                     logger.error("Aborted due to critical error.", e);
-                    this.emit("critical-error");
+                    this.emit("critical-error", e);
                 }
             }
         }
