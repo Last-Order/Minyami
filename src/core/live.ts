@@ -269,7 +269,7 @@ export default class LiveDownloader extends Downloader {
                     this.checkQueue();
                 })
                 .catch((e) => {
-                    this.emit("chunk-error", e);
+                    this.emit("chunk-error", e, task.filename);
                     // 重试计数
                     if (task.retryCount) {
                         task.retryCount++;

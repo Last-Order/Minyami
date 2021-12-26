@@ -384,7 +384,7 @@ class ArchiveDownloader extends Downloader {
                     this.checkQueue();
                 })
                 .catch((e) => {
-                    this.emit("chunk-error", e);
+                    this.emit("chunk-error", e, chunk.filename);
                     this.runningThreads--;
                     // 重试计数
                     if (chunk.retryCount) {
