@@ -110,7 +110,10 @@ export default class LiveDownloader extends Downloader {
             this.emit("critical-error", e);
         }
 
-        this.timeout = Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000);
+        this.chunkTimeout = Math.min(
+            Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000),
+            60000
+        );
 
         if (this.m3u8.encryptKeys.length > 0) {
             this.isEncrypted = true;

@@ -106,8 +106,12 @@ class Downloader extends EventEmitter {
 
     /** 重试数量 */
     retries: number = 5;
+
     /** 超时时间 */
     timeout: number = 60000;
+
+    /** 块超时时间 */
+    chunkTimeout: number = 60000;
 
     proxy: string = "";
 
@@ -281,7 +285,7 @@ class Downloader extends EventEmitter {
     handleTask(task: Chunk) {
         logger.debug(`Downloading ${task.url}`);
         const options: AxiosRequestConfig = {};
-        options.timeout = Math.min(((task.retryCount || 0) + 1) * this.timeout, this.timeout * 5);
+        options.timeout = Math.min(((task.retryCount || 0) + 1) * this.chunkTimeout, this.chunkTimeout * 5);
         return new Promise<void>(async (resolve, reject) => {
             logger.debug(`Downloading ${task.filename}`);
             try {
