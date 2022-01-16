@@ -175,7 +175,7 @@ export class Playlist {
                 }
                 this.chunks.push({
                     url: CommonUtils.buildFullUrl(this.m3u8Url, initialSegmentUrl),
-                    isEncrypted: true,
+                    isEncrypted,
                     length: 0,
                     sequenceId: 0,
                     key,
