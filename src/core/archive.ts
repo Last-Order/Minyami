@@ -81,6 +81,7 @@ class ArchiveDownloader extends Downloader {
      */
     async parse() {
         // parse m3u8
+        console.log(this.m3u8);
         if (this.m3u8.encryptKeys.length > 0) {
             // Encrypted
             const key = this.m3u8.encryptKeys[0];
@@ -100,6 +101,16 @@ class ArchiveDownloader extends Downloader {
                 logger.info("Site comfirmed: Hibiki-Radio.");
                 const parser = await import("./parsers/hibiki");
                 parser.default.parse({
+                    downloader: this,
+                });
+            } else if (this.m3u8Path.includes("hls-auth.cloud.stream.co.jp")) {
+                logger.info("Site comfirmed: Nicochannel.");
+                const nicoChannelParser = await import("./parsers/nicochannel");
+                nicoChannelParser.default.parse({
+                    downloader: this,
+                });
+                const commonParser = await import("./parsers/common");
+                await commonParser.default.parse({
                     downloader: this,
                 });
             } else {

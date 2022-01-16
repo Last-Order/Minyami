@@ -1,12 +1,12 @@
 {
     "name": "minyami",
-    "version": "4.4.12",
+    "version": "4.4.13",
     "lockfileVersion": 2,
     "requires": true,
     "packages": {
         "": {
             "name": "minyami",
-            "version": "4.4.12",
+            "version": "4.4.13",
             "license": "GPL-3.0-or-later",
             "dependencies": {
                 "@eridanussora/reconnecting-websocket": "^4.4.2",

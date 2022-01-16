@@ -124,6 +124,16 @@ export default class LiveDownloader extends Downloader {
                 parser.default.parse({
                     downloader: this,
                 });
+            } else if (this.m3u8Path.includes("hls-auth.cloud.stream.co.jp")) {
+                logger.info("Site comfirmed: Nicochannel.");
+                const nicoChannelParser = await import("./parsers/nicochannel");
+                nicoChannelParser.default.parse({
+                    downloader: this,
+                });
+                const commonParser = await import("./parsers/common");
+                await commonParser.default.parse({
+                    downloader: this,
+                });
             } else {
                 logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 try {
