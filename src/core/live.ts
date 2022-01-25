@@ -60,8 +60,12 @@ export default class LiveDownloader extends Downloader {
             this.m3u8 = (await loadM3U8(this.m3u8Path, this.retries, this.timeout)) as Playlist;
         } catch (e) {
             if (this.finishedChunkCount > 0) {
-                // Stop downloading
-                this.isEnd = true;
+                const responseStatus = e?.response?.status;
+                if (!!responseStatus && responseStatus >= 400 && responseStatus <= 599) {
+                    logger.info("M3U8 file is no longer available. Stop downloading.");
+                    // Stop downloading
+                    this.isEnd = true;
+                }
             } else {
                 logger.error("Aborted due to critical error.", e);
                 this.emit("critical-error", e);

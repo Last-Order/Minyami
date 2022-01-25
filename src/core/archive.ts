@@ -81,7 +81,6 @@ class ArchiveDownloader extends Downloader {
      */
     async parse() {
         // parse m3u8
-        console.log(this.m3u8);
         if (this.m3u8.encryptKeys.length > 0) {
             // Encrypted
             const key = this.m3u8.encryptKeys[0];
