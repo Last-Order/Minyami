@@ -133,6 +133,9 @@ export default class Parser {
                 downloader.once("finished", () => {
                     clearInterval(freshTokenInterval);
                 });
+                downloader.once("critical-error", () => {
+                    clearInterval(freshTokenInterval);
+                });
             });
         }
         const prefix = downloader.m3u8.m3u8Url.match(/^(.+\/)/)[1];

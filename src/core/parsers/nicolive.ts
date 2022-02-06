@@ -13,53 +13,40 @@ export default class Parser {
             throw new Error("Missing token for Niconico.");
         }
         const proxyAgent = ProxyAgentHelper.getProxyAgentInstance();
-        if (downloader.key.includes("CAS_MODE")) {
-            // 试验放送
-        } else {
-            downloader.once("parsed", () => {
-                const liveId = downloader.key.match(/(.+?)_/)[1];
-                const isChannelLive = !liveId.startsWith("lv");
-                let socketUrl, socket;
-                if (!isChannelLive) {
-                    socketUrl = `wss://a.live2.nicovideo.jp/wsapi/v2/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
-                } else {
-                    // Channel Live
-                    socketUrl = `wss://a.live2.nicovideo.jp/unama/wsapi/v2/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
-                }
-                if (downloader.proxy) {
-                    socket = new ReconnectingWebSocket(socketUrl, undefined, {
-                        WebSocket: WebSocket,
-                        clientOptions: {
-                            headers: {
-                                "User-Agent": UA.CHROME_DEFAULT_UA,
-                            },
-                            agent: proxyAgent ? proxyAgent : undefined,
-                        },
-                    });
-                } else {
-                    socket = new ReconnectingWebSocket(socketUrl, undefined, {
-                        WebSocket: WebSocket,
-                        clientOptions: {
-                            headers: {
-                                "User-Agent": UA.CHROME_DEFAULT_UA,
-                            },
-                        },
-                    });
-                }
-                socket.addEventListener("message", (message: any) => {
-                    const parsedMessage = JSON.parse(message.data);
-                    // Send heartbeat packet to keep alive
-                    if (parsedMessage.type === "ping") {
-                        socket.send(
-                            JSON.stringify({
-                                type: "pong",
-                                body: {},
-                            })
-                        );
-                    }
-                });
+        downloader.once("parsed", () => {
+            const liveId = downloader.key.match(/(.+?)_/)[1];
+            const isChannelLive = !liveId.startsWith("lv");
+            const socketUrl = isChannelLive
+                ? `wss://a.live2.nicovideo.jp/unama/wsapi/v2/watch/${liveId}/timeshift?audience_token=${downloader.key}`
+                : `wss://a.live2.nicovideo.jp/wsapi/v2/watch/${liveId}/timeshift?audience_token=${downloader.key}`;
+            const socket = new ReconnectingWebSocket(socketUrl, undefined, {
+                WebSocket: WebSocket,
+                clientOptions: {
+                    headers: {
+                        "User-Agent": UA.CHROME_DEFAULT_UA,
+                    },
+                    agent: proxyAgent ? proxyAgent : undefined,
+                },
             });
-        }
+
+            socket.addEventListener("message", (message: any) => {
+                const parsedMessage = JSON.parse(message.data);
+                // Send heartbeat packet to keep alive
+                if (parsedMessage.type === "ping") {
+                    socket.send(
+                        JSON.stringify({
+                            type: "pong",
+                            body: {},
+                        })
+                    );
+                    socket.send(
+                        JSON.stringify({
+                            type: "keepSeat",
+                        })
+                    );
+                }
+            });
+        });
         return {};
     }
 }
