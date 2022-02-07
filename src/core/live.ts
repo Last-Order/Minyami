@@ -318,6 +318,7 @@ export default class LiveDownloader extends Downloader {
             if (this.noMerge) {
                 logger.info("Skip merging. Please merge video chunks manually.");
                 logger.info(`Temporary files are located at ${this.tempPath}`);
+                this.saveTask();
                 this.emit("finished");
             }
             logger.info(`${this.finishedChunkCount} chunks downloaded. Start merging chunks.`);
