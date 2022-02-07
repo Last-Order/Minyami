@@ -68,6 +68,8 @@ export default class LiveDownloader extends Downloader {
                 }
             } else {
                 logger.error("Aborted due to critical error.", e);
+                logger.info(`Your temporary files are located at [${path.resolve(this.tempPath)}]`);
+                this.saveTask();
                 this.emit("critical-error", e);
             }
         }
@@ -91,6 +93,8 @@ export default class LiveDownloader extends Downloader {
                     this.forceStop = true;
                 } else {
                     logger.info("Force stop."); // TODO: reject all download promises
+                    logger.info(`Your temporary files are located at [${path.resolve(this.tempPath)}]`);
+                    this.saveTask();
                     this.emit("finished");
                 }
             });
@@ -111,6 +115,8 @@ export default class LiveDownloader extends Downloader {
             }
         } catch (e) {
             logger.error("Aborted due to critical error.", e);
+            logger.info(`Your temporary files are located at [${path.resolve(this.tempPath)}]`);
+            this.saveTask();
             this.emit("critical-error", e);
         }
 
@@ -147,6 +153,8 @@ export default class LiveDownloader extends Downloader {
                     });
                 } catch (e) {
                     logger.error("Aborted due to critical error.", e);
+                    logger.info(`Your temporary files are located at [${path.resolve(this.tempPath)}]`);
+                    this.saveTask();
                     this.emit("critical-error", e);
                 }
             }
@@ -175,6 +183,8 @@ export default class LiveDownloader extends Downloader {
                     });
                 } catch (e) {
                     logger.error("Aborted due to critical error.", e);
+                    logger.info(`Your temporary files are located at [${path.resolve(this.tempPath)}]`);
+                    this.saveTask();
                     this.emit("critical-error", e);
                 }
             }
@@ -185,6 +195,7 @@ export default class LiveDownloader extends Downloader {
                 logger.debug(
                     `Now running threads: ${this.runningThreads}, finished chunks: ${this.finishedChunkCount}`
                 );
+                this.saveTask();
             }, 3000);
         }
         await this.cycling();
@@ -320,7 +331,8 @@ export default class LiveDownloader extends Downloader {
                 })
                 .catch((e) => {
                     logger.error("Fail to merge video. Please merge video chunks manually.", e);
-                    logger.error(`Your temporary files at located at [${path.resolve(this.tempPath)}]`);
+                    logger.info(`Your temporary files are located at [${path.resolve(this.tempPath)}]`);
+                    this.saveTask();
                     this.emit("critical-error", e);
                 });
         }
@@ -331,6 +343,31 @@ export default class LiveDownloader extends Downloader {
             sleep(1000).then(() => {
                 this.checkQueue();
             });
+        }
+    }
+
+    saveTask() {
+        const taskInfo = {
+            tempPath: this.tempPath,
+            m3u8Path: this.m3u8Path,
+            outputPath: this.outputPath,
+            threads: this.threads,
+            cookies: this.cookies,
+            headers: this.headers,
+            key: this.key,
+            verbose: this.verbose,
+            startedAt: this.startedAt,
+            retries: this.retries,
+            timeout: this.timeout,
+            proxy: this.proxy,
+            outputFileList: this.outputFileList,
+        };
+        const savePath = path.resolve(this.tempPath, "./task.json");
+        try {
+            fs.writeFileSync(savePath, JSON.stringify(taskInfo, null, 2));
+        } catch (e) {
+            logger.warning("Fail to save task info.");
+            logger.debug(e);
         }
     }
 }
