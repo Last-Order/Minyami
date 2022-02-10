@@ -1,4 +1,5 @@
 import CommonUtils from "../utils/common";
+import logger from "../utils/log";
 
 export class M3U8ParseError extends Error {}
 
@@ -145,18 +146,20 @@ export class Playlist {
                  */
                 const tagBody = getTagBody(currentLine);
                 const parsedTagBody = parseTagBody(tagBody);
-                if (parsedTagBody["METHOD"] === "NONE") {
-                    isEncrypted = false;
-                } else if (parsedTagBody["METHOD"] === "AES-128") {
+                if (parsedTagBody["METHOD"] === "AES-128") {
                     isEncrypted = true;
                     key = parsedTagBody["URI"];
                     if (parsedTagBody["IV"]) {
                         iv = parsedTagBody["IV"].match(/0x([^,]+)/)[1];
                     }
                     this.encryptKeys.push(key);
+                } else if (parsedTagBody["METHOD"] === "NONE") {
+                    isEncrypted = false;
                 } else {
-                    // SAMPLE-AES is rare in production and it's not supported by Minyami.
-                    throw new M3U8ParseError("Unsupported encrypt method.");
+                    isEncrypted = false;
+                    logger.warning(
+                        `Unsupported encryption method: "${parsedTagBody["METHOD"]}". Chunks will not be decrypted.`
+                    );
                 }
             }
             if (currentLine.startsWith("#EXT-X-MAP")) {
