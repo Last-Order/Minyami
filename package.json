@@ -31,7 +31,7 @@
     "dependencies": {
         "@eridanussora/reconnecting-websocket": "^4.4.2",
         "agent-base": "^6.0.2",
-        "axios": "^0.21.4",
+        "axios": "^0.26.0",
         "chalk": "^2.4.2",
         "cli-progress": "^3.10.0",
         "crypto-js": "^3.3.0",
@@ -41,7 +41,7 @@
         "ws": "^7.4.6"
     },
     "devDependencies": {
-        "@types/node": "^13.13.45",
+        "@types/node": "^17.0.17",
         "husky": "^7.0.2",
         "lint-staged": "^11.1.2",
         "prettier": "^2.3.2",
