@@ -15,7 +15,9 @@ class ConsoleLogger {
     }
 
     error(message: string, error?: Error) {
-        if (error !== undefined) console.log(error);
+        if (error !== undefined) {
+            this.isDebugMode && console.debug(error);
+        }
         console.info(chalk.red(`[MINYAMI][ERROR] ${message}`));
     }
 
