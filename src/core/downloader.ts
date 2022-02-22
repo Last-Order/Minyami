@@ -76,6 +76,8 @@ class Downloader extends EventEmitter {
     m3u8: Playlist;
     /** 输出目录 */
     outputPath: string = "./output.ts";
+    /** 输出文件列表 */
+    outputFileList: string[];
     /** 并发数量 */
     threads: number = 5;
 
@@ -270,7 +272,7 @@ class Downloader extends EventEmitter {
     async clean() {
         try {
             logger.info("Starting cleaning temporary files.");
-            await system.deleteDirectory(this.tempPath);
+            await system.deleteDirectory(this.tempPath, this.outputFileList);
         } catch (e) {
             logger.warning(
                 `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`

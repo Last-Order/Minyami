@@ -5,7 +5,7 @@ import * as path from "path";
 import Erii from "erii";
 import ArchiveDownloader from "./core/archive";
 import LiveDownloader from "./core/live";
-import { exec, deleteDirectory } from "./utils/system";
+import { exec, forceDeleteDirectory } from "./utils/system";
 import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
 import ProxyAgent from "./utils/agent";
@@ -123,7 +123,7 @@ Erii.bind(
     () => {
         for (const file of fs.readdirSync(path.resolve(os.tmpdir()))) {
             if (file.startsWith("minyami_")) {
-                deleteDirectory(path.resolve(os.tmpdir(), `./${file}`));
+                forceDeleteDirectory(path.resolve(os.tmpdir(), `./${file}`));
             }
         }
         fs.writeFileSync(path.resolve(__dirname, "../tasks.json"), "[]");

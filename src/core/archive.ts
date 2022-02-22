@@ -446,7 +446,7 @@ class ArchiveDownloader extends Downloader {
                     logger.info("End of merging.");
                     logger.info("Starting cleaning temporary files.");
                     try {
-                        await deleteDirectory(this.tempPath);
+                        await deleteDirectory(this.tempPath, this.outputFileList);
                     } catch (e) {
                         logger.warning(
                             `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
