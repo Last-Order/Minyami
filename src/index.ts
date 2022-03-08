@@ -70,7 +70,7 @@ Erii.bind(
                 process.exit();
             });
             downloader.on("critical-error", () => {
-                process.exit();
+                process.exit(1);
             });
             await downloader.download();
         } else {
@@ -83,7 +83,7 @@ Erii.bind(
                 process.exit();
             });
             downloader.on("critical-error", () => {
-                process.exit();
+                process.exit(1);
             });
             await downloader.init();
             await downloader.download();
@@ -109,7 +109,7 @@ Erii.bind(
             process.exit();
         });
         downloader.on("critical-error", () => {
-            process.exit();
+            process.exit(1);
         });
         downloader.resume(path);
     }
