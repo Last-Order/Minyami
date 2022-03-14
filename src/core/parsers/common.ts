@@ -9,18 +9,20 @@ export default class Parser {
     static async parse({ downloader }: ParserOptions): Promise<ParserResult> {
         if (downloader.m3u8.encryptKeys.length > 0) {
             const keys = {};
+            const explicitKeys: string[] = typeof downloader.key === "string" ? downloader.key.split(",") : [];
             // collect all key urls
-            for (const key of downloader.m3u8.encryptKeys) {
-                keys[CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, key)] = downloader.key || "";
+            for (let i = 0; i <= downloader.m3u8.encryptKeys.length - 1; i++) {
+                keys[CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, downloader.m3u8.encryptKeys[i])] =
+                    explicitKeys[i] || "";
             }
             // download all keys
             let counter = 1;
             for (const url of Object.keys(keys)) {
                 logger.info(`Downloading decrypt keys. (${counter} / ${Object.keys(keys).length})`);
-                if (downloader.key) {
+                if (explicitKeys[counter - 1]) {
                     downloader.saveEncryptionKey(
                         CommonUtils.buildFullUrl(downloader.m3u8.m3u8Url, url),
-                        downloader.key
+                        explicitKeys[counter - 1]
                     );
                     continue;
                 }
