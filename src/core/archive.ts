@@ -183,6 +183,7 @@ class ArchiveDownloader extends Downloader {
 
         try {
             await this.parse();
+            await this.checkKeys();
         } catch (e) {
             logger.error("Failed to parse M3U8 file.");
             logger.debug(e);
@@ -515,6 +516,7 @@ class ArchiveDownloader extends Downloader {
         await this.loadM3U8();
         try {
             await this.parse();
+            await this.checkKeys();
         } catch (e) {
             logger.error("Fail to parse M3U8 file.");
             logger.debug(e);

@@ -19,7 +19,6 @@ export default class LiveDownloader extends Downloader {
     chunks: Chunk[] = [];
     runningThreads: number = 0;
 
-    isEncrypted: boolean = false;
     isEnd: boolean = false;
     isStarted: boolean = false;
     forceStop: boolean = false;
@@ -126,7 +125,6 @@ export default class LiveDownloader extends Downloader {
         );
 
         if (this.m3u8.encryptKeys.length > 0) {
-            this.isEncrypted = true;
             const key = this.m3u8.encryptKeys[0];
             if (key.startsWith("abematv-license")) {
                 logger.info("Site comfirmed: AbemaTV");
@@ -159,7 +157,6 @@ export default class LiveDownloader extends Downloader {
                 }
             }
         } else {
-            this.isEncrypted = false;
             // Not encrypted
             if (this.m3u8Path.includes("dmc.nico")) {
                 logger.info("Site comfirmed: Niconico.");
@@ -198,6 +195,7 @@ export default class LiveDownloader extends Downloader {
                 this.saveTask();
             }, 3000);
         }
+        await this.checkKeys();
         await this.cycling();
     }
 
@@ -259,6 +257,7 @@ export default class LiveDownloader extends Downloader {
             );
 
             await this.loadM3U8();
+            await this.checkKeys();
 
             if (!this.isStarted) {
                 this.isStarted = true;
