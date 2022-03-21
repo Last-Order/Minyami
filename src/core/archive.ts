@@ -90,12 +90,6 @@ class ArchiveDownloader extends Downloader {
                 parser.default.parse({
                     downloader: this,
                 });
-            } else if (this.m3u8Path.includes("dmm.com")) {
-                logger.info("Site comfirmed: DMM.");
-                const parser = await import("./parsers/dmm");
-                parser.default.parse({
-                    downloader: this,
-                });
             } else if (this.m3u8Path.includes("d22puzix29w08m")) {
                 logger.info("Site comfirmed: Hibiki-Radio.");
                 const parser = await import("./parsers/hibiki");
