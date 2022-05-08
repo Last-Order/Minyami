@@ -25,6 +25,7 @@ export interface DownloaderConfig {
     proxy?: string;
     format?: string;
     nomerge?: boolean;
+    keepEncryptedChunks?: boolean;
     cliMode?: boolean;
 }
 
@@ -128,6 +129,8 @@ class Downloader extends EventEmitter {
 
     encryptionKeys = {};
 
+    keepEncryptedChunks = false;
+
     // Hooks
     protected onChunkNaming: (chunk: M3U8Chunk | EncryptedM3U8Chunk) => string = (chunk) => {
         return new URL(chunk.url).pathname
@@ -152,6 +155,7 @@ class Downloader extends EventEmitter {
             headers,
             nomerge,
             cliMode = false,
+            keepEncryptedChunks,
         }: DownloaderConfig = {
             threads: 5,
         }
@@ -218,6 +222,15 @@ class Downloader extends EventEmitter {
 
         if (nomerge) {
             this.noMerge = nomerge;
+            logger.info("Temporary files will not be deleted automatically.");
+        }
+
+        if (keepEncryptedChunks) {
+            this.keepEncryptedChunks = keepEncryptedChunks;
+            logger.info("Encrypted chunks will not be deleted automatically.");
+            if (!this.noMerge) {
+                logger.warning(`--keep-encrypted-chunks should be used with --keep.`);
+            }
         }
 
         this.m3u8Path = m3u8Path;
@@ -323,7 +336,8 @@ class Downloader extends EventEmitter {
                         path.resolve(this.tempPath, `./${task.filename}`),
                         path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
                         this.getEncryptionKey(CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key)),
-                        task.iv || task.sequenceId.toString(16)
+                        task.iv || task.sequenceId.toString(16),
+                        this.keepEncryptedChunks
                     );
                     logger.debug(`Decrypting ${task.filename} succeed`);
                 }

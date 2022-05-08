@@ -35,7 +35,19 @@ export default class LiveDownloader extends Downloader {
      */
     constructor(
         m3u8Path: string,
-        { threads, output, key, verbose, retries, proxy, cookies, headers, nomerge, cliMode }: LiveDownloaderConfig
+        {
+            threads,
+            output,
+            key,
+            verbose,
+            retries,
+            proxy,
+            cookies,
+            headers,
+            nomerge,
+            keepEncryptedChunks,
+            cliMode,
+        }: LiveDownloaderConfig
     ) {
         super(m3u8Path, {
             threads: threads || 5,
@@ -47,6 +59,7 @@ export default class LiveDownloader extends Downloader {
             cookies,
             headers,
             nomerge,
+            keepEncryptedChunks,
             cliMode,
         });
         if (retries) {

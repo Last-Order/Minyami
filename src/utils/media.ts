@@ -143,7 +143,7 @@ export async function requestRaw(url: string, options: AxiosRequestConfig = {}):
  * @param key in hex
  * @param iv in hex
  */
-export function decrypt(input: string, output: string, key: string, iv: string) {
+export function decrypt(input: string, output: string, key: string, iv: string, keepEncryptedChunks = false) {
     return new Promise<void>((resolve) => {
         const algorithm = "aes-128-cbc";
         if (key.length !== 32) {
@@ -165,7 +165,7 @@ export function decrypt(input: string, output: string, key: string, iv: string) 
         const o = fs.createWriteStream(output);
         const pipe = i.pipe(decipher).pipe(o);
         pipe.on("finish", () => {
-            fs.unlinkSync(input);
+            !keepEncryptedChunks && fs.unlinkSync(input);
             resolve();
         });
     });

@@ -51,6 +51,7 @@ Help:
          --slice <range>           Download specified part of the stream
              <range>               Set time range in [<hh:mm:ss>-<hh:mm:ss> format]. eg. --slice "45:00-53:00"
          --nomerge, keep           Do not merge m3u8 chunks.
+         --keep-encrypted-chunks   Do not delete encrypted chunks after decryption. Use with --keep.
      --resume <input_path>         Resume a download. (Archive)  -r
          <input_path>              m3u8 file path
      --clean                       Clean cache files

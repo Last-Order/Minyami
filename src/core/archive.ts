@@ -54,6 +54,7 @@ class ArchiveDownloader extends Downloader {
             cookies,
             headers,
             nomerge,
+            keepEncryptedChunks,
             cliMode,
         }: ArchiveDownloaderConfig = {}
     ) {
@@ -68,6 +69,7 @@ class ArchiveDownloader extends Downloader {
             cookies,
             headers,
             nomerge,
+            keepEncryptedChunks,
             cliMode,
         });
         if (slice) {

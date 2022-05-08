@@ -46,6 +46,7 @@ Help:
          --slice <range>           下载部分内容
              <range>               设置时间范围，格式为 [<hh:mm:ss>-<hh:mm:ss> format] 例如 --slice "45:00-53:00"
          --nomerge, keep           不合并视频分块。
+         --keep-encrypted-chunks   不删除解密前分块。与--keep一起使用。
      --resume <input_path>         恢复下载 (不适用于直播)  -r
          <input_path>              m3u8 文件路径
      --clean                       清除缓存文件和任务信息
