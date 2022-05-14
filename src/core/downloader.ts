@@ -45,6 +45,7 @@ export interface Chunk {
     length: number;
     sequenceId?: number;
     retryCount?: number;
+    isInitialChunk?: boolean;
 }
 
 export interface ChunkAction {

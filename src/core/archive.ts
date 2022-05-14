@@ -199,6 +199,7 @@ class ArchiveDownloader extends Downloader {
                           sequenceId: chunk.sequenceId,
                           isEncrypted: true,
                           length: chunk.length,
+                          ...(chunk.isInitialChunk ? { isInitialChunk: true } : {}),
                       }
                     : {
                           url: chunk.url,
@@ -206,6 +207,7 @@ class ArchiveDownloader extends Downloader {
                           sequenceId: chunk.sequenceId,
                           isEncrypted: false,
                           length: chunk.length,
+                          ...(chunk.isInitialChunk ? { isInitialChunk: true } : {}),
                       };
             });
         }
@@ -248,12 +250,16 @@ class ArchiveDownloader extends Downloader {
                         newChunkList.push(newChunkItem);
                     }
                 } else {
-                    // 处理普通块
-                    if (nowTime >= this.sliceStart) {
+                    if (chunk.isInitialChunk) {
                         newChunkList.push(chunk);
-                        nowTime += chunk.length;
                     } else {
-                        nowTime += chunk.length;
+                        // 处理普通块
+                        if (nowTime >= this.sliceStart) {
+                            newChunkList.push(chunk);
+                            nowTime += chunk.length;
+                        } else {
+                            nowTime += chunk.length;
+                        }
                     }
                 }
             }

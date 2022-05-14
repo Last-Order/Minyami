@@ -3,17 +3,18 @@ import logger from "../utils/log";
 
 export class M3U8ParseError extends Error {}
 
-export interface M3U8Chunk {
+interface BaseChunk {
     url: string;
     sequenceId: number;
     length: number;
+    isInitialChunk?: boolean;
+}
+
+export interface M3U8Chunk extends BaseChunk {
     isEncrypted: false;
 }
 
-export interface EncryptedM3U8Chunk {
-    url: string;
-    sequenceId: number;
-    length: number;
+export interface EncryptedM3U8Chunk extends BaseChunk {
     key: string;
     iv: string;
     isEncrypted: true;
@@ -183,6 +184,7 @@ export class Playlist {
                     sequenceId: 0,
                     key,
                     iv,
+                    isInitialChunk: true,
                 });
             }
             if (currentLine.startsWith("#EXT-X-ENDLIST")) {
