@@ -19,7 +19,7 @@ export interface MinyamiTask {
     /** Cookie */
     cookies: string;
     /** HTTP Headers */
-    headers: object;
+    headers: Record<string, string>;
     key: string;
 
     /** 是否打印调试信息 */
