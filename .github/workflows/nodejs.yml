@@ -19,6 +19,7 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
                   cache: "npm"
+                  cache-dependency-path: npm-shrinkwrap.json
             - name: npm install, build
               run: |
                   npm ci
@@ -38,6 +39,7 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
                   cache: "npm"
+                  cache-dependency-path: npm-shrinkwrap.json
             - name: Checking code styles
               run: |
                   npm ci
