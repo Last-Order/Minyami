@@ -11,17 +11,17 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                node-version: [16]
+                node-version: [16, 18]
         steps:
             - uses: actions/checkout@v2
             - name: Use Node.js ${{ matrix.node-version }}
-              uses: actions/setup-node@v1
+              uses: actions/setup-node@v3
               with:
                   node-version: ${{ matrix.node-version }}
+                  cache: "npm"
             - name: npm install, build
               run: |
                   npm ci
-                  npm i -g typescript
                   npm run build
                   node ./dist/index.js --version
               env:
@@ -30,13 +30,14 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                node-version: [16]
+                node-version: [18]
         steps:
             - uses: actions/checkout@v2
             - name: Use Node.js ${{ matrix.node-version }}
-              uses: actions/setup-node@v1
+              uses: actions/setup-node@v3
               with:
                   node-version: ${{ matrix.node-version }}
+                  cache: "npm"
             - name: Checking code styles
               run: |
                   npm ci
