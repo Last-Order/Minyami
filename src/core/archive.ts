@@ -17,7 +17,6 @@ class ArchiveDownloader extends Downloader {
 
     chunks: ChunkItem[] = [];
     allChunks: ChunkItem[] = [];
-    pickedChunks: ChunkItem[] = [];
     // 使用 Object 的原因是使用数组，检索需要遍历数组 1/2 * n^2 次
     // 当有数千块的时候有那么一点点不可接受
     finishedFilenames: { [index: string]: any } = {};
@@ -368,7 +367,6 @@ class ArchiveDownloader extends Downloader {
                 chunk = this.chunks.shift() as Chunk;
                 // this.chunks.shift();
             }
-            this.pickedChunks.push(chunk);
             this.runningThreads++;
             this.handleTask(chunk)
                 .then(() => {

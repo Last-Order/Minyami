@@ -92,7 +92,6 @@ class Downloader extends EventEmitter {
 
     allChunks: ChunkItem[];
     chunks: ChunkItem[];
-    pickedChunks: ChunkItem[];
 
     /** Cookies */
     cookies: string;
@@ -279,10 +278,7 @@ class Downloader extends EventEmitter {
             } else {
                 this.m3u8 = m3u8;
             }
-            this.totalChunkLength = this.m3u8.chunks.reduce(
-                (prevLength, currentChunk) => prevLength + currentChunk.length,
-                0
-            );
+            this.totalChunkLength = this.m3u8.getTotalChunkLength();
         } catch (e) {
             logger.error("Aborted due to critical error.", e);
             this.emit("critical-error", e);
