@@ -142,11 +142,14 @@ export default class Parser {
         if (downloader) {
             if (downloader.chunks.length === 0) {
                 // 生成 Fake M3U8
-                const chunkLength = downloader.m3u8.getChunkLength();
-                const videoLength = parseFloat(downloader.m3u8.m3u8Content.match(/#DMC-STREAM-DURATION:(.+)/)[1]);
+				const isNicoVideo = downloader.m3u8.m3u8Content.match(/#DMC-STREAM-DURATION:(.+)/) === null;
+                const chunkLength = isNicoVideo ? 1 : downloader.m3u8.getChunkLength();
+                const videoLength = isNicoVideo ? (downloader.m3u8.m3u8Content.split(/\r\n|\r|\n/).length - 8) / 2 + 1 : parseFloat(downloader.m3u8.m3u8Content.match(/#DMC-STREAM-DURATION:(.+)/)[1]);
                 const firstChunkFilename = downloader.m3u8.chunks[0].url.match(/^(.+ts)/)[1];
                 let offset;
-                if (firstChunkFilename === "0.ts") {
+				if(isNicoVideo) {
+					offset = "";
+				} else if (firstChunkFilename === "0.ts") {
                     offset = downloader.m3u8.chunks[1].url.match(/(\d{3})\.ts/)[1];
                 } else {
                     offset = downloader.m3u8.chunks[0].url.match(/(\d{3})\.ts/)[1];
@@ -160,7 +163,7 @@ export default class Parser {
                     isNew: true,
                 };
                 let startTime;
-                for (let time = 0; time < videoLength; time += chunkLength) {
+                for (let time = isNicoVideo ? 1 : 0; time < videoLength; time += chunkLength) {
                     if (counter === 0) {
                         startTime = time.toString();
                         const pingUrl = downloader.m3u8Path.replace(/start=\d+/gi, `start=${startTime}`);
