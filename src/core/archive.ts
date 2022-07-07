@@ -123,20 +123,33 @@ class ArchiveDownloader extends Downloader {
             // Not encrypted
             if (this.m3u8Path.includes("dmc.nico")) {
                 // NicoNico
-                logger.info("Site comfirmed: NicoNico.");
-                const parser = await import("./parsers/nico");
-                if (!this.key) {
-                    logger.info("请保持播放页面不要关闭");
-                    logger.info("Please do not close the video page.");
-                    logger.info(`Maybe you should get a audience token to get a better user experience.`);
+                if (this.m3u8.m3u8Content.includes("#EXT-X-PLAYLIST-TYPE:VOD")) {
+                    logger.info("Site comfirmed: NicoVideo.");
+                    try {
+                        const parser = await import("./parsers/common");
+                        await parser.default.parse({
+                            downloader: this,
+                        });
+                    } catch (e) {
+                        logger.error("Aborted due to critical error.", e);
+                        this.emit("critical-error", e);
+                    }
+                } else {
+                    logger.info("Site comfirmed: NicoLive.");
+                    const parser = await import("./parsers/nico");
+                    if (!this.key) {
+                        logger.info("请保持播放页面不要关闭");
+                        logger.info("Please do not close the video page.");
+                        logger.info(`Maybe you should get a audience token to get a better user experience.`);
+                    }
+                    if (this.threads > 10) {
+                        logger.warning(`High threads setting detected. Use at your own risk!`);
+                    }
+                    parser.default.parse({
+                        downloader: this,
+                    });
+                    this.autoGenerateChunkList = false;
                 }
-                if (this.threads > 10) {
-                    logger.warning(`High threads setting detected. Use at your own risk!`);
-                }
-                parser.default.parse({
-                    downloader: this,
-                });
-                this.autoGenerateChunkList = false;
             } else if (this.m3u8Path.includes("googlevideo")) {
                 // YouTube
                 logger.info("Site comfirmed: YouTube.");
