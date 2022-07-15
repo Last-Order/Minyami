@@ -1,12 +1,10 @@
 import * as path from "path";
-import * as fs from "fs";
-import { URL } from "url";
 import axios, { AxiosRequestConfig } from "axios";
 import { EventEmitter } from "events";
 import logger from "../utils/log";
 import { loadM3U8 } from "../utils/m3u8";
-import * as system from "../utils/system";
-import CommonUtils from "../utils/common";
+import { buildFullUrl, getFileExt } from "../utils/common";
+import { deleteDirectory } from "../utils/system";
 import { download, decrypt } from "../utils/media";
 import ProxyAgentHelper from "../utils/agent";
 import UA from "../constants/ua";
@@ -133,10 +131,11 @@ class Downloader extends EventEmitter {
 
     // Hooks
     protected onChunkNaming: (chunk: M3U8Chunk | EncryptedM3U8Chunk) => string = (chunk) => {
-        return new URL(chunk.url).pathname
-            .split("/")
-            .slice(-1)[0]
-            .slice(8 - 255);
+        const ext = getFileExt(chunk.url);
+        if (chunk.isInitialChunk) {
+            return `init${ext ? `.${ext}` : ""}`;
+        }
+        return `${chunk.sequenceId}${ext ? `.${ext}` : ""}`;
     };
 
     protected async onKeyUpdated({ keyUrls, explicitKeys, saveEncryptionKey }: OnKeyUpdatedParams) {}
@@ -263,18 +262,26 @@ class Downloader extends EventEmitter {
      * 初始化 读取m3u8内容
      */
     async init() {
-        await this.loadM3U8();
+        await this.refreshM3U8();
     }
 
-    async loadM3U8() {
+    async refreshM3U8() {
         try {
-            const m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout);
+            const m3u8 = await loadM3U8({
+                path: this.m3u8Path,
+                retries: this.retries,
+                timeout: this.timeout,
+            });
             if (m3u8 instanceof MasterPlaylist) {
                 const streams = m3u8.streams;
                 const bestStream = streams.sort((a, b) => b.bandwidth - a.bandwidth)[0];
                 logger.info("Master playlist input detected. Auto selecting best quality streams.");
                 logger.debug(`Best stream: ${bestStream.url}; Bandwidth: ${bestStream.bandwidth}`);
-                this.m3u8 = (await loadM3U8(bestStream.url, this.retries, this.timeout)) as Playlist;
+                this.m3u8 = (await loadM3U8({
+                    path: bestStream.url,
+                    retries: this.retries,
+                    timeout: this.timeout,
+                })) as Playlist;
             } else {
                 this.m3u8 = m3u8;
             }
@@ -288,7 +295,7 @@ class Downloader extends EventEmitter {
     async checkKeys() {
         if (this.m3u8.encryptKeys.length > 0) {
             const newKeys = this.m3u8.encryptKeys.filter(
-                (key) => !this.getEncryptionKey(CommonUtils.buildFullUrl(this.m3u8.m3u8Url, key))
+                (key) => !this.getEncryptionKey(buildFullUrl(this.m3u8.m3u8Url, key))
             );
             if (newKeys.length > 0) {
                 await this.onKeyUpdated({
@@ -307,7 +314,7 @@ class Downloader extends EventEmitter {
     async clean() {
         try {
             logger.info("Starting cleaning temporary files.");
-            await system.deleteDirectory(this.tempPath, this.outputFileList);
+            await deleteDirectory(this.tempPath, this.outputFileList);
         } catch (e) {
             logger.warning(
                 `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
@@ -332,7 +339,7 @@ class Downloader extends EventEmitter {
                     await decrypt(
                         path.resolve(this.tempPath, `./${task.filename}`),
                         path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
-                        this.getEncryptionKey(CommonUtils.buildFullUrl(this.m3u8.m3u8Url, task.key)),
+                        this.getEncryptionKey(buildFullUrl(this.m3u8.m3u8Url, task.key)),
                         task.iv || task.sequenceId.toString(16),
                         this.keepEncryptedChunks
                     );

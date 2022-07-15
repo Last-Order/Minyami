@@ -1,4 +1,4 @@
-import CommonUtils from "../utils/common";
+import { buildFullUrl } from "../utils/common";
 import logger from "../utils/log";
 
 export class M3U8ParseError extends Error {}
@@ -82,7 +82,7 @@ export class MasterPlaylist {
                 if (!nextLine.startsWith("http") && !this.m3u8Url) {
                     throw new M3U8ParseError("Missing full url for M3U8.");
                 }
-                const url = CommonUtils.buildFullUrl(this.m3u8Url, nextLine);
+                const url = buildFullUrl(this.m3u8Url, nextLine);
                 const streamInfo: Stream = {
                     url,
                     bandwidth: +parsedTagBody["BANDWIDTH"],
@@ -103,18 +103,27 @@ export class MasterPlaylist {
     }
 }
 
+export interface PlaylistParseParams {
+    m3u8Content: string;
+    m3u8Url?: string;
+    /** default sequence number. use when m3u8 not containing #EXT-X-MEDIA-SEQUENCE */
+    sequenceId?: number;
+}
+
 export class Playlist {
     m3u8Content: string;
     m3u8Url: string;
+    sequenceId: number = 0;
     isEnd: boolean = false;
     chunks: (M3U8Chunk | EncryptedM3U8Chunk)[] = [];
     encryptKeys: string[] = [];
     averageChunkLength = 0;
     totalChunkLength = 0;
 
-    constructor({ m3u8Content, m3u8Url = "" }: { m3u8Content: string; m3u8Url?: string }) {
+    constructor({ m3u8Content, m3u8Url = "", sequenceId }: PlaylistParseParams) {
         this.m3u8Content = m3u8Content;
         this.m3u8Url = m3u8Url;
+        this.sequenceId = sequenceId || 0;
         this.parse();
     }
 
@@ -124,7 +133,6 @@ export class Playlist {
     private parse() {
         let key: string,
             iv: string,
-            sequenceId = 0,
             isEncrypted = false;
         const lines = this.m3u8Content.split("\n");
         for (let i = 0; i <= lines.length - 1; i++) {
@@ -140,7 +148,7 @@ export class Playlist {
                  * @see https://datatracker.ietf.org/doc/html/rfc8216#section-4.3.3.2
                  */
                 const tagBody = getTagBody(currentLine);
-                sequenceId = parseInt(tagBody);
+                this.sequenceId = parseInt(tagBody);
             }
             if (currentLine.startsWith("#EXT-X-KEY")) {
                 /**
@@ -179,7 +187,7 @@ export class Playlist {
                     throw new M3U8ParseError("Missing full url for M3U8.");
                 }
                 this.chunks.push({
-                    url: CommonUtils.buildFullUrl(this.m3u8Url, initialSegmentUrl),
+                    url: buildFullUrl(this.m3u8Url, initialSegmentUrl),
                     isEncrypted,
                     length: 0,
                     sequenceId: 0,
@@ -204,26 +212,26 @@ export class Playlist {
                 }
                 if (isEncrypted) {
                     this.chunks.push({
-                        url: CommonUtils.buildFullUrl(this.m3u8Url, nextLine),
+                        url: buildFullUrl(this.m3u8Url, nextLine),
                         length: chunkLength,
                         isEncrypted: true,
                         key,
                         iv,
-                        sequenceId,
+                        sequenceId: this.sequenceId,
                     });
                 } else {
                     this.chunks.push({
-                        url: CommonUtils.buildFullUrl(this.m3u8Url, nextLine),
+                        url: buildFullUrl(this.m3u8Url, nextLine),
                         length: chunkLength,
                         isEncrypted: false,
-                        sequenceId,
+                        sequenceId: this.sequenceId,
                     });
                 }
                 /**
                  * @see https://datatracker.ietf.org/doc/html/rfc8216#section-3
                  * The Media Sequence Number of the first segment in the Media Playlist is either 0 or declared in the * Playlist (Section 4.3.3.2). The Media Sequence Number of every other segment is equal to the Media * Sequence Number of the segment that precedes it plus one.
                  */
-                sequenceId++;
+                this.sequenceId++;
             }
         }
     }
@@ -254,15 +262,29 @@ export class Playlist {
 export default class M3U8 {
     m3u8Content: string;
     m3u8Url: string;
-    constructor({ m3u8Content, m3u8Url }: { m3u8Content: string; m3u8Url?: string }) {
+    initSequenceId: number;
+    constructor({
+        m3u8Content,
+        m3u8Url,
+        initSequenceId,
+    }: {
+        m3u8Content: string;
+        m3u8Url?: string;
+        initSequenceId?: number;
+    }) {
         this.m3u8Content = m3u8Content;
         this.m3u8Url = m3u8Url;
+        this.initSequenceId = initSequenceId;
     }
     parse() {
         if (this.m3u8Content.includes("#EXT-X-STREAM-INF")) {
             return new MasterPlaylist({ m3u8Content: this.m3u8Content, m3u8Url: this.m3u8Url });
         } else {
-            return new Playlist({ m3u8Content: this.m3u8Content, m3u8Url: this.m3u8Url });
+            return new Playlist({
+                m3u8Content: this.m3u8Content,
+                m3u8Url: this.m3u8Url,
+                sequenceId: this.initSequenceId,
+            });
         }
     }
 }

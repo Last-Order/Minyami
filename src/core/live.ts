@@ -7,6 +7,7 @@ import { loadM3U8 } from "../utils/m3u8";
 import logger from "../utils/log";
 import Downloader, { Chunk, LiveDownloaderConfig } from "./downloader";
 import { EncryptedM3U8Chunk, M3U8Chunk, MasterPlaylist, Playlist } from "./m3u8";
+import { getFileExt } from "../utils/common";
 
 /**
  * Live Downloader
@@ -18,6 +19,7 @@ export default class LiveDownloader extends Downloader {
     m3u8: Playlist;
     chunks: Chunk[] = [];
     runningThreads: number = 0;
+    totalCount: number = 0;
 
     isEnd: boolean = false;
     isStarted: boolean = false;
@@ -67,9 +69,22 @@ export default class LiveDownloader extends Downloader {
         }
     }
 
-    async loadM3U8() {
+    onChunkNaming = (chunk: M3U8Chunk | EncryptedM3U8Chunk): string => {
+        const ext = getFileExt(chunk.url);
+        if (chunk.isInitialChunk) {
+            return `init${ext ? `.${ext}` : ""}`;
+        }
+        return `${chunk.sequenceId}${ext ? `.${ext}` : ""}`;
+    };
+
+    async refreshM3U8() {
         try {
-            this.m3u8 = (await loadM3U8(this.m3u8Path, this.retries, this.timeout)) as Playlist;
+            this.m3u8 = (await loadM3U8({
+                path: this.m3u8Path,
+                retries: this.retries,
+                timeout: this.timeout,
+                initSequenceId: this.totalCount,
+            })) as Playlist;
         } catch (e) {
             if (this.finishedChunkCount > 0) {
                 const responseStatus = e?.response?.status;
@@ -114,13 +129,21 @@ export default class LiveDownloader extends Downloader {
 
         try {
             // first time loading playlist
-            const m3u8 = await loadM3U8(this.m3u8Path, this.retries, this.timeout);
+            const m3u8 = await loadM3U8({
+                path: this.m3u8Path,
+                retries: this.retries,
+                timeout: this.timeout,
+            });
             if (m3u8 instanceof MasterPlaylist) {
                 const streams = m3u8.streams;
                 const bestStream = streams.sort((a, b) => b.bandwidth - a.bandwidth)[0];
                 logger.info("Master playlist input detected. Auto selecting best quality streams.");
                 logger.debug(`Best stream: ${bestStream.url}; Bandwidth: ${bestStream.bandwidth}`);
-                this.m3u8 = (await loadM3U8(bestStream.url, this.retries, this.timeout)) as Playlist;
+                this.m3u8 = (await loadM3U8({
+                    path: bestStream.url,
+                    retries: this.retries,
+                    timeout: this.timeout,
+                })) as Playlist;
                 this.m3u8Path = bestStream.url;
             } else {
                 this.m3u8 = m3u8;
@@ -269,7 +292,9 @@ export default class LiveDownloader extends Downloader {
                 })
             );
 
-            await this.loadM3U8();
+            this.totalCount += currentUndownloadedChunks.length;
+
+            await this.refreshM3U8();
             await this.checkKeys();
 
             if (!this.isStarted) {

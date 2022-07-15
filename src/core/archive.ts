@@ -526,7 +526,7 @@ class ArchiveDownloader extends Downloader {
             };
         }
         // Load M3U8
-        await this.loadM3U8();
+        await this.refreshM3U8();
         try {
             await this.parse();
             await this.checkKeys();
