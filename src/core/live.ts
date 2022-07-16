@@ -127,33 +127,7 @@ export default class LiveDownloader extends Downloader {
             });
         }
 
-        try {
-            // first time loading playlist
-            const m3u8 = await loadM3U8({
-                path: this.m3u8Path,
-                retries: this.retries,
-                timeout: this.timeout,
-            });
-            if (m3u8 instanceof MasterPlaylist) {
-                const streams = m3u8.streams;
-                const bestStream = streams.sort((a, b) => b.bandwidth - a.bandwidth)[0];
-                logger.info("Master playlist input detected. Auto selecting best quality streams.");
-                logger.debug(`Best stream: ${bestStream.url}; Bandwidth: ${bestStream.bandwidth}`);
-                this.m3u8 = (await loadM3U8({
-                    path: bestStream.url,
-                    retries: this.retries,
-                    timeout: this.timeout,
-                })) as Playlist;
-                this.m3u8Path = bestStream.url;
-            } else {
-                this.m3u8 = m3u8;
-            }
-        } catch (e) {
-            logger.error("Aborted due to critical error.", e);
-            logger.info(`Your temporary files are located at [${path.resolve(this.tempPath)}]`);
-            this.saveTask();
-            this.emit("critical-error", e);
-        }
+        await this.loadM3U8();
 
         this.chunkTimeout = Math.min(
             Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000),

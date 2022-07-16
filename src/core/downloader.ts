@@ -262,10 +262,11 @@ class Downloader extends EventEmitter {
      * 初始化 读取m3u8内容
      */
     async init() {
-        await this.refreshM3U8();
+        await this.loadM3U8();
+        this.totalChunkLength = this.m3u8.getTotalChunkLength();
     }
 
-    async refreshM3U8() {
+    async loadM3U8() {
         try {
             const m3u8 = await loadM3U8({
                 path: this.m3u8Path,
@@ -285,7 +286,6 @@ class Downloader extends EventEmitter {
             } else {
                 this.m3u8 = m3u8;
             }
-            this.totalChunkLength = this.m3u8.getTotalChunkLength();
         } catch (e) {
             logger.error("Aborted due to critical error.", e);
             this.emit("critical-error", e);
