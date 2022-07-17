@@ -153,7 +153,8 @@ export default class Parser {
                 }
                 const suffix = downloader.m3u8.chunks[0].url.match(/\.ts(.+)/)[1];
                 const newChunkList = [];
-                let counter: number = 0;
+                let counter = 0;
+                let sequenceId = 0;
                 let chunkGroup: ChunkGroup = {
                     chunks: [],
                     isFinished: false,
@@ -192,8 +193,10 @@ export default class Parser {
                         filename: `${time.toString()}${offset}.ts`,
                         isEncrypted: false,
                         length: 5.0,
+                        sequenceId,
                     });
                     counter++;
+                    sequenceId++;
                     if (counter === 4) {
                         newChunkList.push(chunkGroup);
                         counter = 0;
