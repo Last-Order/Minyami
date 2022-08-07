@@ -201,16 +201,17 @@ class Downloader extends EventEmitter {
                     }
                 }
             }
-            // Apply global custom headers
-            axios.defaults.headers.common = {
-                ...axios.defaults.headers.common,
-                ...{
-                    "User-Agent": UA.CHROME_DEFAULT_UA,
-                },
-                ...(this.cookies ? { Cookie: this.cookies } : {}), // Cookies 优先级低于 Custom Headers
-                ...this.headers,
-            };
         }
+
+        // Apply global custom headers
+        axios.defaults.headers.common = {
+            ...axios.defaults.headers.common,
+            ...{
+                "User-Agent": UA.CHROME_DEFAULT_UA,
+            },
+            ...(this.cookies ? { Cookie: this.cookies } : {}), // Cookies 优先级低于 Custom Headers
+            ...this.headers,
+        };
 
         if (proxy) {
             this.proxy = proxy;
