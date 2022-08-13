@@ -5,9 +5,10 @@ import { mergeToMKV, mergeToTS } from "../utils/media";
 import { sleep } from "../utils/system";
 import { loadM3U8 } from "../utils/m3u8";
 import logger from "../utils/log";
-import Downloader, { Chunk, LiveDownloaderConfig } from "./downloader";
-import { EncryptedM3U8Chunk, M3U8Chunk, MasterPlaylist, Playlist } from "./m3u8";
+import Downloader, { DownloadTask, LiveDownloaderConfig } from "./downloader";
+import { isEncryptedChunk, M3U8Chunk, MasterPlaylist, Playlist } from "./m3u8";
 import { getFileExt } from "../utils/common";
+import FileConcentrator, { TaskStatus } from "./file_concentrator";
 
 /**
  * Live Downloader
@@ -15,9 +16,9 @@ import { getFileExt } from "../utils/common";
 
 export default class LiveDownloader extends Downloader {
     outputFileList: string[] = [];
-    finishedList: string[] = [];
+    finishedList: number[] = [];
     m3u8: Playlist;
-    chunks: Chunk[] = [];
+    downloadTasks: DownloadTask[] = [];
     runningThreads: number = 0;
     totalCount: number = 0;
 
@@ -27,7 +28,7 @@ export default class LiveDownloader extends Downloader {
 
     prefix: string;
 
-    retries = 3;
+    retries = 5;
 
     /**
      *
@@ -69,21 +70,13 @@ export default class LiveDownloader extends Downloader {
         }
     }
 
-    onChunkNaming = (chunk: M3U8Chunk | EncryptedM3U8Chunk): string => {
-        const ext = getFileExt(chunk.url);
-        if (chunk.isInitialChunk) {
-            return `init${ext ? `.${ext}` : ""}`;
-        }
-        return `${chunk.sequenceId}${ext ? `.${ext}` : ""}`;
-    };
-
     async refreshM3U8() {
         try {
             this.m3u8 = (await loadM3U8({
                 path: this.m3u8Path,
                 retries: this.retries,
                 timeout: this.timeout,
-                initSequenceId: this.totalCount,
+                initPrimaryKey: this.totalCount,
             })) as Playlist;
         } catch (e) {
             if (this.finishedChunkCount > 0) {
@@ -220,12 +213,12 @@ export default class LiveDownloader extends Downloader {
                 logger.info("Stream ended. Waiting for current tasks finished.");
                 this.isEnd = true;
             }
-            const currentPlaylistChunks: (M3U8Chunk | EncryptedM3U8Chunk)[] = [];
+            const currentPlaylistChunks: M3U8Chunk[] = [];
             this.m3u8.chunks.forEach((chunk) => {
                 try {
                     // 去重
-                    if (!this.finishedList.includes(this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url)) {
-                        this.finishedList.push(this.onChunkNaming ? this.onChunkNaming(chunk) : chunk.url);
+                    if (!this.finishedList.includes(chunk.primaryKey)) {
+                        this.finishedList.push(chunk.primaryKey);
                         currentPlaylistChunks.push(chunk);
                     }
                 } catch (e) {
@@ -234,39 +227,29 @@ export default class LiveDownloader extends Downloader {
                 }
             });
             logger.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
-            const currentUndownloadedChunks = currentPlaylistChunks.map((chunk) => {
+            const newTasks = currentPlaylistChunks.map((chunk) => {
                 const filename = this.onChunkNaming(chunk);
-                return chunk.isEncrypted
-                    ? {
-                          filename,
-                          isEncrypted: true,
-                          key: chunk.key,
-                          iv: chunk.iv,
-                          sequenceId: chunk.sequenceId,
-                          url: chunk.url,
-                          length: chunk.length,
-                      }
-                    : {
-                          filename,
-                          isEncrypted: false,
-                          sequenceId: chunk.sequenceId,
-                          url: chunk.url,
-                          length: chunk.length,
-                      };
+                return {
+                    filename,
+                    url: chunk.url,
+                    retryCount: 0,
+                    chunk,
+                };
             });
             // 加入待完成的任务列表
-            this.chunks.push(...currentUndownloadedChunks);
+            this.downloadTasks.push(...newTasks);
+
             this.outputFileList.push(
-                ...currentUndownloadedChunks.map((chunk) => {
-                    if (chunk.isEncrypted) {
-                        return path.resolve(this.tempPath, `./${chunk.filename}.decrypt`);
+                ...newTasks.map((task) => {
+                    if (isEncryptedChunk(task.chunk)) {
+                        return path.resolve(this.tempPath, `./${task.filename}.decrypt`);
                     } else {
-                        return path.resolve(this.tempPath, `./${chunk.filename}`);
+                        return path.resolve(this.tempPath, `./${task.filename}`);
                     }
                 })
             );
 
-            this.totalCount += currentUndownloadedChunks.length;
+            this.totalCount += newTasks.length;
 
             await this.refreshM3U8();
             await this.checkKeys();
@@ -288,12 +271,22 @@ export default class LiveDownloader extends Downloader {
     }
 
     checkQueue() {
-        if (this.chunks.length > 0 && this.runningThreads < this.threads) {
-            const task = this.chunks.shift();
+        if (this.downloadTasks.length > 0 && this.runningThreads < this.threads) {
+            const task = this.downloadTasks.shift();
             this.runningThreads++;
             this.handleTask(task)
                 .then(() => {
                     this.runningThreads--;
+
+                    this.fileConcentrator.addTasks([
+                        {
+                            filePath: isEncryptedChunk(task.chunk)
+                                ? path.resolve(this.tempPath, `./${task.filename}.decrypt`)
+                                : path.resolve(this.tempPath, `./${task.filename}`),
+                            index: task.chunk.primaryKey,
+                        },
+                    ]);
+
                     const currentChunkInfo = {
                         taskname: task.filename,
                         finishedChunksCount: this.finishedChunkCount,
@@ -318,12 +311,12 @@ export default class LiveDownloader extends Downloader {
                     logger.warning(`Processing ${task.filename} failed.`);
                     logger.debug(e.message);
                     this.runningThreads--;
-                    this.chunks.unshift(task); // 对直播流来说 早速重试比较好
+                    this.downloadTasks.unshift(task); // 对直播流来说 早速重试比较好
                     this.checkQueue();
                 });
             this.checkQueue();
         }
-        if (this.chunks.length === 0 && this.runningThreads === 0 && this.isEnd) {
+        if (this.downloadTasks.length === 0 && this.runningThreads === 0 && this.isEnd) {
             // 结束状态 合并文件
             this.emit("downloaded");
             if (this.noMerge) {
@@ -349,7 +342,7 @@ export default class LiveDownloader extends Downloader {
                 });
         }
 
-        if (this.chunks.length === 0 && this.runningThreads === 0 && !this.isEnd) {
+        if (this.downloadTasks.length === 0 && this.runningThreads === 0 && !this.isEnd) {
             // 空闲状态 一秒后再检查待完成任务列表
             logger.debug("Sleep 1000ms.");
             sleep(1000).then(() => {

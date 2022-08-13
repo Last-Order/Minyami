@@ -9,10 +9,10 @@ interface LoadM3U8Options {
     path: string;
     retries?: number;
     timeout?: number;
-    initSequenceId?: number;
+    initPrimaryKey?: number;
 }
 
-export async function loadM3U8({ path, retries = 1, timeout = 60000, initSequenceId }: LoadM3U8Options) {
+export async function loadM3U8({ path, retries = 1, timeout = 60000, initPrimaryKey }: LoadM3U8Options) {
     const proxyAgent = ProxyAgentHelper.getProxyAgentInstance();
     let m3u8Content;
     if (path.startsWith("http")) {
@@ -57,7 +57,7 @@ export async function loadM3U8({ path, retries = 1, timeout = 60000, initSequenc
                 source = null;
             }
         }
-        const m3u8 = new M3U8({ m3u8Content, m3u8Url: path, initSequenceId });
+        const m3u8 = new M3U8({ m3u8Content, m3u8Url: path, initPrimaryKey });
         return m3u8.parse();
     } else {
         // is a local file path

@@ -8,7 +8,8 @@ import { deleteDirectory } from "../utils/system";
 import { download, decrypt } from "../utils/media";
 import ProxyAgentHelper from "../utils/agent";
 import UA from "../constants/ua";
-import { EncryptedM3U8Chunk, M3U8Chunk, MasterPlaylist, Playlist } from "./m3u8";
+import FileConcentrator, { TaskStatus } from "./file_concentrator";
+import { isInitialChunk, M3U8Chunk, MasterPlaylist, Playlist } from "./m3u8";
 import type { ActionType } from "./action";
 import * as actions from "./action";
 
@@ -33,33 +34,27 @@ export interface ArchiveDownloaderConfig extends DownloaderConfig {
 
 export interface LiveDownloaderConfig extends DownloaderConfig {}
 
-export interface Chunk {
-    url: string;
+export interface DownloadTask {
     filename: string;
-    isEncrypted: boolean;
-    parentGroup?: ChunkGroup;
-    key?: string;
-    iv?: string;
-    length: number;
-    sequenceId?: number;
-    retryCount?: number;
-    isInitialChunk?: boolean;
+    parentGroup?: DownloadTaskGroup;
+    retryCount: number;
+    chunk: M3U8Chunk;
 }
 
-export interface ChunkAction {
+export interface DownloadTaskGroupAction {
     actionName: ActionType;
     actionParams: string;
 }
 
-export interface ChunkGroup {
-    chunks: Chunk[];
-    actions?: ChunkAction[];
+export interface DownloadTaskGroup {
+    subTasks: DownloadTask[];
+    actions?: DownloadTaskGroupAction[];
     isFinished: boolean;
     isNew: boolean;
     retryActions?: boolean;
 }
 
-export type ChunkItem = Chunk | ChunkGroup;
+export type DownloadTaskItem = DownloadTask | DownloadTaskGroup;
 
 export interface OnKeyUpdatedParams {
     keyUrls: string[];
@@ -68,8 +63,8 @@ export interface OnKeyUpdatedParams {
     saveEncryptionKey: (url: string, key: string) => void;
 }
 
-export function isChunkGroup(c: ChunkItem): c is ChunkGroup {
-    return !!(c as ChunkGroup).chunks;
+export function isTaskGroup(c: DownloadTaskItem): c is DownloadTaskGroup {
+    return !!(c as DownloadTaskGroup).subTasks;
 }
 
 class Downloader extends EventEmitter {
@@ -88,8 +83,8 @@ class Downloader extends EventEmitter {
     /** 并发数量 */
     threads: number = 5;
 
-    allChunks: ChunkItem[];
-    chunks: ChunkItem[];
+    downloadTasks: DownloadTaskItem[];
+    allDownloadTasks: DownloadTaskItem[];
 
     /** Cookies */
     cookies: string;
@@ -129,13 +124,14 @@ class Downloader extends EventEmitter {
 
     keepEncryptedChunks = false;
 
+    fileConcentrator: FileConcentrator;
+
+    taskStatusRecord: TaskStatus[];
+
     // Hooks
-    protected onChunkNaming: (chunk: M3U8Chunk | EncryptedM3U8Chunk) => string = (chunk) => {
+    protected onChunkNaming: (chunk: M3U8Chunk) => string = (chunk) => {
         const ext = getFileExt(chunk.url);
-        if (chunk.isInitialChunk) {
-            return `init${ext ? `.${ext}` : ""}`;
-        }
-        return `${chunk.sequenceId}${ext ? `.${ext}` : ""}`;
+        return `${chunk.primaryKey.toString().padStart(6, "0")}${ext ? `.${ext}` : ""}`;
     };
 
     protected async onKeyUpdated({ keyUrls, explicitKeys, saveEncryptionKey }: OnKeyUpdatedParams) {}
@@ -242,6 +238,14 @@ class Downloader extends EventEmitter {
             this.outputPath = this.outputPath + ".ts";
         }
 
+        if (!this.noMerge) {
+            this.fileConcentrator = new FileConcentrator({
+                outputPath: this.outputPath,
+                taskStatusRecord: this.taskStatusRecord,
+                deleteAfterWritten: true,
+            });
+        }
+
         this.cliMode = cliMode;
 
         if (cliMode) {
@@ -327,27 +331,32 @@ class Downloader extends EventEmitter {
      * 处理块下载任务
      * @param task 块下载任务
      */
-    handleTask(task: Chunk) {
-        logger.debug(`Downloading ${task.url}`);
+    handleTask(task: DownloadTask) {
+        logger.debug(`Downloading ${task.chunk.url}`);
         const options: AxiosRequestConfig = {};
         options.timeout = Math.min(((task.retryCount || 0) + 1) * this.chunkTimeout, this.chunkTimeout * 5);
         return new Promise<void>(async (resolve, reject) => {
             logger.debug(`Downloading ${task.filename}`);
             try {
-                await download(task.url, path.resolve(this.tempPath, `./${task.filename}`), options);
+                await download(task.chunk.url, path.resolve(this.tempPath, `./${task.filename}`), options);
                 logger.debug(`Downloading ${task.filename} succeed.`);
-                if (task.isEncrypted) {
+                if (task.chunk.isEncrypted) {
+                    const decryptIV = isInitialChunk(task.chunk)
+                        ? task.chunk.iv
+                        : task.chunk.iv || task.chunk.sequenceId.toString(16);
                     await decrypt(
                         path.resolve(this.tempPath, `./${task.filename}`),
                         path.resolve(this.tempPath, `./${task.filename}`) + ".decrypt",
-                        this.getEncryptionKey(buildFullUrl(this.m3u8.m3u8Url, task.key)),
-                        task.iv || task.sequenceId.toString(16),
+                        this.getEncryptionKey(buildFullUrl(this.m3u8.m3u8Url, task.chunk.key)),
+                        decryptIV,
                         this.keepEncryptedChunks
                     );
                     logger.debug(`Decrypting ${task.filename} succeed`);
                 }
                 this.finishedChunkCount++;
-                this.finishedChunkLength += task.length;
+                if (!isInitialChunk(task.chunk)) {
+                    this.finishedChunkLength += task.chunk.length;
+                }
                 resolve();
             } catch (e) {
                 logger.warning(
@@ -365,7 +374,7 @@ class Downloader extends EventEmitter {
         });
     }
 
-    async handleChunkGroupAction(action: ChunkAction) {
+    async handleChunkGroupAction(action: DownloadTaskGroupAction) {
         try {
             switch (action.actionName) {
                 case "ping": {
@@ -396,7 +405,7 @@ class Downloader extends EventEmitter {
         return this.encryptionKeys[url];
     }
 
-    setOnChunkNaming(handler: (chunk: M3U8Chunk | EncryptedM3U8Chunk) => string) {
+    setOnChunkNaming(handler: (chunk: M3U8Chunk) => string) {
         this.onChunkNaming = handler;
     }
 
