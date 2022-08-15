@@ -3,7 +3,7 @@ import axios, { AxiosRequestConfig } from "axios";
 import { EventEmitter } from "events";
 import logger from "../utils/log";
 import { loadM3U8 } from "../utils/m3u8";
-import { buildFullUrl, getFileExt } from "../utils/common";
+import { buildFullUrl, getAvailableOutputPath, getFileExt } from "../utils/common";
 import { deleteDirectory } from "../utils/system";
 import { download, decrypt } from "../utils/media";
 import ProxyAgentHelper from "../utils/agent";
@@ -126,7 +126,7 @@ class Downloader extends EventEmitter {
 
     fileConcentrator: FileConcentrator;
 
-    taskStatusRecord: TaskStatus[];
+    taskStatusRecord: TaskStatus[] = [];
 
     // Hooks
     protected onChunkNaming: (chunk: M3U8Chunk) => string = (chunk) => {
@@ -239,6 +239,7 @@ class Downloader extends EventEmitter {
         }
 
         if (!this.noMerge) {
+            this.outputPath = getAvailableOutputPath(this.outputPath);
             this.fileConcentrator = new FileConcentrator({
                 outputPath: this.outputPath,
                 taskStatusRecord: this.taskStatusRecord,

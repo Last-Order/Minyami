@@ -3,7 +3,7 @@ import * as os from "os";
 import * as path from "path";
 import axios from "axios";
 import { mergeToMKV, mergeToTS } from "../utils/media";
-import { deleteDirectory } from "../utils/system";
+import { deleteDirectory, deleteEmptyDirectory } from "../utils/system";
 import { saveTask, deleteTask, getTask } from "../utils/task";
 import { timeStringToSeconds } from "../utils/time";
 import logger from "../utils/log";
@@ -16,6 +16,7 @@ import Downloader, {
     DownloadTaskGroup,
 } from "./downloader";
 import { getFileExt } from "../utils/common";
+import { TaskStatus } from "./file_concentrator";
 
 class ArchiveDownloader extends Downloader {
     tempPath: string;
@@ -306,6 +307,7 @@ class ArchiveDownloader extends Downloader {
                 } else {
                     this.outputFileList.push(path.resolve(this.tempPath, `./${taskItem.filename}`));
                 }
+                this.taskStatusRecord[taskItem.chunk.primaryKey] = TaskStatus.PENDING;
             } else {
                 for (const t of taskItem.subTasks) {
                     if (isEncryptedChunk(t.chunk)) {
@@ -313,6 +315,7 @@ class ArchiveDownloader extends Downloader {
                     } else {
                         this.outputFileList.push(path.resolve(this.tempPath, `./${t.filename}`));
                     }
+                    this.taskStatusRecord[t.chunk.primaryKey] = TaskStatus.PENDING;
                 }
             }
         });
@@ -351,7 +354,7 @@ class ArchiveDownloader extends Downloader {
     async checkQueue() {
         if (this.downloadTasks.length > 0 && this.runningThreads < this.threads) {
             const firstTask = this.downloadTasks[0];
-            let chunk: DownloadTask;
+            let task: DownloadTask;
             if (isTaskGroup(firstTask)) {
                 if (firstTask.actions && firstTask.isNew) {
                     logger.debug(`Handle chunk actions for a new chunk group.`);
@@ -363,13 +366,13 @@ class ArchiveDownloader extends Downloader {
                     return;
                 }
                 if (firstTask.subTasks.length > 0) {
-                    chunk = firstTask.subTasks.shift();
-                    chunk.parentGroup = firstTask;
-                    if (chunk.parentGroup.retryActions) {
-                        for (const action of chunk.parentGroup.actions) {
+                    task = firstTask.subTasks.shift();
+                    task.parentGroup = firstTask;
+                    if (task.parentGroup.retryActions) {
+                        for (const action of task.parentGroup.actions) {
                             await this.handleChunkGroupAction(action);
                         }
-                        chunk.parentGroup.retryActions = false;
+                        task.parentGroup.retryActions = false;
                     }
                 } else {
                     // All chunks finished in group
@@ -380,15 +383,15 @@ class ArchiveDownloader extends Downloader {
                     return;
                 }
             } else {
-                chunk = this.downloadTasks.shift() as DownloadTask;
+                task = this.downloadTasks.shift() as DownloadTask;
                 // this.chunks.shift();
             }
             this.runningThreads++;
-            this.handleTask(chunk)
+            this.handleTask(task)
                 .then(() => {
                     this.runningThreads--;
                     const currentChunkInfo = {
-                        taskname: chunk.filename,
+                        taskname: task.filename,
                         finishedChunksCount: this.finishedChunkCount,
                         totalChunksCount: this.totalChunksCount,
                         chunkSpeed: this.calculateSpeedByChunk(),
@@ -406,34 +409,43 @@ class ArchiveDownloader extends Downloader {
                             currentChunkInfo.ratioSpeed
                         }x | ETA: ${currentChunkInfo.eta})`
                     );
-                    this.finishedFilenames[chunk.filename] = true;
+                    this.finishedFilenames[task.filename] = true;
+                    this.fileConcentrator.addTasks([
+                        {
+                            filePath: task.chunk.isEncrypted
+                                ? path.resolve(this.tempPath, `./${task.filename}.decrypt`)
+                                : path.resolve(this.tempPath, `./${task.filename}`),
+                            index: task.chunk.primaryKey,
+                        },
+                    ]);
+                    this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.DONE;
                     this.emit("chunk-downloaded", currentChunkInfo);
                     this.checkQueue();
                 })
                 .catch((e) => {
-                    this.emit("chunk-error", e, chunk.filename);
+                    this.emit("chunk-error", e, task.filename);
                     this.runningThreads--;
                     // 重试计数
-                    if (chunk.retryCount) {
-                        chunk.retryCount++;
+                    if (task.retryCount) {
+                        task.retryCount++;
                     } else {
-                        chunk.retryCount = 1;
+                        task.retryCount = 1;
                     }
-                    if (chunk.parentGroup) {
-                        if (chunk.parentGroup.isFinished) {
+                    if (task.parentGroup) {
+                        if (task.parentGroup.isFinished) {
                             // Add a new group to the queue.
                             this.downloadTasks.push({
-                                subTasks: [chunk],
-                                actions: chunk.parentGroup.actions,
+                                subTasks: [task],
+                                actions: task.parentGroup.actions,
                                 isFinished: false,
                                 isNew: true,
                             } as DownloadTaskGroup);
                         } else {
-                            chunk.parentGroup.retryActions = true;
-                            chunk.parentGroup.subTasks.push(chunk);
+                            task.parentGroup.retryActions = true;
+                            task.parentGroup.subTasks.push(task);
                         }
                     } else {
-                        this.downloadTasks.push(chunk);
+                        this.downloadTasks.push(task);
                     }
                     this.checkQueue();
                 });
@@ -449,41 +461,42 @@ class ArchiveDownloader extends Downloader {
             }
             this.isDownloaded = true;
             logger.info("All chunks downloaded. Start merging chunks.");
-            const muxer = this.format === "ts" ? mergeToTS : mergeToMKV;
-            // Save before merge
             this.emit("downloaded");
             this.saveTask();
             if (this.noMerge) {
                 logger.info("Skip merging. Please merge video chunks manually.");
                 logger.info(`Temporary files are located at ${this.tempPath}`);
                 this.emit("finished");
+                return;
             }
-            muxer(this.outputFileList, this.outputPath)
-                .then(async (outputPath) => {
-                    logger.info("End of merging.");
-                    logger.info("Starting cleaning temporary files.");
-                    try {
-                        await deleteDirectory(this.tempPath, this.outputFileList);
-                    } catch (e) {
-                        logger.warning(
-                            `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
-                        );
-                    }
-                    try {
-                        deleteTask(this.m3u8Path.split("?")[0]);
-                    } catch (error) {
-                        logger.warning("Fail to parse previous tasks, ignored.");
-                        logger.warning(error.message);
-                    }
-                    logger.info(`All finished. Check your file at [${path.resolve(outputPath)}] .`);
-                    this.emit("finished");
-                })
-                .catch(async (e) => {
-                    await this.clean();
-                    this.emit("merge-error", e);
-                    logger.error("Fail to merge video. Please merge video chunks manually.", e);
-                    logger.error(`Your temporary files at located at [${path.resolve(this.tempPath)}]`);
-                });
+            logger.info("Merging chunks...");
+            await this.fileConcentrator.waitAllFilesWritten();
+            logger.info("End of merging.");
+            logger.info("Starting cleaning temporary files.");
+            try {
+                await deleteEmptyDirectory(this.tempPath);
+            } catch (e) {
+                logger.warning(
+                    `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
+                );
+            }
+            try {
+                deleteTask(this.m3u8Path.split("?")[0]);
+            } catch (error) {
+                logger.warning("Fail to parse previous tasks, ignored.");
+                logger.warning(error.message);
+            }
+            const outputPaths = this.fileConcentrator.getOutputFilePaths();
+            if (outputPaths.length === 1) {
+                logger.info(`All finished. Please checkout your files at [${path.resolve(outputPaths[0])}]`);
+            } else {
+                logger.info(
+                    `All finished. Please checkout your files at ${outputPaths
+                        .map((p) => `[${path.resolve(p)}]`)
+                        .join(", ")}.`
+                );
+            }
+            this.emit("finished");
         }
     }
 

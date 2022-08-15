@@ -21,6 +21,12 @@ export const deleteDirectory = (directoryPath: string, fileList: string[] = []) 
     }
 };
 
+export const deleteEmptyDirectory = (directoryPath: string) => {
+    if (fs.readdirSync(directoryPath).length === 0) {
+        fs.rmdirSync(directoryPath);
+    }
+};
+
 export const forceDeleteDirectory = (directoryPath: string) => {
     const fileList = fs.readdirSync(directoryPath);
     for (const filename of fileList) {
