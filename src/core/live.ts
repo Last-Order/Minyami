@@ -1,21 +1,18 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { mergeToMKV, mergeToTS } from "../utils/media";
-import { sleep } from "../utils/system";
+import { deleteEmptyDirectory, sleep } from "../utils/system";
 import { loadM3U8 } from "../utils/m3u8";
 import logger from "../utils/log";
 import Downloader, { DownloadTask, LiveDownloaderConfig } from "./downloader";
 import { isEncryptedChunk, M3U8Chunk, MasterPlaylist, Playlist } from "./m3u8";
-import { getFileExt } from "../utils/common";
-import FileConcentrator, { TaskStatus } from "./file_concentrator";
+import { TaskStatus } from "./file_concentrator";
 
 /**
  * Live Downloader
  */
 
 export default class LiveDownloader extends Downloader {
-    outputFileList: string[] = [];
     finishedList: number[] = [];
     m3u8: Playlist;
     downloadTasks: DownloadTask[] = [];
@@ -236,18 +233,13 @@ export default class LiveDownloader extends Downloader {
                     chunk,
                 };
             });
-            // 加入待完成的任务列表
+
+            // 加入待完成的任务列表 并标记任务初始状态
             this.downloadTasks.push(...newTasks);
 
-            this.outputFileList.push(
-                ...newTasks.map((task) => {
-                    if (isEncryptedChunk(task.chunk)) {
-                        return path.resolve(this.tempPath, `./${task.filename}.decrypt`);
-                    } else {
-                        return path.resolve(this.tempPath, `./${task.filename}`);
-                    }
-                })
-            );
+            for (const task of newTasks) {
+                this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.PENDING;
+            }
 
             this.totalCount += newTasks.length;
 
@@ -287,6 +279,8 @@ export default class LiveDownloader extends Downloader {
                         },
                     ]);
 
+                    this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.DONE;
+
                     const currentChunkInfo = {
                         taskname: task.filename,
                         finishedChunksCount: this.finishedChunkCount,
@@ -308,10 +302,15 @@ export default class LiveDownloader extends Downloader {
                     } else {
                         task.retryCount = 1;
                     }
-                    logger.warning(`Processing ${task.filename} failed.`);
                     logger.debug(e.message);
                     this.runningThreads--;
-                    this.downloadTasks.unshift(task); // 对直播流来说 早速重试比较好
+                    if (task.retryCount >= this.retries) {
+                        this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.DROPPED;
+                        logger.warning(`Processing ${task.filename} failed, max retries exceed, drop.`);
+                    } else {
+                        logger.warning(`Processing ${task.filename} failed, retry later.`);
+                        this.downloadTasks.unshift(task); // 对直播流来说 早速重试比较好
+                    }
                     this.checkQueue();
                 });
             this.checkQueue();
@@ -325,13 +324,29 @@ export default class LiveDownloader extends Downloader {
                 this.saveTask();
                 this.emit("finished");
             }
-            logger.info(`${this.finishedChunkCount} chunks downloaded. Start merging chunks.`);
-            const muxer = this.format === "ts" ? mergeToTS : mergeToMKV;
-            muxer(this.outputFileList, this.outputPath)
-                .then(async (outputPath) => {
+            logger.info("Merging chunks...");
+            this.fileConcentrator
+                .waitAllFilesWritten()
+                .then(async () => {
                     logger.info("End of merging.");
-                    await this.clean();
-                    logger.info(`All finished. Check your file at [${path.resolve(outputPath)}] .`);
+                    logger.info("Starting cleaning temporary files.");
+                    try {
+                        await deleteEmptyDirectory(this.tempPath);
+                    } catch (e) {
+                        logger.warning(
+                            `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
+                        );
+                    }
+                    const outputPaths = this.fileConcentrator.getOutputFilePaths();
+                    if (outputPaths.length === 1) {
+                        logger.info(`All finished. Please checkout your files at [${path.resolve(outputPaths[0])}]`);
+                    } else {
+                        logger.info(
+                            `All finished. Please checkout your files at ${outputPaths
+                                .map((p) => `[${path.resolve(p)}]`)
+                                .join(", ")}.`
+                        );
+                    }
                     this.emit("finished");
                 })
                 .catch((e) => {
@@ -365,7 +380,6 @@ export default class LiveDownloader extends Downloader {
             retries: this.retries,
             timeout: this.timeout,
             proxy: this.proxy,
-            outputFileList: this.outputFileList,
         };
         const savePath = path.resolve(this.tempPath, "./task.json");
         try {

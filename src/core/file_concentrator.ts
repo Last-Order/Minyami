@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { sleep } from "../utils/system";
-import log from "../utils/log";
+import logger from "../utils/log";
 
 export enum TaskStatus {
     PENDING,
@@ -81,7 +81,7 @@ class FileConcentrator {
                 this.writeStream = fs.createWriteStream(
                     `${this.outputFilename}_${this.writeSequence}${this.outputFileExt ? `.${this.outputFileExt}` : ""}`
                 );
-                log.debug(`created new writestream, write sequence ${this.writeSequence}.`);
+                logger.debug(`created new writestream, write sequence ${this.writeSequence}.`);
             };
             if (this.writeStream) {
                 this.writeStream.end(() => {
@@ -106,13 +106,17 @@ class FileConcentrator {
             return;
         }
         this.isCheckingWritableFiles = true;
-        log.debug("check writable tasks start.");
+        logger.debug("check writable tasks start.");
         const writableTasks: ConcentrationTask[] = [];
         for (let i = this.lastFinishIndex + 1; i <= this.tasks.length; i++) {
             if (!this.tasks[i] && this.taskStatusRecords[i] === TaskStatus.DROPPED) {
-                if (!this.ignoreBreakpoints) {
+                if (
+                    !this.ignoreBreakpoints &&
+                    (this.writeSequence !== 0 || this.taskWriteCount[this.writeSequence] !== 0)
+                ) {
                     // 文件未下载 但是任务已经被丢弃 忽略空缺 记录文件分割点
-                    log.debug(`create new breakpoint at ${i}`);
+                    // 分割点之前还没有写入过则不分割
+                    logger.debug(`create new breakpoint at ${i}`);
                     this.breakpoints.push(i);
                 }
                 continue;
@@ -131,7 +135,7 @@ class FileConcentrator {
                 }
             }
         }
-        log.debug("check writable tasks end.");
+        logger.debug("check writable tasks end.");
         this.isCheckingWritableFiles = false;
     }
 
@@ -142,7 +146,7 @@ class FileConcentrator {
             let counter = 0;
             for (const task of tasks) {
                 if (this.breakpoints.includes(task.index - 1)) {
-                    log.debug(`meet write point at ${task.index}.`);
+                    logger.debug(`meet write point at ${task.index}.`);
                     this.writeSequence++;
                     await this.createNextWriteStream();
                 }

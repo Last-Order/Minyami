@@ -2,12 +2,11 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import axios from "axios";
-import { mergeToMKV, mergeToTS } from "../utils/media";
-import { deleteDirectory, deleteEmptyDirectory } from "../utils/system";
+import { deleteEmptyDirectory } from "../utils/system";
 import { saveTask, deleteTask, getTask } from "../utils/task";
 import { timeStringToSeconds } from "../utils/time";
 import logger from "../utils/log";
-import { isEncryptedChunk, isInitialChunk, Playlist } from "./m3u8";
+import { isInitialChunk, Playlist } from "./m3u8";
 import Downloader, {
     ArchiveDownloaderConfig,
     DownloadTaskItem,
@@ -28,7 +27,6 @@ class ArchiveDownloader extends Downloader {
     // 使用 Object 的原因是使用数组，检索需要遍历数组 1/2 * n^2 次
     // 当有数千块的时候有那么一点点不可接受
     finishedFilenames: { [index: string]: any } = {};
-    outputFileList: string[];
 
     totalChunksCount: number;
     runningThreads: number = 0;
@@ -299,26 +297,6 @@ class ArchiveDownloader extends Downloader {
             this.totalChunksCount += isTaskGroup(chunk) ? chunk.subTasks.length : 1;
         }
 
-        this.outputFileList = [];
-        this.downloadTasks.forEach((taskItem) => {
-            if (!isTaskGroup(taskItem)) {
-                if (isEncryptedChunk(taskItem.chunk)) {
-                    this.outputFileList.push(path.resolve(this.tempPath, `./${taskItem.filename}.decrypt`));
-                } else {
-                    this.outputFileList.push(path.resolve(this.tempPath, `./${taskItem.filename}`));
-                }
-                this.taskStatusRecord[taskItem.chunk.primaryKey] = TaskStatus.PENDING;
-            } else {
-                for (const t of taskItem.subTasks) {
-                    if (isEncryptedChunk(t.chunk)) {
-                        this.outputFileList.push(path.resolve(this.tempPath, `./${t.filename}.decrypt`));
-                    } else {
-                        this.outputFileList.push(path.resolve(this.tempPath, `./${t.filename}`));
-                    }
-                    this.taskStatusRecord[t.chunk.primaryKey] = TaskStatus.PENDING;
-                }
-            }
-        });
         if (this.verbose) {
             setInterval(() => {
                 logger.debug(
@@ -531,7 +509,6 @@ class ArchiveDownloader extends Downloader {
         this.proxy = previousTask.proxy;
         this.allDownloadTasks = previousTask.allDownloadTasks;
         this.downloadTasks = previousTask.downloadTasks;
-        this.outputFileList = previousTask.outputFileList;
         this.finishedFilenames = previousTask.finishedFilenames;
         if (this.headers && Object.keys(this.headers).length > 0) {
             // Apply global custom headers
@@ -620,7 +597,6 @@ class ArchiveDownloader extends Downloader {
                 proxy: this.proxy,
                 downloadTasks: unfinishedTasks,
                 allDownloadTasks: this.allDownloadTasks,
-                outputFileList: this.outputFileList,
                 finishedFilenames: this.finishedFilenames,
             });
         } catch (error) {
