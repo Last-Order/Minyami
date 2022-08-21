@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import { URL } from "url";
 import { sleep } from "../utils/system";
 import logger from "../utils/log";
 
@@ -204,6 +205,10 @@ class FileConcentrator {
 
     public getOutputFilePaths(): string[] {
         const result = [];
+        if (this.writeSequence === 0) {
+            result.push(`${this.outputFilename}${this.outputFileExt ? `.${this.outputFileExt}` : ""}`);
+            return;
+        }
         for (let i = 0; i <= this.writeSequence; i++) {
             result.push(`${this.outputFilename}_${i}${this.outputFileExt ? `.${this.outputFileExt}` : ""}`);
         }
