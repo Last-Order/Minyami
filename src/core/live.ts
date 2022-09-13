@@ -164,13 +164,6 @@ export default class LiveDownloader extends Downloader {
                 parser.default.parse({
                     downloader: this,
                 });
-            } else if (this.m3u8Path.includes("googlevideo")) {
-                // YouTube
-                logger.info("Site comfirmed: YouTube.");
-                const parser = await import("./parsers/youtube");
-                parser.default.parse({
-                    downloader: this,
-                });
             } else {
                 logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 try {
