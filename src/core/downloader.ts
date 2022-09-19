@@ -284,6 +284,7 @@ class Downloader extends EventEmitter {
                 const bestStream = streams.sort((a, b) => b.bandwidth - a.bandwidth)[0];
                 logger.info("Master playlist input detected. Auto selecting best quality streams.");
                 logger.debug(`Best stream: ${bestStream.url}; Bandwidth: ${bestStream.bandwidth}`);
+                this.m3u8Path = bestStream.url;
                 this.m3u8 = (await loadM3U8({
                     path: bestStream.url,
                     retries: this.retries,
