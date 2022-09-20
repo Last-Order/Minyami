@@ -263,16 +263,17 @@ export default class LiveDownloader extends Downloader {
                 .then(() => {
                     this.runningThreads--;
 
-                    this.fileConcentrator.addTasks([
-                        {
-                            filePath: isEncryptedChunk(task.chunk)
-                                ? path.resolve(this.tempPath, `./${task.filename}.decrypt`)
-                                : path.resolve(this.tempPath, `./${task.filename}`),
-                            index: task.chunk.primaryKey,
-                        },
-                    ]);
-
-                    this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.DONE;
+                    if (!this.noMerge) {
+                        this.fileConcentrator.addTasks([
+                            {
+                                filePath: isEncryptedChunk(task.chunk)
+                                    ? path.resolve(this.tempPath, `./${task.filename}.decrypt`)
+                                    : path.resolve(this.tempPath, `./${task.filename}`),
+                                index: task.chunk.primaryKey,
+                            },
+                        ]);
+                        this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.DONE;
+                    }
 
                     const currentChunkInfo = {
                         taskname: task.filename,
@@ -316,6 +317,7 @@ export default class LiveDownloader extends Downloader {
                 logger.info(`Temporary files are located at ${this.tempPath}`);
                 this.saveTask();
                 this.emit("finished");
+                return;
             }
             logger.info("Merging chunks...");
             this.fileConcentrator

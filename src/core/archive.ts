@@ -381,15 +381,17 @@ class ArchiveDownloader extends Downloader {
                         }x | ETA: ${currentChunkInfo.eta})`
                     );
                     this.finishedFilenames[task.filename] = true;
-                    this.fileConcentrator.addTasks([
-                        {
-                            filePath: task.chunk.isEncrypted
-                                ? path.resolve(this.tempPath, `./${task.filename}.decrypt`)
-                                : path.resolve(this.tempPath, `./${task.filename}`),
-                            index: task.chunk.primaryKey,
-                        },
-                    ]);
-                    this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.DONE;
+                    if (!this.noMerge) {
+                        this.fileConcentrator.addTasks([
+                            {
+                                filePath: task.chunk.isEncrypted
+                                    ? path.resolve(this.tempPath, `./${task.filename}.decrypt`)
+                                    : path.resolve(this.tempPath, `./${task.filename}`),
+                                index: task.chunk.primaryKey,
+                            },
+                        ]);
+                        this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.DONE;
+                    }
                     this.emit("chunk-downloaded", currentChunkInfo);
                     this.checkQueue();
                 })
@@ -397,11 +399,7 @@ class ArchiveDownloader extends Downloader {
                     this.emit("chunk-error", e, task.filename);
                     this.runningThreads--;
                     // 重试计数
-                    if (task.retryCount) {
-                        task.retryCount++;
-                    } else {
-                        task.retryCount = 1;
-                    }
+                    task.retryCount = task.retryCount ? task.retryCount + 1 : 1;
                     if (task.parentGroup) {
                         if (task.parentGroup.isFinished) {
                             // Add a new group to the queue.
