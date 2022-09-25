@@ -7,6 +7,7 @@ import logger from "../utils/log";
 import Downloader, { DownloadTask, LiveDownloaderConfig } from "./downloader";
 import { isEncryptedChunk, M3U8Chunk, Playlist } from "./m3u8";
 import { TaskStatus } from "./file_concentrator";
+import { getFileExt } from "../utils/common";
 
 /**
  * Live Downloader
@@ -208,8 +209,9 @@ export default class LiveDownloader extends Downloader {
             });
             logger.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
             const newTasks = currentPlaylistChunks.map((chunk, index) => {
+                const ext = getFileExt(chunk.url);
                 const id = this.totalCount + index;
-                const filename = id.toString().padStart(6, "0");
+                const filename = `${id.toString().padStart(6, "0")}${ext ? `.${ext}` : ""}`;
                 return {
                     filename,
                     url: chunk.url,
