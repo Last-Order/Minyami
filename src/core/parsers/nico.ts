@@ -184,12 +184,12 @@ export default class Parser {
                     chunkGroup.subTasks.push({
                         filename: `${time.toString()}${offset}.ts`,
                         retryCount: 0,
+                        id: sequenceId,
                         chunk: {
                             isEncrypted: false,
                             isInitialChunk: false,
                             length: 5.0,
                             sequenceId,
-                            primaryKey: sequenceId,
                             url:
                                 prefix +
                                 (time.toString() === "0"

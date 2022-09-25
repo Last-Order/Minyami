@@ -103,16 +103,6 @@ class ArchiveDownloader extends Downloader {
                 parser.default.parse({
                     downloader: this,
                 });
-            } else if (this.m3u8Path.includes("hls-auth.cloud.stream.co.jp")) {
-                logger.info("Site comfirmed: Nicochannel.");
-                const nicoChannelParser = await import("./parsers/nicochannel");
-                nicoChannelParser.default.parse({
-                    downloader: this,
-                });
-                const commonParser = await import("./parsers/common");
-                await commonParser.default.parse({
-                    downloader: this,
-                });
             } else {
                 logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 try {
@@ -201,13 +191,12 @@ class ArchiveDownloader extends Downloader {
         if (this.autoGenerateChunkList) {
             this.downloadTasks = this.m3u8.chunks.map((chunk, index) => {
                 const ext = getFileExt(chunk.url);
-                const sequenceNumber = index;
                 return {
                     url: chunk.url,
-                    filename: `${sequenceNumber}${ext ? `.${ext}` : ""}`,
+                    filename: `${index.toString().padStart(6, "0")}${ext ? `.${ext}` : ""}`,
                     retryCount: 0,
                     chunk,
-                    sequenceNumber,
+                    id: index,
                 };
             });
         }
@@ -387,10 +376,10 @@ class ArchiveDownloader extends Downloader {
                                 filePath: task.chunk.isEncrypted
                                     ? path.resolve(this.tempPath, `./${task.filename}.decrypt`)
                                     : path.resolve(this.tempPath, `./${task.filename}`),
-                                index: task.chunk.primaryKey,
+                                index: task.id,
                             },
                         ]);
-                        this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.DONE;
+                        this.taskStatusRecord[task.id] = TaskStatus.DONE;
                     }
                     this.emit("chunk-downloaded", currentChunkInfo);
                     this.checkQueue();
@@ -403,7 +392,7 @@ class ArchiveDownloader extends Downloader {
                     if (task.parentGroup) {
                         if (task.parentGroup.isFinished) {
                             // Add a new group to the queue.
-                            this.downloadTasks.push({
+                            this.downloadTasks.unshift({
                                 subTasks: [task],
                                 actions: task.parentGroup.actions,
                                 isFinished: false,
@@ -411,10 +400,10 @@ class ArchiveDownloader extends Downloader {
                             } as DownloadTaskGroup);
                         } else {
                             task.parentGroup.retryActions = true;
-                            task.parentGroup.subTasks.push(task);
+                            task.parentGroup.subTasks.unshift(task);
                         }
                     } else {
-                        this.downloadTasks.push(task);
+                        this.downloadTasks.unshift(task);
                     }
                     this.checkQueue();
                 });

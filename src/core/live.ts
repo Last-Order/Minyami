@@ -5,7 +5,7 @@ import { deleteEmptyDirectory, sleep } from "../utils/system";
 import { loadM3U8 } from "../utils/m3u8";
 import logger from "../utils/log";
 import Downloader, { DownloadTask, LiveDownloaderConfig } from "./downloader";
-import { isEncryptedChunk, M3U8Chunk, MasterPlaylist, Playlist } from "./m3u8";
+import { isEncryptedChunk, M3U8Chunk, Playlist } from "./m3u8";
 import { TaskStatus } from "./file_concentrator";
 
 /**
@@ -13,7 +13,7 @@ import { TaskStatus } from "./file_concentrator";
  */
 
 export default class LiveDownloader extends Downloader {
-    finishedList: number[] = [];
+    finishedList: string[] = [];
     m3u8: Playlist;
     downloadTasks: DownloadTask[] = [];
     runningThreads: number = 0;
@@ -132,16 +132,6 @@ export default class LiveDownloader extends Downloader {
                 parser.default.parse({
                     downloader: this,
                 });
-            } else if (this.m3u8Path.includes("hls-auth.cloud.stream.co.jp")) {
-                logger.info("Site comfirmed: Nicochannel.");
-                const nicoChannelParser = await import("./parsers/nicochannel");
-                nicoChannelParser.default.parse({
-                    downloader: this,
-                });
-                const commonParser = await import("./parsers/common");
-                await commonParser.default.parse({
-                    downloader: this,
-                });
             } else {
                 logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 try {
@@ -207,8 +197,8 @@ export default class LiveDownloader extends Downloader {
             this.m3u8.chunks.forEach((chunk) => {
                 try {
                     // 去重
-                    if (!this.finishedList.includes(chunk.primaryKey)) {
-                        this.finishedList.push(chunk.primaryKey);
+                    if (!this.finishedList.includes(chunk.url)) {
+                        this.finishedList.push(chunk.url);
                         currentPlaylistChunks.push(chunk);
                     }
                 } catch (e) {
@@ -217,13 +207,15 @@ export default class LiveDownloader extends Downloader {
                 }
             });
             logger.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
-            const newTasks = currentPlaylistChunks.map((chunk) => {
-                const filename = this.onChunkNaming(chunk);
+            const newTasks = currentPlaylistChunks.map((chunk, index) => {
+                const id = this.totalCount + index;
+                const filename = id.toString().padStart(6, "0");
                 return {
                     filename,
                     url: chunk.url,
                     retryCount: 0,
                     chunk,
+                    id,
                 };
             });
 
@@ -231,7 +223,7 @@ export default class LiveDownloader extends Downloader {
             this.downloadTasks.push(...newTasks);
 
             for (const task of newTasks) {
-                this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.PENDING;
+                this.taskStatusRecord[task.id] = TaskStatus.PENDING;
             }
 
             this.totalCount += newTasks.length;
@@ -269,10 +261,10 @@ export default class LiveDownloader extends Downloader {
                                 filePath: isEncryptedChunk(task.chunk)
                                     ? path.resolve(this.tempPath, `./${task.filename}.decrypt`)
                                     : path.resolve(this.tempPath, `./${task.filename}`),
-                                index: task.chunk.primaryKey,
+                                index: task.id,
                             },
                         ]);
-                        this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.DONE;
+                        this.taskStatusRecord[task.id] = TaskStatus.DONE;
                     }
 
                     const currentChunkInfo = {
@@ -299,7 +291,7 @@ export default class LiveDownloader extends Downloader {
                     logger.debug(e.message);
                     this.runningThreads--;
                     if (task.retryCount >= this.retries) {
-                        this.taskStatusRecord[task.chunk.primaryKey] = TaskStatus.DROPPED;
+                        this.taskStatusRecord[task.id] = TaskStatus.DROPPED;
                         logger.warning(`Processing ${task.filename} failed, max retries exceed, drop.`);
                     } else {
                         logger.warning(`Processing ${task.filename} failed, retry later.`);

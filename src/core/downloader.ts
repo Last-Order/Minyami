@@ -35,6 +35,7 @@ export interface ArchiveDownloaderConfig extends DownloaderConfig {
 export interface LiveDownloaderConfig extends DownloaderConfig {}
 
 export interface DownloadTask {
+    id: number;
     filename: string;
     parentGroup?: DownloadTaskGroup;
     retryCount: number;
@@ -127,12 +128,6 @@ class Downloader extends EventEmitter {
     fileConcentrator: FileConcentrator;
 
     taskStatusRecord: TaskStatus[] = [];
-
-    // Hooks
-    protected onChunkNaming: (chunk: M3U8Chunk) => string = (chunk) => {
-        const ext = getFileExt(chunk.url);
-        return `${chunk.primaryKey.toString().padStart(6, "0")}${ext ? `.${ext}` : ""}`;
-    };
 
     protected async onKeyUpdated({ keyUrls, explicitKeys, saveEncryptionKey }: OnKeyUpdatedParams) {}
 
@@ -405,10 +400,6 @@ class Downloader extends EventEmitter {
 
     getEncryptionKey(url: string) {
         return this.encryptionKeys[url];
-    }
-
-    setOnChunkNaming(handler: (chunk: M3U8Chunk) => string) {
-        this.onChunkNaming = handler;
     }
 
     setOnKeyUpdated(handler: (params: OnKeyUpdatedParams) => Promise<void>) {

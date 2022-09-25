@@ -5,8 +5,6 @@ export class M3U8ParseError extends Error {}
 
 interface BaseChunk {
     url: string;
-    /** primaryKey is a unique, ascending id for chunks */
-    primaryKey: number;
 }
 
 interface NormalChunk extends BaseChunk {
@@ -139,25 +137,21 @@ export class MasterPlaylist {
 export interface PlaylistParseParams {
     m3u8Content: string;
     m3u8Url?: string;
-    /** default primaryKey */
-    primaryKey?: number;
 }
 
 export class Playlist {
     m3u8Content: string;
     m3u8Url: string;
     sequenceId: number = 0;
-    primaryKey: number = 0;
     isEnd: boolean = false;
     chunks: M3U8Chunk[] = [];
     encryptKeys: string[] = [];
     averageChunkLength = 0;
     totalChunkLength = 0;
 
-    constructor({ m3u8Content, m3u8Url = "", primaryKey }: PlaylistParseParams) {
+    constructor({ m3u8Content, m3u8Url = "" }: PlaylistParseParams) {
         this.m3u8Content = m3u8Content;
         this.m3u8Url = m3u8Url;
-        this.primaryKey = primaryKey || 0;
         this.parse();
     }
 
@@ -235,9 +229,7 @@ export class Playlist {
                     key,
                     iv,
                     isInitialChunk: true,
-                    primaryKey: this.primaryKey,
                 });
-                this.primaryKey++;
             }
             if (currentLine.startsWith("#EXT-X-ENDLIST")) {
                 this.isEnd = true;
@@ -262,7 +254,6 @@ export class Playlist {
                         iv,
                         sequenceId: this.sequenceId,
                         isInitialChunk: false,
-                        primaryKey: this.primaryKey,
                     });
                 } else {
                     this.chunks.push({
@@ -271,7 +262,6 @@ export class Playlist {
                         isEncrypted: false,
                         sequenceId: this.sequenceId,
                         isInitialChunk: false,
-                        primaryKey: this.primaryKey,
                     });
                 }
                 /**
@@ -279,7 +269,6 @@ export class Playlist {
                  * The Media Sequence Number of the first segment in the Media Playlist is either 0 or declared in the * Playlist (Section 4.3.3.2). The Media Sequence Number of every other segment is equal to the Media * Sequence Number of the segment that precedes it plus one.
                  */
                 this.sequenceId++;
-                this.primaryKey++;
             }
         }
     }
@@ -333,7 +322,6 @@ export default class M3U8 {
             return new Playlist({
                 m3u8Content: this.m3u8Content,
                 m3u8Url: this.m3u8Url,
-                primaryKey: this.initPrimaryKey,
             });
         }
     }
