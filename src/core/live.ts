@@ -7,7 +7,6 @@ import logger from "../utils/log";
 import Downloader, { DownloadTask, LiveDownloaderConfig } from "./downloader";
 import { isEncryptedChunk, M3U8Chunk, Playlist } from "./m3u8";
 import { TaskStatus } from "./file_concentrator";
-import { getFileExt } from "../utils/common";
 
 /**
  * Live Downloader
@@ -47,6 +46,7 @@ export default class LiveDownloader extends Downloader {
             headers,
             nomerge,
             keepEncryptedChunks,
+            chunkNamingStrategy,
             cliMode,
         }: LiveDownloaderConfig
     ) {
@@ -61,6 +61,7 @@ export default class LiveDownloader extends Downloader {
             headers,
             nomerge,
             keepEncryptedChunks,
+            chunkNamingStrategy,
             cliMode,
         });
         if (retries) {
@@ -110,7 +111,7 @@ export default class LiveDownloader extends Downloader {
                     this.isEnd = true;
                     this.forceStop = true;
                 } else {
-                    logger.info("Force stop."); // TODO: reject all download promises
+                    logger.info("Force stopped."); // TODO: reject all download promises
                     logger.info(`Your temporary files are located at [${path.resolve(this.tempPath)}]`);
                     this.saveTask();
                     this.emit("finished");
@@ -152,6 +153,13 @@ export default class LiveDownloader extends Downloader {
             if (this.m3u8Path.includes("dmc.nico")) {
                 logger.info("Site comfirmed: Niconico.");
                 const parser = await import("./parsers/nicolive");
+                parser.default.parse({
+                    downloader: this,
+                });
+            } else if (this.m3u8Path.includes("googlevideo")) {
+                // YouTube
+                logger.info("Site comfirmed: YouTube.");
+                const parser = await import("./parsers/youtube");
                 parser.default.parse({
                     downloader: this,
                 });
@@ -208,17 +216,15 @@ export default class LiveDownloader extends Downloader {
                 }
             });
             logger.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
-            const newTasks = currentPlaylistChunks.map((chunk, index) => {
-                const ext = getFileExt(chunk.url);
+            const newTasks: DownloadTask[] = currentPlaylistChunks.map((chunk, index) => {
                 const id = this.totalCount + index;
-                const filename = `${id.toString().padStart(6, "0")}${ext ? `.${ext}` : ""}`;
                 return {
-                    filename,
+                    filename: this.onTaskOutputFileNaming(chunk, this.totalCount + index),
                     url: chunk.url,
                     retryCount: 0,
                     chunk,
                     id,
-                };
+                } as DownloadTask;
             });
 
             // 加入待完成的任务列表 并标记任务初始状态

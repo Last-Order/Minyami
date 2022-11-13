@@ -277,6 +277,12 @@ Erii.addOption({
     description: "Do not delete encrypted chunks after decryption.",
 });
 
+Erii.addOption({
+    name: ["chunk-naming-strategy"],
+    command: "download",
+    description: "Temporary file naming strategy. Defaults to 1.",
+});
+
 Erii.default(() => {
     Erii.showHelp();
 });

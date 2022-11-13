@@ -12,6 +12,7 @@ import FileConcentrator, { TaskStatus } from "./file_concentrator";
 import { isInitialChunk, M3U8Chunk, MasterPlaylist, Playlist } from "./m3u8";
 import type { ActionType } from "./action";
 import * as actions from "./action";
+import { NamingStrategy } from "./types";
 
 export interface DownloaderConfig {
     threads?: number;
@@ -25,6 +26,7 @@ export interface DownloaderConfig {
     format?: string;
     nomerge?: boolean;
     keepEncryptedChunks?: boolean;
+    chunkNamingStrategy?: NamingStrategy;
     cliMode?: boolean;
 }
 
@@ -125,11 +127,24 @@ class Downloader extends EventEmitter {
 
     keepEncryptedChunks = false;
 
+    chunkNamingStrategy = NamingStrategy.USE_FILE_SEQUENCE;
+
     fileConcentrator: FileConcentrator;
 
     taskStatusRecord: TaskStatus[] = [];
 
     protected async onKeyUpdated({ keyUrls, explicitKeys, saveEncryptionKey }: OnKeyUpdatedParams) {}
+
+    protected onTaskOutputFileNaming(chunk: M3U8Chunk, id: number) {
+        if (this.chunkNamingStrategy === NamingStrategy.USE_FILE_SEQUENCE) {
+            const ext = getFileExt(chunk.url);
+            return `${id.toString().padStart(6, "0")}${ext ? `.${ext}` : ""}`;
+        }
+        return new URL(chunk.url).pathname
+            .split("/")
+            .slice(-1)[0]
+            .slice(8 - 255);
+    }
 
     constructor(
         m3u8Path: string,
@@ -146,6 +161,7 @@ class Downloader extends EventEmitter {
             nomerge,
             cliMode = false,
             keepEncryptedChunks,
+            chunkNamingStrategy,
         }: DownloaderConfig = {
             threads: 5,
         }
@@ -222,6 +238,10 @@ class Downloader extends EventEmitter {
             if (!this.noMerge) {
                 logger.warning(`--keep-encrypted-chunks should be used with --keep.`);
             }
+        }
+        console.log(chunkNamingStrategy);
+        if (chunkNamingStrategy) {
+            this.chunkNamingStrategy = +chunkNamingStrategy;
         }
 
         this.m3u8Path = m3u8Path;
@@ -418,6 +438,10 @@ class Downloader extends EventEmitter {
      */
     calculateSpeedByRatio() {
         return (this.finishedChunkLength / Math.round((new Date().valueOf() - this.startedAt) / 1000)).toFixed(2);
+    }
+
+    setOnTaskOutputFileNaming(namingFunction: (chunk: M3U8Chunk, id: number) => string) {
+        this.onTaskOutputFileNaming = namingFunction;
     }
 }
 
