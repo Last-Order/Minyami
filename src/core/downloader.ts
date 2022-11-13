@@ -239,7 +239,6 @@ class Downloader extends EventEmitter {
                 logger.warning(`--keep-encrypted-chunks should be used with --keep.`);
             }
         }
-        console.log(chunkNamingStrategy);
         if (chunkNamingStrategy) {
             this.chunkNamingStrategy = +chunkNamingStrategy;
         }
