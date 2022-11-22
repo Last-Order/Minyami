@@ -270,6 +270,16 @@ class ArchiveDownloader extends Downloader {
             }
 
             this.downloadTasks = newChunkList;
+
+            // Mark skipped chunks as dropped
+            const firstChunk = isTaskGroup(this.downloadTasks[0])
+                ? this.downloadTasks[0].subTasks[0]
+                : this.downloadTasks[0];
+            if (firstChunk.id > 0) {
+                for (let i = 0; i < firstChunk.id; i++) {
+                    this.taskStatusRecord[i] = TaskStatus.DROPPED;
+                }
+            }
         }
 
         this.allDownloadTasks = this.downloadTasks.map((task) => {
