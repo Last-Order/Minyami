@@ -239,8 +239,7 @@ export default class LiveDownloader extends Downloader {
             await this.refreshM3U8();
             await this.checkKeys();
 
-            if (!this.isStarted) {
-                this.isStarted = true;
+            if (currentPlaylistChunks.length > 0) {
                 this.checkQueue();
             }
             logger.debug(`Cool down... Wait for next check`);
