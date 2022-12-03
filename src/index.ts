@@ -5,7 +5,7 @@ import * as path from "path";
 import Erii from "erii";
 import ArchiveDownloader from "./core/archive";
 import LiveDownloader from "./core/live";
-import { exec, forceDeleteDirectory } from "./utils/system";
+import { exec, forceDeleteDirectory, readConfigFile } from "./utils/system";
 import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
 import ProxyAgent from "./utils/agent";
@@ -60,7 +60,11 @@ Erii.bind(
             logger.enableDebugMode();
         }
         ProxyAgent.readProxyConfigurationFromEnv();
-        const downloadOptions = Object.assign(options, { cliMode: true, logger });
+        const fileOptions = readConfigFile();
+        if (Object.keys(fileOptions).length > 0) {
+            logger.debug(`Read config file: ${JSON.stringify(fileOptions)}`);
+        }
+        const downloadOptions = Object.assign(options, fileOptions, { cliMode: true, logger });
         if (options.live) {
             const downloader = new LiveDownloader(path, downloadOptions);
             downloader.on("finished", () => {
