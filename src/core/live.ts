@@ -121,10 +121,8 @@ export default class LiveDownloader extends Downloader {
 
         await this.loadM3U8();
 
-        this.chunkTimeout = Math.min(
-            Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000),
-            60000
-        );
+        this.timeout = Math.min(Math.max(20000, this.m3u8.chunks.length * this.m3u8.getChunkLength() * 1000), 60000);
+        this.chunkTimeout = Math.min(this.m3u8.getChunkLength() * 1000 * 20, 60000);
 
         if (this.m3u8.encryptKeys.length > 0) {
             const key = this.m3u8.encryptKeys[0];
