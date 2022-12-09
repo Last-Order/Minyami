@@ -19,9 +19,10 @@ export default class LiveDownloader extends Downloader {
     runningThreads: number = 0;
     totalCount: number = 0;
 
-    isEnd: boolean = false;
-    isStarted: boolean = false;
-    forceStop: boolean = false;
+    isEnd = false;
+    isDownloadFinished = false;
+    isStarted = false;
+    forceStop = false;
 
     prefix: string;
 
@@ -306,8 +307,9 @@ export default class LiveDownloader extends Downloader {
                 });
             this.checkQueue();
         }
-        if (this.downloadTasks.length === 0 && this.runningThreads === 0 && this.isEnd) {
+        if (this.downloadTasks.length === 0 && this.runningThreads === 0 && this.isEnd && !this.isDownloadFinished) {
             // 结束状态 合并文件
+            this.isDownloadFinished = true;
             this.emit("downloaded");
             if (this.noMerge) {
                 logger.info("Skip merging. Please merge video chunks manually.");
