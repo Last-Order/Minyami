@@ -15,7 +15,7 @@
                 "chalk": "^2.4.2",
                 "cli-progress": "^3.10.0",
                 "crypto-js": "^3.3.0",
-                "erii": "^2.0.3",
+                "erii": "^2.0.5",
                 "https-proxy-agent": "^5.0.0",
                 "socks-proxy-agent": "^6.1.0",
                 "ws": "^7.4.6"
@@ -191,14 +191,6 @@
                 "node": ">=6"
             }
         },
-        "node_modules/camelcase": {
-            "version": "5.3.1",
-            "resolved": "https://registry.npmjs.org/camelcase/-/camelcase-5.3.1.tgz",
-            "integrity": "sha512-L28STB170nwWS63UjtlEOE3dldQApaJXZkOI1uMFfzf3rRuPegHaHesyee+YxQ+W6SvRDQV6UrdOdRiR153wJg==",
-            "engines": {
-                "node": ">=6"
-            }
-        },
         "node_modules/chalk": {
             "version": "2.4.2",
             "resolved": "https://registry.npmjs.org/chalk/-/chalk-2.4.2.tgz",
@@ -366,14 +358,6 @@
                 }
             }
         },
-        "node_modules/decamelize": {
-            "version": "1.2.0",
-            "resolved": "https://registry.npmjs.org/decamelize/-/decamelize-1.2.0.tgz",
-            "integrity": "sha1-9lNNFRSCabIDUue+4m9QH5oZEpA=",
-            "engines": {
-                "node": ">=0.10.0"
-            }
-        },
         "node_modules/emoji-regex": {
             "version": "8.0.0",
             "resolved": "https://registry.npmjs.org/emoji-regex/-/emoji-regex-8.0.0.tgz",
@@ -392,14 +376,14 @@
             }
         },
         "node_modules/erii": {
-            "version": "2.0.3",
-            "resolved": "https://registry.npmjs.org/erii/-/erii-2.0.3.tgz",
-            "integrity": "sha512-b9pv8bB1bv5HIbmh2D+teudDWcrBO8GXyH0TZSXNGpGbflmtudQmPkQFGTY8TVbd31zpQgR6FgObNxfxON9AgA==",
+            "version": "2.0.5",
+            "resolved": "https://registry.npmjs.org/erii/-/erii-2.0.5.tgz",
+            "integrity": "sha512-HKW2cykE6U/afnCQG3M7liIZ0eGG2iGHL4VY+bm7cqFJtq+QfgF8hByxhqaXSElRtXOPWTa3azOKotQDOo7Rvg==",
             "dependencies": {
                 "chalk": "^2.4.1",
                 "clui": "^0.3.6",
-                "validator": "^10.2.0",
-                "yargs-parser": "^13.1.2"
+                "validator": "^13.7.0",
+                "yargs-parser": "^21.0.0"
             }
         },
         "node_modules/error-ex": {
@@ -1398,9 +1382,9 @@
             }
         },
         "node_modules/validator": {
-            "version": "10.11.0",
-            "resolved": "https://registry.npmjs.org/validator/-/validator-10.11.0.tgz",
-            "integrity": "sha512-X/p3UZerAIsbBfN/IwahhYaBbY68EN/UQBWHtsbXGT5bfrH/p4NQzUCG1kF/rtKaNpnJ7jAu6NGTdSNtyNIXMw==",
+            "version": "13.7.0",
+            "resolved": "https://registry.npmjs.org/validator/-/validator-13.7.0.tgz",
+            "integrity": "sha512-nYXQLCBkpJ8X6ltALua9dRrZDHVYxjJ1wgskNt1lH9fzGjs3tgojGSCBjmEPwkWS1y29+DrizMTW19Pr9uB2nw==",
             "engines": {
                 "node": ">= 0.10"
             }
@@ -1500,12 +1484,11 @@
             }
         },
         "node_modules/yargs-parser": {
-            "version": "13.1.2",
-            "resolved": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-13.1.2.tgz",
-            "integrity": "sha512-3lbsNRf/j+A4QuSZfDRA7HRSfWrzO0YjqTJd5kjAq37Zep1CEgaYmrH9Q3GwPiB9cHyd1Y1UwggGhJGoxipbzg==",
-            "dependencies": {
-                "camelcase": "^5.0.0",
-                "decamelize": "^1.2.0"
+            "version": "21.1.1",
+            "resolved": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-21.1.1.tgz",
+            "integrity": "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==",
+            "engines": {
+                "node": ">=12"
             }
         }
     },
@@ -1627,11 +1610,6 @@
             "resolved": "https://registry.npmjs.org/callsites/-/callsites-3.1.0.tgz",
             "integrity": "sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==",
             "dev": true
-        },
-        "camelcase": {
-            "version": "5.3.1",
-            "resolved": "https://registry.npmjs.org/camelcase/-/camelcase-5.3.1.tgz",
-            "integrity": "sha512-L28STB170nwWS63UjtlEOE3dldQApaJXZkOI1uMFfzf3rRuPegHaHesyee+YxQ+W6SvRDQV6UrdOdRiR153wJg=="
         },
         "chalk": {
             "version": "2.4.2",
@@ -1765,11 +1743,6 @@
                 "ms": "2.1.2"
             }
         },
-        "decamelize": {
-            "version": "1.2.0",
-            "resolved": "https://registry.npmjs.org/decamelize/-/decamelize-1.2.0.tgz",
-            "integrity": "sha1-9lNNFRSCabIDUue+4m9QH5oZEpA="
-        },
         "emoji-regex": {
             "version": "8.0.0",
             "resolved": "https://registry.npmjs.org/emoji-regex/-/emoji-regex-8.0.0.tgz",
@@ -1785,14 +1758,14 @@
             }
         },
         "erii": {
-            "version": "2.0.3",
-            "resolved": "https://registry.npmjs.org/erii/-/erii-2.0.3.tgz",
-            "integrity": "sha512-b9pv8bB1bv5HIbmh2D+teudDWcrBO8GXyH0TZSXNGpGbflmtudQmPkQFGTY8TVbd31zpQgR6FgObNxfxON9AgA==",
+            "version": "2.0.5",
+            "resolved": "https://registry.npmjs.org/erii/-/erii-2.0.5.tgz",
+            "integrity": "sha512-HKW2cykE6U/afnCQG3M7liIZ0eGG2iGHL4VY+bm7cqFJtq+QfgF8hByxhqaXSElRtXOPWTa3azOKotQDOo7Rvg==",
             "requires": {
                 "chalk": "^2.4.1",
                 "clui": "^0.3.6",
-                "validator": "^10.2.0",
-                "yargs-parser": "^13.1.2"
+                "validator": "^13.7.0",
+                "yargs-parser": "^21.0.0"
             }
         },
         "error-ex": {
@@ -2564,9 +2537,9 @@
             "dev": true
         },
         "validator": {
-            "version": "10.11.0",
-            "resolved": "https://registry.npmjs.org/validator/-/validator-10.11.0.tgz",
-            "integrity": "sha512-X/p3UZerAIsbBfN/IwahhYaBbY68EN/UQBWHtsbXGT5bfrH/p4NQzUCG1kF/rtKaNpnJ7jAu6NGTdSNtyNIXMw=="
+            "version": "13.7.0",
+            "resolved": "https://registry.npmjs.org/validator/-/validator-13.7.0.tgz",
+            "integrity": "sha512-nYXQLCBkpJ8X6ltALua9dRrZDHVYxjJ1wgskNt1lH9fzGjs3tgojGSCBjmEPwkWS1y29+DrizMTW19Pr9uB2nw=="
         },
         "which": {
             "version": "2.0.2",
@@ -2627,13 +2600,9 @@
             "dev": true
         },
         "yargs-parser": {
-            "version": "13.1.2",
-            "resolved": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-13.1.2.tgz",
-            "integrity": "sha512-3lbsNRf/j+A4QuSZfDRA7HRSfWrzO0YjqTJd5kjAq37Zep1CEgaYmrH9Q3GwPiB9cHyd1Y1UwggGhJGoxipbzg==",
-            "requires": {
-                "camelcase": "^5.0.0",
-                "decamelize": "^1.2.0"
-            }
+            "version": "21.1.1",
+            "resolved": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-21.1.1.tgz",
+            "integrity": "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw=="
         }
     }
 }

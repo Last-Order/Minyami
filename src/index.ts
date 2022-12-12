@@ -2,7 +2,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import Erii from "erii";
+import Erii from "Erii";
 import ArchiveDownloader from "./core/archive";
 import LiveDownloader from "./core/live";
 import { exec, forceDeleteDirectory, readConfigFile } from "./utils/system";
@@ -64,9 +64,15 @@ Erii.bind(
         if (Object.keys(fileOptions).length > 0) {
             logger.debug(`Read config file: ${JSON.stringify(fileOptions)}`);
         }
-        const downloadOptions = Object.assign(options, fileOptions, { cliMode: true, logger });
+        for (const key of Object.keys(fileOptions)) {
+            if (!options[key]) {
+                options[key] = fileOptions[key];
+            }
+        }
+        const finalOptions = Object.assign(options, { cliMode: true, logger });
+        console.log(finalOptions.chunkNamingStrategy);
         if (options.live) {
-            const downloader = new LiveDownloader(path, downloadOptions);
+            const downloader = new LiveDownloader(path, finalOptions);
             downloader.on("finished", () => {
                 process.exit();
             });
@@ -75,7 +81,7 @@ Erii.bind(
             });
             await downloader.download();
         } else {
-            const downloader = new ArchiveDownloader(path, downloadOptions);
+            const downloader = new ArchiveDownloader(path, finalOptions);
             downloader.on("finished", () => {
                 process.exit();
             });
