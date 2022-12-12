@@ -2,7 +2,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import Erii from "Erii";
+import Erii from "erii";
 import ArchiveDownloader from "./core/archive";
 import LiveDownloader from "./core/live";
 import { exec, forceDeleteDirectory, readConfigFile } from "./utils/system";
