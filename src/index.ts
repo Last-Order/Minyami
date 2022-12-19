@@ -70,7 +70,6 @@ Erii.bind(
             }
         }
         const finalOptions = Object.assign(options, { cliMode: true, logger });
-        console.log(finalOptions.chunkNamingStrategy);
         if (options.live) {
             const downloader = new LiveDownloader(path, finalOptions);
             downloader.on("finished", () => {

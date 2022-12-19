@@ -272,12 +272,25 @@ class ArchiveDownloader extends Downloader {
             this.downloadTasks = newChunkList;
 
             // Mark skipped chunks as dropped
-            const firstChunk = isTaskGroup(this.downloadTasks[0])
+            const firstTask = isTaskGroup(this.downloadTasks[0])
                 ? this.downloadTasks[0].subTasks[0]
                 : this.downloadTasks[0];
-            if (firstChunk.id > 0) {
-                for (let i = 0; i < firstChunk.id; i++) {
+            if (firstTask.id > 0) {
+                for (let i = 0; i < firstTask.id; i++) {
                     this.taskStatusRecord[i] = TaskStatus.DROPPED;
+                }
+            } else if (firstTask.chunk.isInitialChunk) {
+                // re-index chunks
+                if (isTaskGroup(this.downloadTasks[0])) {
+                    // TODO: not supported
+                    logger.error("TaskGroup is not supported when initial segment is provided.");
+                    return;
+                } else {
+                    this.downloadTasks.slice(1).forEach((task, index) => {
+                        if (!isTaskGroup(task)) {
+                            task.id = index;
+                        }
+                    });
                 }
             }
         }
