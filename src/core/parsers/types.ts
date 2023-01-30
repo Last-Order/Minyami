@@ -1,5 +1,5 @@
-import M3U8 from "../m3u8";
 import { AxiosProxyConfig } from "axios";
+import M3U8 from "../m3u8";
 import Downloader from "../downloader";
 
 export interface ParserOptions {

@@ -127,7 +127,7 @@ class Downloader extends EventEmitter {
 
     keepEncryptedChunks = false;
 
-    chunkNamingStrategy = NamingStrategy.USE_FILE_SEQUENCE;
+    chunkNamingStrategy = NamingStrategy.MIXED;
 
     fileConcentrator: FileConcentrator;
 
@@ -136,6 +136,12 @@ class Downloader extends EventEmitter {
     protected async onKeyUpdated({ keyUrls, explicitKeys, saveEncryptionKey }: OnKeyUpdatedParams) {}
 
     protected onTaskOutputFileNaming(chunk: M3U8Chunk, id: number) {
+        if (this.chunkNamingStrategy === NamingStrategy.MIXED) {
+            return `${id.toString().padStart(6, "0")}_${new URL(chunk.url).pathname
+                .split("/")
+                .slice(-1)[0]
+                .slice(16 - 255)}`;
+        }
         if (this.chunkNamingStrategy === NamingStrategy.USE_FILE_SEQUENCE) {
             const ext = getFileExt(chunk.url);
             return `${id.toString().padStart(6, "0")}${ext ? `.${ext}` : ""}`;
