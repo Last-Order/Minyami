@@ -106,7 +106,7 @@ export function download(url: string, path: string, options: AxiosRequestConfig 
             ) {
                 reject(new Error("Bad Response"));
             }
-            const tempPath = path + '.t';
+            const tempPath = path + ".t";
             fs.writeFileSync(tempPath, response.data);
             fs.renameSync(tempPath, path);
             resolve();
@@ -164,7 +164,7 @@ export function decrypt(input: string, output: string, key: string, iv: string, 
 
         const decipher = crypto.createDecipheriv(algorithm, keyBuffer, ivBuffer);
         const i = fs.createReadStream(input);
-        const tempOutput = output + '.t';
+        const tempOutput = output + ".t";
         const o = fs.createWriteStream(tempOutput);
         const pipe = i.pipe(decipher).pipe(o);
         pipe.on("finish", () => {
