@@ -168,9 +168,11 @@ export function decrypt(input: string, output: string, key: string, iv: string, 
         const o = fs.createWriteStream(tempOutput);
         const pipe = i.pipe(decipher).pipe(o);
         pipe.on("finish", () => {
+            resolve();
+        });
+        pipe.on("close", () => {
             !keepEncryptedChunks && fs.unlinkSync(input);
             fs.renameSync(tempOutput, output);
-            resolve();
         });
     });
 }
