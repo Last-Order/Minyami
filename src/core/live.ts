@@ -39,6 +39,7 @@ export default class LiveDownloader extends Downloader {
         {
             threads,
             output,
+            tempDir,
             key,
             verbose,
             retries,
@@ -54,6 +55,7 @@ export default class LiveDownloader extends Downloader {
         super(m3u8Path, {
             threads: threads || 5,
             output,
+            tempDir,
             key,
             verbose,
             retries,
@@ -99,7 +101,7 @@ export default class LiveDownloader extends Downloader {
         // Record start time to calculate speed.
         this.startedAt = new Date().valueOf();
         // Allocate temporary directory.
-        this.tempPath = path.resolve(os.tmpdir(), "minyami_" + new Date().valueOf());
+        this.tempPath = path.resolve(this.tempPath, "minyami_" + new Date().valueOf());
 
         if (!fs.existsSync(this.tempPath)) {
             fs.mkdirSync(this.tempPath);

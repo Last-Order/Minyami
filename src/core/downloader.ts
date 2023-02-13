@@ -1,4 +1,6 @@
 import * as path from "path";
+import * as fs from "fs";
+import * as os from "os";
 import axios, { AxiosRequestConfig } from "axios";
 import { EventEmitter } from "events";
 import logger from "../utils/log";
@@ -17,6 +19,7 @@ import { NamingStrategy } from "./types";
 export interface DownloaderConfig {
     threads?: number;
     output?: string;
+    tempDir?: string;
     key?: string;
     verbose?: boolean;
     cookies?: string;
@@ -168,6 +171,7 @@ class Downloader extends EventEmitter {
             cliMode = false,
             keepEncryptedChunks,
             chunkNamingStrategy,
+            tempDir,
         }: DownloaderConfig = {
             threads: 5,
         }
@@ -180,6 +184,18 @@ class Downloader extends EventEmitter {
 
         if (output) {
             this.outputPath = output;
+        }
+
+        if (tempDir) {
+            if (!fs.existsSync(tempDir)) {
+                logger.error("Temporary path directory not exists.");
+                this.emit("critical-error", new Error("Temporary path directory not exists."));
+                return;
+            }
+            logger.info(`Temporary path sets to ${path.resolve(tempDir)}`);
+            this.tempPath = path.resolve(tempDir);
+        } else {
+            this.tempPath = path.resolve(os.tmpdir());
         }
 
         if (key) {

@@ -190,6 +190,16 @@ Erii.addOption({
 });
 
 Erii.addOption({
+    name: ["temp-dir"],
+    command: "download",
+    description: "Temporary file path",
+    argument: {
+        name: "path",
+        description: "(Optional) Temporary file path, defaults to env.TEMP",
+    },
+});
+
+Erii.addOption({
     name: ["key"],
     command: "download",
     description: "Set key manually (Internal use)",
