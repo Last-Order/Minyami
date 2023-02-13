@@ -140,7 +140,7 @@ class Downloader extends EventEmitter {
             return `${id.toString().padStart(6, "0")}_${new URL(chunk.url).pathname
                 .split("/")
                 .slice(-1)[0]
-                .slice(16 - 255)}`;
+                .slice(17 - 255)}`;
         }
         if (this.chunkNamingStrategy === NamingStrategy.USE_FILE_SEQUENCE) {
             const ext = getFileExt(chunk.url);
@@ -149,7 +149,7 @@ class Downloader extends EventEmitter {
         return new URL(chunk.url).pathname
             .split("/")
             .slice(-1)[0]
-            .slice(8 - 255);
+            .slice(10 - 255);
     }
 
     constructor(

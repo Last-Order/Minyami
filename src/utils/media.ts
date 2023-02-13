@@ -106,7 +106,9 @@ export function download(url: string, path: string, options: AxiosRequestConfig 
             ) {
                 reject(new Error("Bad Response"));
             }
-            fs.writeFileSync(path, response.data);
+            const tempPath = path + '.t';
+            fs.writeFileSync(tempPath, response.data);
+            fs.renameSync(tempPath, path);
             resolve();
         } catch (e) {
             reject(e);
@@ -162,10 +164,12 @@ export function decrypt(input: string, output: string, key: string, iv: string, 
 
         const decipher = crypto.createDecipheriv(algorithm, keyBuffer, ivBuffer);
         const i = fs.createReadStream(input);
-        const o = fs.createWriteStream(output);
+        const tempOutput = output + '.t';
+        const o = fs.createWriteStream(tempOutput);
         const pipe = i.pipe(decipher).pipe(o);
         pipe.on("finish", () => {
             !keepEncryptedChunks && fs.unlinkSync(input);
+            fs.renameSync(tempOutput, output);
             resolve();
         });
     });
