@@ -10,10 +10,6 @@ import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
 import ProxyAgent from "./utils/agent";
 
-process.on("unhandledRejection", (error: Error) => {
-    console.error(error.name, error.message, error.stack);
-});
-
 Erii.setMetaInfo({
     version:
         JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json")).toString())["version"] +
