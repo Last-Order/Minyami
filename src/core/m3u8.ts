@@ -195,7 +195,15 @@ export class Playlist {
             if (currentLine.startsWith("#EXTINF")) {
                 const tagBody = getTagBody(currentLine);
                 const chunkLength = parseFloat(tagBody.split(",")[0]) || 5.0;
-                const nextLine = lines[i + 1];
+                let nextLine: string,
+                    j: number = i;
+                while (j <= lines.length - 1) {
+                    j += 1;
+                    if (!lines[j].startsWith("#")) {
+                        nextLine = lines[j];
+                        break;
+                    }
+                }
                 if (!nextLine) {
                     throw new M3U8ParseError("Invalid M3U8 file.");
                 }
