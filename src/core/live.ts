@@ -46,7 +46,7 @@ export default class LiveDownloader extends Downloader {
             proxy,
             cookies,
             headers,
-            nomerge,
+            noMerge,
             keepEncryptedChunks,
             chunkNamingStrategy,
             cliMode,
@@ -62,7 +62,7 @@ export default class LiveDownloader extends Downloader {
             proxy,
             cookies,
             headers,
-            nomerge,
+            noMerge,
             keepEncryptedChunks,
             chunkNamingStrategy,
             cliMode,
@@ -324,14 +324,16 @@ export default class LiveDownloader extends Downloader {
             this.fileConcentrator
                 .waitAllFilesWritten()
                 .then(async () => {
-                    logger.info("End of merging.");
-                    logger.info("Starting cleaning temporary files.");
-                    try {
-                        await deleteEmptyDirectory(this.tempPath);
-                    } catch (e) {
-                        logger.warning(
-                            `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
-                        );
+                    if (!this.keepTemporaryFiles) {
+                        logger.info("End of merging.");
+                        logger.info("Starting cleaning temporary files.");
+                        try {
+                            await deleteEmptyDirectory(this.tempPath);
+                        } catch (e) {
+                            logger.warning(
+                                `Fail to delete temporary files, please delete manually or execute "minyami --clean" later.`
+                            );
+                        }
                     }
                     const outputPaths = this.fileConcentrator.getOutputFilePaths();
                     if (outputPaths.length === 1) {

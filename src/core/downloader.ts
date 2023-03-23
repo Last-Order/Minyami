@@ -27,7 +27,8 @@ export interface DownloaderConfig {
     retries?: number;
     proxy?: string;
     format?: string;
-    nomerge?: boolean;
+    noMerge?: boolean;
+    keep?: boolean;
     keepEncryptedChunks?: boolean;
     chunkNamingStrategy?: NamingStrategy;
     cliMode?: boolean;
@@ -128,6 +129,8 @@ class Downloader extends EventEmitter {
 
     encryptionKeys = {};
 
+    keepTemporaryFiles = false;
+
     keepEncryptedChunks = false;
 
     chunkNamingStrategy = NamingStrategy.MIXED;
@@ -167,8 +170,9 @@ class Downloader extends EventEmitter {
             format,
             cookies,
             headers,
-            nomerge,
+            noMerge,
             cliMode = false,
+            keep = false,
             keepEncryptedChunks,
             chunkNamingStrategy,
             tempDir,
@@ -249,9 +253,13 @@ class Downloader extends EventEmitter {
             });
         }
 
-        if (nomerge) {
-            this.noMerge = nomerge;
+        if (noMerge) {
+            this.noMerge = noMerge;
             logger.info("Temporary files will not be deleted automatically.");
+        }
+
+        if (keep) {
+            this.keepTemporaryFiles = keep;
         }
 
         if (keepEncryptedChunks) {

@@ -281,9 +281,15 @@ Erii.addOption({
 });
 
 Erii.addOption({
-    name: ["nomerge", "keep"],
+    name: ["no-merge"],
     command: "download",
     description: "Do not merge m3u8 chunks.",
+});
+
+Erii.addOption({
+    name: ["keep", "k"],
+    command: "download",
+    description: "Keep temporary files.",
 });
 
 Erii.addOption({
