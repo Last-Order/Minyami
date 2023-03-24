@@ -61,7 +61,7 @@ Erii.bind(
             logger.debug(`Read config file: ${JSON.stringify(fileOptions)}`);
         }
         for (const key of Object.keys(fileOptions)) {
-            if (!options[key]) {
+            if (options[key] === undefined) {
                 options[key] = fileOptions[key];
             }
         }

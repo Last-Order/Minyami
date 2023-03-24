@@ -255,11 +255,13 @@ class Downloader extends EventEmitter {
 
         if (noMerge) {
             this.noMerge = noMerge;
-            logger.info("Temporary files will not be deleted automatically.");
+            logger.warning("Chunks will not be merged.");
+            logger.warning("Temporary files will not be deleted automatically.");
         }
 
         if (keep) {
             this.keepTemporaryFiles = keep;
+            logger.warning("Temporary files will not be deleted automatically.");
         }
 
         if (keepEncryptedChunks) {
@@ -287,7 +289,7 @@ class Downloader extends EventEmitter {
             this.fileConcentrator = new FileConcentrator({
                 outputPath: this.outputPath,
                 taskStatusRecord: this.taskStatusRecord,
-                deleteAfterWritten: true,
+                deleteAfterWritten: !this.keepTemporaryFiles,
             });
         }
 
