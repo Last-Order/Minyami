@@ -15,7 +15,7 @@
                 "chalk": "^2.4.2",
                 "cli-progress": "^3.10.0",
                 "crypto-js": "^3.3.0",
-                "erii": "^2.0.5",
+                "erii": "^2.0.6",
                 "https-proxy-agent": "^5.0.0",
                 "socks-proxy-agent": "^6.1.0",
                 "ws": "^7.4.6"
@@ -31,7 +31,7 @@
                 "typescript": "^4.7.4"
             },
             "engines": {
-                "node": "~12 || ~14 || ~16 || ~18 || ~19"
+                "node": "~14 || ~16 || ~18 || ~20"
             }
         },
         "node_modules/@babel/code-frame": {
@@ -376,9 +376,9 @@
             }
         },
         "node_modules/erii": {
-            "version": "2.0.5",
-            "resolved": "https://registry.npmjs.org/erii/-/erii-2.0.5.tgz",
-            "integrity": "sha512-HKW2cykE6U/afnCQG3M7liIZ0eGG2iGHL4VY+bm7cqFJtq+QfgF8hByxhqaXSElRtXOPWTa3azOKotQDOo7Rvg==",
+            "version": "2.0.6",
+            "resolved": "https://registry.npmjs.org/erii/-/erii-2.0.6.tgz",
+            "integrity": "sha512-m50n3WUWVoSNcM2IlSVOgHDFQ4GKEdobV51j1skSSLPv5dr0+oc+8WUs8PhzKpxNGX1Pm0HSHHjvxZRYzY24nQ==",
             "dependencies": {
                 "chalk": "^2.4.1",
                 "clui": "^0.3.6",
@@ -1758,9 +1758,9 @@
             }
         },
         "erii": {
-            "version": "2.0.5",
-            "resolved": "https://registry.npmjs.org/erii/-/erii-2.0.5.tgz",
-            "integrity": "sha512-HKW2cykE6U/afnCQG3M7liIZ0eGG2iGHL4VY+bm7cqFJtq+QfgF8hByxhqaXSElRtXOPWTa3azOKotQDOo7Rvg==",
+            "version": "2.0.6",
+            "resolved": "https://registry.npmjs.org/erii/-/erii-2.0.6.tgz",
+            "integrity": "sha512-m50n3WUWVoSNcM2IlSVOgHDFQ4GKEdobV51j1skSSLPv5dr0+oc+8WUs8PhzKpxNGX1Pm0HSHHjvxZRYzY24nQ==",
             "requires": {
                 "chalk": "^2.4.1",
                 "clui": "^0.3.6",

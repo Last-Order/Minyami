@@ -37,6 +37,8 @@ Help:
              <limit>               (Optional) Limit of retry times
          --output, o <path>        Output path
              <path>                (Optional) Output file path, defaults to ./output.mkv
+         --temp-dir <path>         Temporary file path
+             <path>                (Optional) Temporary file path, defaults to env.TEMP
          --key <key>               Set key manually (Internal use)
              <key>                 (Optional) Key for decrypt video.
          --cookies <cookies>       Cookies used to download
@@ -50,8 +52,10 @@ Help:
              <proxy-server>        Set proxy in [protocol://<host>:<port>] format. eg. --proxy "http://127.0.0.1:1080".
          --slice <range>           Download specified part of the stream
              <range>               Set time range in [<hh:mm:ss>-<hh:mm:ss> format]. eg. --slice "45:00-53:00"
-         --nomerge, keep           Do not merge m3u8 chunks.
-         --keep-encrypted-chunks   Do not delete encrypted chunks after decryption. Use with --keep.
+         --no-merge                Do not merge m3u8 chunks.
+         --keep, k                 Keep temporary files.
+         --keep-encrypted-chunks   Do not delete encrypted chunks after decryption.
+         --chunk-naming-strategy   Temporary file naming strategy. Defaults to 1.
      --resume <input_path>         Resume a download. (Archive)  -r
          <input_path>              m3u8 file path
      --clean                       Clean cache files
