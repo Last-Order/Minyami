@@ -315,10 +315,12 @@ export default class LiveDownloader extends Downloader {
             // 结束状态 合并文件
             this.isDownloadFinished = true;
             this.emit("downloaded");
+            if (this.noMerge || this.keepTemporaryFiles) {
+                this.saveTask();
+            }
             if (this.noMerge) {
                 logger.info("Skip merging. Please merge video chunks manually.");
                 logger.info(`Temporary files are located at ${this.tempPath}`);
-                this.saveTask();
                 this.emit("finished");
                 return;
             }
@@ -380,6 +382,7 @@ export default class LiveDownloader extends Downloader {
             retries: this.retries,
             timeout: this.timeout,
             proxy: this.proxy,
+            downloadTasks: this.downloadTasks,
         };
         const savePath = path.resolve(this.tempPath, "./task.json");
         try {
