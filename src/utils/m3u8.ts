@@ -14,7 +14,7 @@ interface LoadM3U8Options {
 
 export async function loadM3U8({ path, retries = 1, timeout = 60000, initPrimaryKey }: LoadM3U8Options) {
     const proxyAgent = ProxyAgentHelper.getProxyAgentInstance();
-    let m3u8Content;
+    let m3u8Content, m3u8Path;
     if (path.startsWith("http")) {
         logger.info("Start fetching M3U8 file.");
         while (retries >= 0) {
@@ -35,6 +35,7 @@ export async function loadM3U8({ path, retries = 1, timeout = 60000, initPrimary
                 });
                 logger.info("M3U8 file fetched.");
                 m3u8Content = response.data;
+                m3u8Path = response.request.res.responseUrl || path;
                 break;
             } catch (e) {
                 logger.warning(
@@ -57,7 +58,7 @@ export async function loadM3U8({ path, retries = 1, timeout = 60000, initPrimary
                 source = null;
             }
         }
-        const m3u8 = new M3U8({ m3u8Content, m3u8Url: path, initPrimaryKey });
+        const m3u8 = new M3U8({ m3u8Content, m3u8Url: m3u8Path, initPrimaryKey });
         return m3u8.parse();
     } else {
         // is a local file path

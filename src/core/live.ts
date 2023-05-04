@@ -5,7 +5,7 @@ import { deleteEmptyDirectory, sleep } from "../utils/system";
 import { loadM3U8 } from "../utils/m3u8";
 import logger from "../utils/log";
 import Downloader, { DownloadTask, LiveDownloaderConfig } from "./downloader";
-import { isEncryptedChunk, M3U8Chunk, Playlist } from "./m3u8";
+import { isEncryptedChunk, isNormalChunk, M3U8Chunk, Playlist } from "./m3u8";
 import { TaskStatus } from "./file_concentrator";
 
 /**
@@ -13,7 +13,8 @@ import { TaskStatus } from "./file_concentrator";
  */
 
 export default class LiveDownloader extends Downloader {
-    finishedList: string[] = [];
+    finishedInitialChunkUrls: string[] = [];
+    finishedSequenceIds: number[] = [];
     m3u8: Playlist;
     downloadTasks: DownloadTask[] = [];
     runningThreads: number = 0;
@@ -207,15 +208,12 @@ export default class LiveDownloader extends Downloader {
             }
             const currentPlaylistChunks: M3U8Chunk[] = [];
             this.m3u8.chunks.forEach((chunk) => {
-                try {
-                    // 去重
-                    if (!this.finishedList.includes(chunk.url)) {
-                        this.finishedList.push(chunk.url);
-                        currentPlaylistChunks.push(chunk);
-                    }
-                } catch (e) {
-                    // 无法正确命名块 忽略错误
-                    // pass
+                if (isNormalChunk(chunk) && !this.finishedSequenceIds.includes(chunk.sequenceId)) {
+                    this.finishedSequenceIds.push(chunk.sequenceId);
+                    currentPlaylistChunks.push(chunk);
+                } else if (!isNormalChunk(chunk) && !this.finishedInitialChunkUrls.includes(chunk.url)) {
+                    this.finishedInitialChunkUrls.push(chunk.url);
+                    currentPlaylistChunks.push(chunk);
                 }
             });
             logger.debug(`Get ${currentPlaylistChunks.length} new chunk(s).`);
