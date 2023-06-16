@@ -17,6 +17,7 @@ export default class LiveDownloader extends Downloader {
     finishedSequenceIds: number[] = [];
     m3u8: Playlist;
     downloadTasks: DownloadTask[] = [];
+    allDownloadTasks: DownloadTask[] = [];
     runningThreads: number = 0;
     totalCount: number = 0;
 
@@ -230,6 +231,7 @@ export default class LiveDownloader extends Downloader {
 
             // 加入待完成的任务列表 并标记任务初始状态
             this.downloadTasks.push(...newTasks);
+            this.allDownloadTasks.push(...newTasks);
 
             for (const task of newTasks) {
                 this.taskStatusRecord[task.id] = TaskStatus.PENDING;
@@ -380,7 +382,7 @@ export default class LiveDownloader extends Downloader {
             retries: this.retries,
             timeout: this.timeout,
             proxy: this.proxy,
-            downloadTasks: this.downloadTasks,
+            downloadTasks: this.allDownloadTasks,
         };
         const savePath = path.resolve(this.tempPath, "./task.json");
         try {
