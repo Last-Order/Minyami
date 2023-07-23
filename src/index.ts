@@ -118,8 +118,15 @@ Erii.bind(
         name: ["clean"],
         description: "Clean cache files",
     },
-    () => {
-        for (const file of fs.readdirSync(path.resolve(os.tmpdir()))) {
+    (ctx, options) => {
+        if (options.verbose) {
+            logger.enableDebugMode();
+        }
+        const fileOptions = readConfigFile();
+        if (Object.keys(fileOptions).length > 0) {
+            logger.debug(`Read config file: ${JSON.stringify(fileOptions)}`);
+        }
+        for (const file of fs.readdirSync(path.resolve(fileOptions.tempDir || os.tmpdir()))) {
             if (file.startsWith("minyami_")) {
                 forceDeleteDirectory(path.resolve(os.tmpdir(), `./${file}`));
             }
