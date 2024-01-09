@@ -139,6 +139,8 @@ class Downloader extends EventEmitter {
 
     taskStatusRecord: TaskStatus[] = [];
 
+    _internal_dropChunksInArchiveMode = false;
+
     protected async onKeyUpdated({ keyUrls, explicitKeys, saveEncryptionKey }: OnKeyUpdatedParams) {}
 
     protected onTaskOutputFileNaming(chunk: M3U8Chunk, id: number) {

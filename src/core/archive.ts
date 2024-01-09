@@ -159,6 +159,22 @@ class ArchiveDownloader extends Downloader {
                 parser.default.parse({
                     downloader: this,
                 });
+            } else if (this.m3u8Path.includes("bcovlive")) {
+                // stagecrowd
+                logger.info("Site comfirmed: Stagecrowd.");
+                try {
+                    const siteParser = await import("./parsers/bcovlive");
+                    const parser = await import("./parsers/common");
+                    await siteParser.default.parse({
+                        downloader: this,
+                    });
+                    await parser.default.parse({
+                        downloader: this,
+                    });
+                } catch (e) {
+                    logger.error("Aborted due to critical error.", e);
+                    this.emit("critical-error", e);
+                }
             } else {
                 logger.warning(`Site is not supported by Minyami Core. Try common parser.`);
                 try {
@@ -438,6 +454,11 @@ class ArchiveDownloader extends Downloader {
                             task.parentGroup.retryActions = true;
                             task.parentGroup.subTasks.unshift(task);
                         }
+                    } else if (this._internal_dropChunksInArchiveMode && task.retryCount >= this.retries) {
+                        // 对于部分网站 放弃无法下载的分块
+                        this.taskStatusRecord[task.id] = TaskStatus.DROPPED;
+                        this.finishedChunkCount++;
+                        logger.warning(`Processing ${task.filename} failed, max retries exceed, drop.`);
                     } else {
                         this.downloadTasks.unshift(task);
                     }
