@@ -22,7 +22,9 @@ class ProxyAgentHelper {
         }
         if (proxy.startsWith("http://") || proxy.startsWith("https://")) {
             // HTTP Proxy
-            this.proxyAgentInstance = new HttpsProxyAgent(proxy);
+            this.proxyAgentInstance = new HttpsProxyAgent(proxy, {
+                keepAlive: true,
+            });
             logger.debug(`HTTP/HTTPS Proxy set: ${proxy}`);
         } else if (proxy.startsWith("socks")) {
             if (proxy.startsWith("socks4")) {
@@ -31,7 +33,9 @@ class ProxyAgentHelper {
             // Socks5 Proxy
             try {
                 const [_, host, port] = proxy.match(/socks5?(?:(?<=5)h)?[:：]\/\/(.+)[:：](\d+)/);
-                this.proxyAgentInstance = new SocksProxyAgent(`socks5h://${host}:${port}`);
+                this.proxyAgentInstance = new SocksProxyAgent(`socks5h://${host}:${port}`, {
+                    keepAlive: true,
+                });
                 logger.debug(`Socks5 Proxy set: socks5h://${host}:${port}`);
             } catch (e) {
                 throw new InvalidProxyServerError("Proxy server invalid.");
@@ -40,7 +44,9 @@ class ProxyAgentHelper {
             // For compatibility, use proxy without protocol as socks5 proxy
             try {
                 const [_, host, port] = proxy.match(/(.+)[:：](\d+)/);
-                this.proxyAgentInstance = new SocksProxyAgent(`socks5h://${host}:${port}`);
+                this.proxyAgentInstance = new SocksProxyAgent(`socks5h://${host}:${port}`, {
+                    keepAlive: true,
+                });
                 logger.debug(`Socks5 Proxy set: socks5h://${host}:${port}`);
             } catch (e) {
                 throw new InvalidProxyServerError("Proxy server invalid.");
