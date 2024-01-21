@@ -10,10 +10,6 @@
         "esModuleInterop": true,
         "newLine": "LF"
     },
-    "include": [
-        "src/**/*"
-    ],
-    "exclude": [
-        "dist"
-    ]
+    "include": ["src/**/*"],
+    "exclude": ["dist"]
 }
