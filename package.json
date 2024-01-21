@@ -37,7 +37,8 @@
         "crypto-js": "^4.2.0",
         "erii": "^2.0.6",
         "https-proxy-agent": "^7.0.2",
-        "socks-proxy-agent": "^8.0.2"
+        "socks-proxy-agent": "^8.0.2",
+        "ws": "^7.4.6"
     },
     "devDependencies": {
         "@types/node": "^17.0.17",
