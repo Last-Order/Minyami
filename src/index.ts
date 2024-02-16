@@ -55,6 +55,9 @@ Erii.bind(
         if (options.verbose) {
             logger.enableDebugMode();
         }
+        if (process.platform === "win32") {
+            await ProxyAgent.readWindowsSystemProxy();
+        }
         ProxyAgent.readProxyConfigurationFromEnv();
         const fileOptions = readConfigFile();
         if (Object.keys(fileOptions).length > 0) {

@@ -18,6 +18,7 @@
                 "erii": "^2.0.6",
                 "https-proxy-agent": "^7.0.2",
                 "socks-proxy-agent": "^8.0.2",
+                "winreg": "^1.2.5",
                 "ws": "^7.4.6"
             },
             "bin": {
@@ -1467,6 +1468,11 @@
                 "node": ">= 8"
             }
         },
+        "node_modules/winreg": {
+            "version": "1.2.5",
+            "resolved": "https://registry.npmjs.org/winreg/-/winreg-1.2.5.tgz",
+            "integrity": "sha512-uf7tHf+tw0B1y+x+mKTLHkykBgK2KMs3g+KlzmyMbLvICSHQyB/xOFjTT8qZ3oeTFyU7Bbj4FzXitGG6jvKhYw=="
+        },
         "node_modules/wrap-ansi": {
             "version": "7.0.0",
             "resolved": "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-7.0.0.tgz",
@@ -2660,6 +2666,11 @@
             "requires": {
                 "isexe": "^2.0.0"
             }
+        },
+        "winreg": {
+            "version": "1.2.5",
+            "resolved": "https://registry.npmjs.org/winreg/-/winreg-1.2.5.tgz",
+            "integrity": "sha512-uf7tHf+tw0B1y+x+mKTLHkykBgK2KMs3g+KlzmyMbLvICSHQyB/xOFjTT8qZ3oeTFyU7Bbj4FzXitGG6jvKhYw=="
         },
         "wrap-ansi": {
             "version": "7.0.0",

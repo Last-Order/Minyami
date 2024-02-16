@@ -2,6 +2,23 @@ import { Agent } from "agent-base";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import logger from "./log";
+import { default as Registry } from "winreg";
+
+interface RegistryKeyItem {
+    name: string;
+    value: string;
+}
+
+const readRegistryKey = (key: any): Promise<RegistryKeyItem[]> => {
+    return new Promise((resolve, reject) => {
+        key.values((err, items) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(items);
+        });
+    });
+};
 
 class InvalidProxyServerError extends Error {}
 
@@ -63,9 +80,38 @@ class ProxyAgentHelper {
     /**
      * Read proxy configuration from environment variables.
      * By default, ALL_PROXY, HTTP_PROXY and HTTPS_PROXY will be used.
+     * Note: environment variables will override system proxy in Windows.
      */
     readProxyConfigurationFromEnv() {
-        this.setProxy(process.env.ALL_PROXY || process.env.HTTP_PROXY || process.env.HTTPS_PROXY);
+        const proxySettings = process.env.ALL_PROXY || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
+        if (proxySettings) {
+            this.setProxy(process.env.ALL_PROXY || process.env.HTTP_PROXY || process.env.HTTPS_PROXY);
+        }
+    }
+
+    /**
+     * Read Windows system proxy from registry
+     */
+    async readWindowsSystemProxy() {
+        if (process.platform !== "win32") {
+            // not a windows environment
+            return;
+        }
+        const key = new Registry({
+            hive: Registry.HKCU,
+            key: "\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+        });
+        try {
+            const items = await readRegistryKey(key);
+            const proxyEnableItem = items.find((item) => item.name === "ProxyEnable");
+            const proxyServerItem = items.find((item) => item.name === "ProxyServer");
+            const isProxyEnable = proxyEnableItem.value === "0x1";
+            if (isProxyEnable && proxyServerItem && proxyServerItem.value !== "") {
+                this.setProxy(proxyServerItem.value);
+            }
+        } catch {
+            // ignore
+        }
     }
 }
 
