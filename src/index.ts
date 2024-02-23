@@ -52,11 +52,13 @@ Erii.bind(
     },
     async (ctx, options) => {
         const path = ctx.getArgument().toString();
-        if (options.verbose) {
-            logger.enableDebugMode();
-        }
-        if (process.platform === "win32") {
-            await ProxyAgent.readWindowsSystemProxy();
+        if (!options.noProxy && !process.env.NO_PROXY) {
+            if (options.verbose) {
+                logger.enableDebugMode();
+            }
+            if (process.platform === "win32") {
+                await ProxyAgent.readWindowsSystemProxy();
+            }
         }
         ProxyAgent.readProxyConfigurationFromEnv();
         const fileOptions = readConfigFile();
@@ -262,6 +264,12 @@ Erii.addOption({
         name: "proxy-server",
         description: 'Set proxy in [protocol://<host>:<port>] format. eg. --proxy "http://127.0.0.1:1080".',
     },
+});
+
+Erii.addOption({
+    name: ["no-proxy"],
+    command: "download",
+    description: "Disable reading proxy configuration from system environment variables or system settings.",
 });
 
 Erii.addOption({

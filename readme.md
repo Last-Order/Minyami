@@ -50,6 +50,7 @@ Help:
              <format_name>         Format name. ts or mkv.
          --proxy <proxy-server>    Use the specified HTTP/HTTPS/SOCKS5 proxy
              <proxy-server>        Set proxy in [protocol://<host>:<port>] format. eg. --proxy "http://127.0.0.1:1080".
+         --no-proxy                Disable reading proxy configuration from system environment variables or system settings.
          --slice <range>           Download specified part of the stream
              <range>               Set time range in [<hh:mm:ss>-<hh:mm:ss> format]. eg. --slice "45:00-53:00"
          --no-merge                Do not merge m3u8 chunks.
@@ -64,7 +65,6 @@ Options:
 
      Options                       Description
      --verbose, debug              Debug output
-
 ```
 
 ## FAQ
@@ -75,11 +75,12 @@ A: It's not necessary.
 
 Q: How to set proxy for Minyami?
 
-A: You can use `--proxy` to set proxy server for Minyami. HTTP/SOCKS5 proxy are supported. Or you can use environment variables `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` to provide proxy configuration for Minyami.
+A: You can use `--proxy` to set proxy server for Minyami. HTTP/SOCKS5 proxy are supported. Or you can use environment variables `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` to provide proxy configuration for Minyami. And Minyami will read proxy settings from environment variables and Windows system proxy settings. To disable any proxy setting from context, you can add `--disable-proxy` or set `env.NO_PROXY` to and non-empty values.
+
 
 Q: How to set temporary file location?
 
-A: You can use environment variables to set the directory of temporary files. See [Issue #80](https://github.com/Last-Order/Minyami/issues/80#issuecomment-869132412).
+A: You can use `--temp-dir` to set the directory of temporary files.
 
 Q: How to set multiple HTTP headers?
 
