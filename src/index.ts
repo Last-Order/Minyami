@@ -52,15 +52,15 @@ Erii.bind(
     },
     async (ctx, options) => {
         const path = ctx.getArgument().toString();
+        if (options.verbose) {
+            logger.enableDebugMode();
+        }
         if (!options.noProxy && !process.env.NO_PROXY) {
-            if (options.verbose) {
-                logger.enableDebugMode();
-            }
             if (process.platform === "win32") {
                 await ProxyAgent.readWindowsSystemProxy();
             }
+            ProxyAgent.readProxyConfigurationFromEnv();
         }
-        ProxyAgent.readProxyConfigurationFromEnv();
         const fileOptions = readConfigFile();
         if (Object.keys(fileOptions).length > 0) {
             logger.debug(`Read config file: ${JSON.stringify(fileOptions)}`);
