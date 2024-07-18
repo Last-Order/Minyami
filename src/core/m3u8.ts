@@ -161,7 +161,8 @@ export class Playlist {
     private parse() {
         let key: string,
             iv: string,
-            isEncrypted = false;
+            isEncrypted = false,
+            warned = false;
         const lines = this.m3u8Content.split("\n");
         for (let i = 0; i <= lines.length - 1; i++) {
             /**
@@ -195,9 +196,12 @@ export class Playlist {
                     isEncrypted = false;
                 } else {
                     isEncrypted = false;
-                    logger.warning(
-                        `Unsupported encryption method: "${parsedTagBody["METHOD"]}". Chunks will not be decrypted.`
-                    );
+                    if (!warned) {
+                        logger.warning(
+                            `Unsupported encryption method: "${parsedTagBody["METHOD"]}". Chunks will not be decrypted.`
+                        );
+                        warned = true;
+                    }
                 }
             }
             if (currentLine.startsWith("#EXT-X-MAP")) {
