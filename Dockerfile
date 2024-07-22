@@ -1,4 +1,4 @@
-FROM node:alpine AS builder
+FROM node:21-alpine AS builder
 
 COPY / /Minyami/
 
