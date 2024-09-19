@@ -148,10 +148,11 @@ export default class Parser {
                 const firstChunkFilename = firstChunkUrl.match(/^(.+ts)/)[1];
                 let offset;
                 if (firstChunkFilename === "0.ts") {
-                    offset = downloader.m3u8.chunks[1].url.match(/(\d{3})\.ts/)[1];
+                    offset = downloader.m3u8.chunks[1].url.match(/(\d{1,3})\.ts/)[1];
                 } else {
-                    offset = downloader.m3u8.chunks[0].url.match(/(\d{3})\.ts/)[1];
+                    offset = downloader.m3u8.chunks[0].url.match(/(\d{1,3})\.ts/)[1];
                 }
+                offset = offset.padStart(3, "0");
                 const suffix = downloader.m3u8.chunks[0].url.match(/\.ts(.+)/)[1];
                 const newChunkList = [];
                 let counter = 0;
