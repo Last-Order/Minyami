@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import * as os from "os";
+import { randomBytes } from "crypto";
 import * as path from "path";
 import { deleteEmptyDirectory, sleep } from "../utils/system";
 import { loadM3U8 } from "../utils/m3u8";
@@ -105,7 +105,7 @@ export default class LiveDownloader extends Downloader {
         // Record start time to calculate speed.
         this.startedAt = new Date().valueOf();
         // Allocate temporary directory.
-        this.tempPath = path.resolve(this.tempPath, "minyami_" + new Date().valueOf());
+        this.tempPath = path.resolve(this.tempPath, `minyami_${Date.now()}_${randomBytes(4).toString("hex")}`);
 
         if (!fs.existsSync(this.tempPath)) {
             fs.mkdirSync(this.tempPath);
