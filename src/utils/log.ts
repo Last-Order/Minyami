@@ -24,6 +24,14 @@ class ConsoleLogger {
     enableDebugMode() {
         this.isDebugMode = true;
     }
+
+    setDebugMode(enabled: boolean): void {
+        this.isDebugMode = enabled;
+    }
+
+    isDebugEnabled(): boolean {
+        return this.isDebugMode;
+    }
 }
 
 export default new ConsoleLogger();
