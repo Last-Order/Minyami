@@ -6,7 +6,7 @@ import logger from "./log";
 
 export const exec = util.promisify(require("child_process").exec);
 
-export const sleep = (deley) => new Promise((resolve) => setTimeout(resolve, deley));
+export const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
 export const deleteDirectory = (directoryPath: string, fileList: string[] = []) => {
     for (const filename of fileList) {
