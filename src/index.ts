@@ -53,7 +53,7 @@ Erii.bind(
     async (ctx, options) => {
         const path = ctx.getArgument().toString();
         if (options.verbose) {
-            logger.enableDebugMode();
+            logger.setDebugMode(true);
         }
         if (!options.noProxy && !process.env.NO_PROXY) {
             if (process.platform === "win32") {
@@ -125,7 +125,7 @@ Erii.bind(
     },
     (ctx, options) => {
         if (options.verbose) {
-            logger.enableDebugMode();
+            logger.setDebugMode(true);
         }
         const fileOptions = readConfigFile();
         if (Object.keys(fileOptions).length > 0) {
