@@ -540,7 +540,6 @@ class ArchiveDownloader extends Downloader {
         this.cookies = previousTask.cookies;
         this.headers = previousTask.headers;
         this.key = previousTask.key;
-        this.verbose = previousTask.verbose;
         this.startedAt = new Date().valueOf();
         this.totalChunksCount = previousTask.totalChunksCount - previousTask.finishedChunksCount;
         this.retries = previousTask.retries;
@@ -550,7 +549,6 @@ class ArchiveDownloader extends Downloader {
         this.downloadTasks = previousTask.downloadTasks;
         this.finishedFilenames = previousTask.finishedFilenames;
 
-        logger.setDebugMode(this.verbose);
         if (this.headers && Object.keys(this.headers).length > 0) {
             // Apply global custom headers
             axios.defaults.headers.common = {
@@ -628,7 +626,6 @@ class ArchiveDownloader extends Downloader {
                 cookies: this.cookies,
                 headers: this.headers,
                 key: this.key,
-                verbose: this.verbose,
                 startedAt: this.startedAt,
                 finishedChunksCount: this.totalChunksCount - unfinishedTaskCount,
                 finishedChunkLength: this.finishedChunkLength,

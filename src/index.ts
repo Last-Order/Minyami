@@ -53,7 +53,7 @@ Erii.bind(
     async (ctx, options) => {
         const path = ctx.getArgument().toString();
         if (options.verbose) {
-            logger.setDebugMode(true);
+            logger.enableDebugMode();
         }
         if (!options.noProxy && !process.env.NO_PROXY) {
             if (process.platform === "win32") {
@@ -105,6 +105,9 @@ Erii.bind(
     },
     async (ctx, options) => {
         const path = ctx.getArgument().toString();
+        if (options.verbose) {
+            logger.enableDebugMode();
+        }
         const downloader = new ArchiveDownloader(undefined, {
             cliMode: true,
         });
@@ -125,7 +128,7 @@ Erii.bind(
     },
     (ctx, options) => {
         if (options.verbose) {
-            logger.setDebugMode(true);
+            logger.enableDebugMode();
         }
         const fileOptions = readConfigFile();
         if (Object.keys(fileOptions).length > 0) {

@@ -22,9 +22,6 @@ export interface MinyamiTask {
     headers: Record<string, string>;
     key: string;
 
-    /** 是否打印调试信息 */
-    verbose: boolean;
-
     /** 开始下载时间 */
     startedAt: number;
     /** 已完成的块数量 */

@@ -21,12 +21,8 @@ class ConsoleLogger {
         console.info(chalk.red(`[MINYAMI][ERROR] ${message}`));
     }
 
-    setDebugMode(enabled: boolean): void {
-        this.isDebugMode = enabled;
-    }
-
-    isDebugEnabled(): boolean {
-        return this.isDebugMode;
+    enableDebugMode() {
+        this.isDebugMode = true;
     }
 }
 
