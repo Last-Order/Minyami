@@ -549,6 +549,8 @@ class ArchiveDownloader extends Downloader {
         this.allDownloadTasks = previousTask.allDownloadTasks;
         this.downloadTasks = previousTask.downloadTasks;
         this.finishedFilenames = previousTask.finishedFilenames;
+
+        logger.setDebugMode(this.verbose);
         if (this.headers && Object.keys(this.headers).length > 0) {
             // Apply global custom headers
             axios.defaults.headers.common = {
