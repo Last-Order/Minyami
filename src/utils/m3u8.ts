@@ -29,7 +29,7 @@ export async function loadM3U8({ path, retries = 1, timeout = 60000, initPrimary
                     timeout,
                     httpsAgent: proxyAgent ? proxyAgent : undefined,
                     headers: {
-                        Host: new URL(path).host,
+                        ...(!axios.defaults.headers.common["Host"] ? { Host: new URL(path).host } : {}),
                     },
                     cancelToken: source.token,
                 });
