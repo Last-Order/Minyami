@@ -95,7 +95,7 @@ export function download(url: string, path: string, options: AxiosRequestConfig 
                 responseType: "arraybuffer",
                 httpsAgent: proxyAgentInstance ? proxyAgentInstance : undefined,
                 headers: {
-                    Host: new URL(url).host,
+                    ...(!axios.defaults.headers.common["Host"] ? { Host: new URL(url).host } : {}),
                 },
                 cancelToken: source.token,
                 ...options,
