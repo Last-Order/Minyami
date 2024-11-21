@@ -1,6 +1,6 @@
 {
     "name": "minyami",
-    "version": "5.4.0",
+    "version": "5.4.1",
     "description": "",
     "main": "dist/exports.js",
     "types": "dist/exports.d.ts",
