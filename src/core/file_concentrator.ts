@@ -73,7 +73,6 @@ class FileConcentrator {
         if (ignoreBreakpoints) {
             this.ignoreBreakpoints = true;
         }
-        this.createNextWriteStream();
     }
 
     private async createNextWriteStream(): Promise<void> {
@@ -166,6 +165,9 @@ class FileConcentrator {
     }
 
     public addTasks(tasks: ConcentrationTask[]) {
+        if (!this.writeStream) {
+            this.createNextWriteStream();
+        }
         for (const task of tasks) {
             this.tasks[task.index] = task;
         }
