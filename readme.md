@@ -142,4 +142,4 @@ To build the project, just run `tsc`.
 
 ## Copyright
 
-Open-sourced under GPLv3. © 2018-2024, Eridanus Sora, member of MeowSound Idols.
+Open-sourced under GPLv3. © 2018-2025, Eridanus Sora, member of MeowSound Idols.
