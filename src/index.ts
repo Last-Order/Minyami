@@ -55,7 +55,9 @@ Erii.bind(
         if (options.verbose) {
             logger.enableDebugMode();
         }
-        if (!options.noProxy && !process.env.NO_PROXY) {
+        if (options.noProxy) {
+            ProxyAgent.disableProxy();
+        } else if (!process.env.NO_PROXY) {
             if (process.platform === "win32") {
                 await ProxyAgent.readWindowsSystemProxy();
             }

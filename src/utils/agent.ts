@@ -83,6 +83,9 @@ class ProxyAgentHelper {
      * Note: environment variables will override system proxy in Windows.
      */
     readProxyConfigurationFromEnv() {
+        if (process.env.NO_PROXY) {
+            return;
+        }
         const proxySettings = process.env.ALL_PROXY || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
         if (proxySettings) {
             this.setProxy(process.env.ALL_PROXY || process.env.HTTP_PROXY || process.env.HTTPS_PROXY);
@@ -112,6 +115,13 @@ class ProxyAgentHelper {
         } catch {
             // ignore
         }
+    }
+
+    /**
+     * Disable proxy by setting proxyAgentInstance to null
+     */
+    disableProxy() {
+        this.proxyAgentInstance = null;
     }
 }
 

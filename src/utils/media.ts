@@ -99,6 +99,7 @@ export function download(url: string, path: string, options: AxiosRequestConfig 
                 },
                 cancelToken: source.token,
                 ...options,
+                proxy: proxyAgentInstance ? undefined : false, // P8f0a
             });
             if (
                 response.headers["content-length"] &&
@@ -136,6 +137,7 @@ export async function requestRaw(url: string, options: AxiosRequestConfig = {}):
             Host: new URL(url).host,
         },
         ...options,
+        proxy: proxyAgentInstance ? undefined : false, // P8f0a
     });
 }
 /**

@@ -32,6 +32,7 @@ export async function loadM3U8({ path, retries = 1, timeout = 60000, initPrimary
                         ...(!axios.defaults.headers.common["Host"] ? { Host: new URL(path).host } : {}),
                     },
                     cancelToken: source.token,
+                    proxy: proxyAgent ? undefined : false, // P3647
                 });
                 logger.info("M3U8 file fetched.");
                 m3u8Content = response.data;
