@@ -8,7 +8,7 @@ import LiveDownloader from "./core/live";
 import { exec, forceDeleteDirectory, readConfigFile } from "./utils/system";
 import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
-import ProxyAgent from "./utils/agent";
+import ProxyAgentHelper from "./utils/agent";
 
 Erii.setMetaInfo({
     version:
@@ -55,11 +55,16 @@ Erii.bind(
         if (options.verbose) {
             logger.enableDebugMode();
         }
-        if (!options.noProxy && !process.env.NO_PROXY) {
+
+        const disableProxy = options.noProxy || process.env.NO_PROXY;
+
+        if (!disableProxy) {
             if (process.platform === "win32") {
-                await ProxyAgent.readWindowsSystemProxy();
+                await ProxyAgentHelper.readWindowsSystemProxy();
             }
-            ProxyAgent.readProxyConfigurationFromEnv();
+            ProxyAgentHelper.readProxyConfigurationFromEnv();
+        } else {
+            ProxyAgentHelper.disableProxy();
         }
         const fileOptions = readConfigFile();
         if (Object.keys(fileOptions).length > 0) {

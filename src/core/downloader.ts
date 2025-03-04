@@ -248,6 +248,9 @@ class Downloader extends EventEmitter {
             ...this.headers,
         };
 
+        // Disable proxy settings cause we use custom agent for proxying requests
+        axios.defaults.proxy = false;
+
         if (proxy) {
             this.proxy = proxy;
             ProxyAgentHelper.setProxy(proxy, {

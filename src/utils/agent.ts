@@ -24,6 +24,7 @@ class InvalidProxyServerError extends Error {}
 
 class ProxyAgentHelper {
     proxyAgentInstance: Agent = null;
+    isEnableProxy = true;
 
     constructor() {}
 
@@ -73,7 +74,31 @@ class ProxyAgentHelper {
         }
     }
 
+    /**
+     * Whether the proxy is enabled
+     */
+    isProxyEnabled() {
+        return this.isEnableProxy;
+    }
+
+    /**
+     * Disable the proxy
+     */
+    disableProxy() {
+        this.isEnableProxy = false;
+    }
+
+    /**
+     * Enable the proxy
+     */
+    enableProxy() {
+        this.isEnableProxy = true;
+    }
+
     getProxyAgentInstance() {
+        if (!this.isEnableProxy) {
+            return null;
+        }
         return this.proxyAgentInstance;
     }
 
