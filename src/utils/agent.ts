@@ -132,7 +132,12 @@ class ProxyAgentHelper {
             const proxyServerItem = items.find((item) => item.name === "ProxyServer");
             const isProxyEnable = proxyEnableItem.value === "0x1";
             if (isProxyEnable && proxyServerItem && proxyServerItem.value !== "") {
-                this.setProxy(proxyServerItem.value);
+                if (proxyServerItem.value.startsWith("socks=")) {
+                    // socks proxy
+                    this.setProxy(proxyServerItem.value.replace("socks=", "socks5://"));
+                } else {
+                    this.setProxy(`http://${proxyServerItem.value}`);
+                }
             }
         } catch {
             // ignore
