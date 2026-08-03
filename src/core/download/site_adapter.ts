@@ -3,8 +3,6 @@ import { parseAbema } from "../parsers/abema";
 import { parseBcovLive } from "../parsers/bcovlive";
 import { parseCommon } from "../parsers/common";
 import { parseHibiki } from "../parsers/hibiki";
-import { parseNico } from "../parsers/nico";
-import { parseNicoLive } from "../parsers/nicolive";
 import { parseYoutube } from "../parsers/youtube";
 import { mergeParserResults, ParserOptions, ParserResult } from "../parsers/types";
 
@@ -22,27 +20,6 @@ export async function prepareSite(options: ParserOptions): Promise<ParserResult>
             return parseHibiki(options);
         }
         logger.warning("Site is not supported by Minyami Core. Try common parser.");
-        return parseCommon(options);
-    }
-
-    if (m3u8Path.includes("dmc.nico")) {
-        if (mode === "archive" && !playlist.m3u8Content.includes("#EXT-X-PLAYLIST-TYPE:VOD")) {
-            logger.info("Site confirmed: NicoLive.");
-            if (!options.key) {
-                logger.info("请保持播放页面不要关闭");
-                logger.info("Please do not close the video page.");
-                logger.info("Maybe you should get an audience token to get a better user experience.");
-            }
-            if (options.threads > 10) {
-                logger.warning("High threads setting detected. Use at your own risk!");
-            }
-            return parseNico(options);
-        }
-        if (mode === "live") {
-            logger.info("Site confirmed: Niconico.");
-            return parseNicoLive(options);
-        }
-        logger.info("Site confirmed: NicoVideo.");
         return parseCommon(options);
     }
 

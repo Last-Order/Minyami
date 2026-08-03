@@ -21,21 +21,15 @@ async function testScheduler() {
             }
             return task;
         },
-        onError: () => ({
-            retry: true,
-            beforeRetry: async () => events.push("retry-barrier"),
-        }),
+        onError: () => true,
     });
-    scheduler.addBarrier(async () => events.push("initial-barrier"));
     scheduler.add([1, 2]);
     const completion = scheduler.start();
     scheduler.close();
     await completion;
 
-    assert.strictEqual(events[0], "initial-barrier");
     assert.strictEqual(attempts.get(1), 2);
     assert.strictEqual(attempts.get(2), 1);
-    assert(events.includes("retry-barrier"));
 }
 
 async function withMediaServer(run) {

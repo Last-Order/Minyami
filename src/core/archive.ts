@@ -5,33 +5,16 @@ import { deleteEmptyDirectory } from "../utils/system";
 import { deleteTask, getTask, saveTask } from "../utils/task";
 import { timeStringToSeconds } from "../utils/time";
 import { TaskStatus } from "./file_concentrator";
-import {
-    ArchiveDownloaderConfig,
-    DownloadTask,
-    DownloadTaskGroupAction,
-    DownloadTaskItem,
-    isTaskGroup,
-} from "./downloader";
-import {
-    cloneTaskItems,
-    countTasks,
-    createArchiveTasks,
-    forEachTask,
-    sliceArchiveTasks,
-} from "./download/archive_tasks";
+import { ArchiveDownloaderConfig, DownloadTask } from "./downloader";
+import { cloneTasks, createArchiveTasks, sliceArchiveTasks } from "./download/archive_tasks";
 import { DownloadEvent, DownloadEventListener, DownloadSnapshot, DownloadStatus } from "./download/controller";
 import { DownloadRuntime, ExecutedChunk } from "./download/runtime";
-import { RetryDecision, TaskScheduler } from "./download/task_scheduler";
-
-interface ScheduledArchiveTask {
-    task: DownloadTask;
-    retryActions?: DownloadTaskGroupAction[];
-}
+import { TaskScheduler } from "./download/task_scheduler";
 
 interface ArchiveState {
     status: DownloadStatus;
-    downloadTasks: DownloadTaskItem[];
-    allDownloadTasks: DownloadTaskItem[];
+    downloadTasks: DownloadTask[];
+    allDownloadTasks: DownloadTask[];
     finishedFilenames: Record<string, boolean>;
     totalChunkCount: number;
     sliceStart?: number;
@@ -39,7 +22,7 @@ interface ArchiveState {
     isResumed: boolean;
     isDownloaded: boolean;
     isStarted: boolean;
-    scheduler?: TaskScheduler<ScheduledArchiveTask, ExecutedChunk>;
+    scheduler?: TaskScheduler<DownloadTask, ExecutedChunk>;
     verboseTimer?: NodeJS.Timeout;
     sigintInstalled: boolean;
 }
@@ -166,10 +149,10 @@ async function resumeArchive(context: ArchiveContext, taskId: string): Promise<v
         finishedChunkCount: previousTask.finishedChunksCount,
         finishedChunkLength: previousTask.finishedChunkLength,
     });
-    state.downloadTasks = cloneTaskItems(previousTask.downloadTasks || []);
-    state.allDownloadTasks = cloneTaskItems(previousTask.allDownloadTasks || state.downloadTasks);
+    state.downloadTasks = cloneTasks(previousTask.downloadTasks || []);
+    state.allDownloadTasks = cloneTasks(previousTask.allDownloadTasks || state.downloadTasks);
     state.finishedFilenames = previousTask.finishedFilenames || {};
-    state.totalChunkCount = previousTask.totalChunksCount || countTasks(state.allDownloadTasks);
+    state.totalChunkCount = previousTask.totalChunksCount || state.allDownloadTasks.length;
     state.isResumed = true;
     installArchiveSigintHandler(context);
 
@@ -187,62 +170,44 @@ async function resumeArchive(context: ArchiveContext, taskId: string): Promise<v
 
 async function prepareNewArchiveDownload(context: ArchiveContext): Promise<void> {
     const { runtime, state } = context;
-    const plan = await prepareArchiveSiteAndKeys(context);
-    if (plan.tasks) {
-        state.downloadTasks = cloneTaskItems(plan.tasks);
-    } else if (plan.autoGenerateTasks !== false && state.downloadTasks.length === 0) {
-        state.downloadTasks = createArchiveTasks(runtime.playlist, (chunk, id) => runtime.nameChunk(chunk, id));
-    }
+    await prepareArchiveSiteAndKeys(context);
+    state.downloadTasks = createArchiveTasks(runtime.playlist, (chunk, id) => runtime.nameChunk(chunk, id));
     state.downloadTasks = sliceArchiveTasks(state.downloadTasks, state.sliceStart, state.sliceEnd);
-    state.allDownloadTasks = cloneTaskItems(state.downloadTasks);
-    state.totalChunkCount = countTasks(state.downloadTasks);
+    state.allDownloadTasks = cloneTasks(state.downloadTasks);
+    state.totalChunkCount = state.downloadTasks.length;
     initializeArchiveTaskStatuses(context, state.allDownloadTasks);
 }
 
 async function prepareArchiveSiteAndKeys(context: ArchiveContext) {
-    const { runtime, state, events } = context;
-    const plan = await runtime.prepareSite("archive", state.downloadTasks);
+    const { runtime, events } = context;
+    await runtime.prepareSite("archive");
     events.emit("parsed");
     await runtime.checkKeys();
-    return plan;
 }
 
-function initializeArchiveTaskStatuses(context: ArchiveContext, items: DownloadTaskItem[]): void {
+function initializeArchiveTaskStatuses(context: ArchiveContext, tasks: DownloadTask[]): void {
     const { runtime, state } = context;
-    let maxId = -1;
-    forEachTask(items, (task) => {
-        maxId = Math.max(maxId, task.id);
-    });
+    const maxId = tasks.reduce((highest, task) => Math.max(highest, task.id), -1);
     for (let id = 0; id <= maxId; id++) {
         runtime.taskStatusRecord[id] = TaskStatus.DROPPED;
     }
-    forEachTask(items, (task) => {
+    for (const task of tasks) {
         runtime.taskStatusRecord[task.id] = state.finishedFilenames[task.filename]
             ? TaskStatus.DROPPED
             : TaskStatus.PENDING;
-    });
+    }
 }
 
 async function runArchiveScheduler(context: ArchiveContext): Promise<void> {
     const { runtime, state } = context;
     logger.info(`Start downloading with ${runtime.config.threads} thread(s).`);
-    state.scheduler = new TaskScheduler<ScheduledArchiveTask, ExecutedChunk>({
+    state.scheduler = new TaskScheduler<DownloadTask, ExecutedChunk>({
         concurrency: runtime.config.threads,
-        execute: ({ task }) => runtime.execute(task),
-        onSuccess: ({ task }, result) => onArchiveTaskSuccess(context, task, result),
-        onError: (scheduled, error) => onArchiveTaskError(context, scheduled, error),
+        execute: (task) => runtime.execute(task),
+        onSuccess: (task, result) => onArchiveTaskSuccess(context, task, result),
+        onError: (task, error) => onArchiveTaskError(context, task, error),
     });
-
-    for (const item of state.downloadTasks) {
-        if (isTaskGroup(item)) {
-            if (item.actions?.length) {
-                state.scheduler.addBarrier(() => runArchiveActions(context, item.actions));
-            }
-            state.scheduler.add(item.subTasks.map((task) => ({ task, retryActions: item.actions })));
-        } else {
-            state.scheduler.add({ task: item });
-        }
-    }
+    state.scheduler.add(state.downloadTasks);
 
     if (runtime.config.verbose) {
         state.verboseTimer = setInterval(() => {
@@ -283,9 +248,8 @@ async function onArchiveTaskSuccess(context: ArchiveContext, task: DownloadTask,
     events.emit("chunk-downloaded", chunkInfo);
 }
 
-function onArchiveTaskError(context: ArchiveContext, scheduled: ScheduledArchiveTask, error: unknown): RetryDecision {
+function onArchiveTaskError(context: ArchiveContext, task: DownloadTask, error: unknown): boolean {
     const { runtime, state, events } = context;
-    const { task, retryActions } = scheduled;
     events.emit("chunk-error", error, task.filename);
     task.retryCount = task.retryCount ? task.retryCount + 1 : 1;
     if (runtime.dropChunksOnMaxRetries && task.retryCount >= runtime.config.retries) {
@@ -293,19 +257,10 @@ function onArchiveTaskError(context: ArchiveContext, scheduled: ScheduledArchive
         runtime.progress.recordDropped();
         state.finishedFilenames[task.filename] = true;
         logger.warning(`Processing ${task.filename} failed, max retries exceed, drop.`);
-        return { retry: false };
+        return false;
     }
     logger.warning(`Processing ${task.filename} failed, retry later.`);
-    return {
-        retry: true,
-        ...(retryActions?.length ? { beforeRetry: () => runArchiveActions(context, retryActions) } : {}),
-    };
-}
-
-async function runArchiveActions(context: ArchiveContext, actions: DownloadTaskGroupAction[]): Promise<void> {
-    for (const action of actions) {
-        await context.runtime.runAction(action);
-    }
+    return true;
 }
 
 async function finishArchiveDownload(context: ArchiveContext): Promise<void> {
@@ -315,7 +270,6 @@ async function finishArchiveDownload(context: ArchiveContext): Promise<void> {
     }
     state.isDownloaded = true;
     logger.info("All chunks downloaded. Start merging chunks.");
-    await runtime.notifyDownloaded();
     events.emit("downloaded");
     saveArchiveTaskStatus(context);
 
@@ -323,7 +277,6 @@ async function finishArchiveDownload(context: ArchiveContext): Promise<void> {
         logger.info("Skip merging. Please merge video chunks manually.");
         logger.info(`Temporary files are located at ${runtime.tempPath}`);
         state.status = "finished";
-        await runtime.notifyFinished();
         events.emit("finished");
         return;
     }
@@ -350,24 +303,13 @@ async function finishArchiveDownload(context: ArchiveContext): Promise<void> {
     }
     logArchiveOutputPaths(outputPaths);
     state.status = "finished";
-    await runtime.notifyFinished();
     events.emit("finished");
 }
 
 function saveArchiveTaskStatus(context: ArchiveContext): void {
     const { runtime, state } = context;
-    const unfinishedTasks: DownloadTaskItem[] = [];
-    for (const item of state.allDownloadTasks) {
-        if (isTaskGroup(item)) {
-            const subTasks = item.subTasks.filter((task) => !state.finishedFilenames[task.filename]);
-            if (subTasks.length > 0) {
-                unfinishedTasks.push({ ...item, subTasks });
-            }
-        } else if (!state.finishedFilenames[item.filename]) {
-            unfinishedTasks.push(item);
-        }
-    }
-    const unfinishedTaskCount = countTasks(unfinishedTasks);
+    const unfinishedTasks = state.allDownloadTasks.filter((task) => !state.finishedFilenames[task.filename]);
+    const unfinishedTaskCount = unfinishedTasks.length;
     logger.info(`Downloaded: ${runtime.progress.finishedChunkCount}; Waiting for download: ${unfinishedTaskCount}`);
 
     try {
@@ -387,8 +329,8 @@ function saveArchiveTaskStatus(context: ArchiveContext): void {
             retries: runtime.config.retries,
             timeout: runtime.timeout,
             proxy: runtime.config.proxy,
-            downloadTasks: cloneTaskItems(unfinishedTasks),
-            allDownloadTasks: cloneTaskItems(state.allDownloadTasks),
+            downloadTasks: cloneTasks(unfinishedTasks),
+            allDownloadTasks: cloneTasks(state.allDownloadTasks),
             finishedFilenames: state.finishedFilenames,
         });
     } catch (error) {
@@ -408,7 +350,7 @@ function getArchiveSnapshot(context: ArchiveContext): ArchiveDownloadSnapshot {
         finishedChunkCount: runtime.progress.finishedChunkCount,
         finishedChunkLength: runtime.progress.finishedChunkLength,
         runningTaskCount: state.scheduler?.runningCount || 0,
-        pendingTaskCount: state.scheduler?.pendingCount || countTasks(state.downloadTasks),
+        pendingTaskCount: state.scheduler?.pendingCount || state.downloadTasks.length,
         totalChunkCount: state.totalChunkCount,
         isResumed: state.isResumed,
     };
@@ -448,7 +390,6 @@ async function failArchive(context: ArchiveContext, error: unknown): Promise<voi
     clearArchiveVerboseTimer(state);
     state.status = "failed";
     logger.error("Aborted due to critical error.", error as Error);
-    await runtime.notifyCriticalError();
     events.emit("critical-error", error);
 }
 

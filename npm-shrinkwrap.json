@@ -9,7 +9,6 @@
             "version": "5.5.1",
             "license": "GPL-3.0-or-later",
             "dependencies": {
-                "@eridanussora/reconnecting-websocket": "^4.4.2",
                 "agent-base": "^7.1.0",
                 "axios": "^1.6.7",
                 "chalk": "^2.4.2",
@@ -18,8 +17,7 @@
                 "erii": "^2.0.6",
                 "https-proxy-agent": "^7.0.4",
                 "socks-proxy-agent": "^8.0.2",
-                "winreg": "^1.2.5",
-                "ws": "^7.4.6"
+                "winreg": "^1.2.5"
             },
             "bin": {
                 "minyami": "dist/index.js"
@@ -69,11 +67,6 @@
             "engines": {
                 "node": ">=6.9.0"
             }
-        },
-        "node_modules/@eridanussora/reconnecting-websocket": {
-            "version": "4.4.2",
-            "resolved": "https://registry.npmjs.org/@eridanussora/reconnecting-websocket/-/reconnecting-websocket-4.4.2.tgz",
-            "integrity": "sha512-Y3J18+prLwWouZEbbAGxAyI9xNKsL0aU4iGQR08jcVdjjecp+WcVGes5PUmHlTVDi3fg82+DvHFeBHfZ9GlZCQ=="
         },
         "node_modules/@types/node": {
             "version": "17.0.17",
@@ -1523,26 +1516,6 @@
             "integrity": "sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==",
             "dev": true
         },
-        "node_modules/ws": {
-            "version": "7.4.6",
-            "resolved": "https://registry.npmjs.org/ws/-/ws-7.4.6.tgz",
-            "integrity": "sha512-YmhHDO4MzaDLB+M9ym/mDA5z0naX8j7SIlT8f8z+I0VtzsRbekxEutHSme7NPS2qE8StCYQNUnfWdXta/Yu85A==",
-            "engines": {
-                "node": ">=8.3.0"
-            },
-            "peerDependencies": {
-                "bufferutil": "^4.0.1",
-                "utf-8-validate": "^5.0.2"
-            },
-            "peerDependenciesMeta": {
-                "bufferutil": {
-                    "optional": true
-                },
-                "utf-8-validate": {
-                    "optional": true
-                }
-            }
-        },
         "node_modules/yaml": {
             "version": "1.10.2",
             "resolved": "https://registry.npmjs.org/yaml/-/yaml-1.10.2.tgz",
@@ -1587,11 +1560,6 @@
                 "chalk": "^2.0.0",
                 "js-tokens": "^4.0.0"
             }
-        },
-        "@eridanussora/reconnecting-websocket": {
-            "version": "4.4.2",
-            "resolved": "https://registry.npmjs.org/@eridanussora/reconnecting-websocket/-/reconnecting-websocket-4.4.2.tgz",
-            "integrity": "sha512-Y3J18+prLwWouZEbbAGxAyI9xNKsL0aU4iGQR08jcVdjjecp+WcVGes5PUmHlTVDi3fg82+DvHFeBHfZ9GlZCQ=="
         },
         "@types/node": {
             "version": "17.0.17",
@@ -2708,12 +2676,6 @@
                     "dev": true
                 }
             }
-        },
-        "ws": {
-            "version": "7.4.6",
-            "resolved": "https://registry.npmjs.org/ws/-/ws-7.4.6.tgz",
-            "integrity": "sha512-YmhHDO4MzaDLB+M9ym/mDA5z0naX8j7SIlT8f8z+I0VtzsRbekxEutHSme7NPS2qE8StCYQNUnfWdXta/Yu85A==",
-            "requires": {}
         },
         "yaml": {
             "version": "1.10.2",

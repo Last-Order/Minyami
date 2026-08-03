@@ -3,11 +3,10 @@ import * as path from "path";
 import { randomBytes } from "crypto";
 import logger from "../../utils/log";
 import { buildFullUrl, getAvailableOutputPath } from "../../utils/common";
-import { sleep } from "../../utils/system";
 import FileConcentrator, { TaskStatus } from "../file_concentrator";
-import { DownloadTask, DownloadTaskGroupAction, DownloadTaskItem, DownloaderConfig } from "../downloader";
+import { DownloadTask, DownloaderConfig } from "../downloader";
 import { MasterPlaylist, Playlist } from "../m3u8";
-import { ParserLifecycle, ParserMode, ParserResult } from "../parsers/types";
+import { ParserMode, ParserResult } from "../parsers/types";
 import { ChunkExecutor, ChunkResult } from "./chunk_executor";
 import { ChunkNamer, createChunkNamer } from "./chunk_naming";
 import { normalizeDownloaderConfig, NormalizedDownloaderConfig } from "./config";
@@ -42,7 +41,6 @@ export class DownloadRuntime {
     private outputPrepared = false;
     private chunkNamer: ChunkNamer;
     private sitePlan: ParserResult = {};
-    private lifecycle?: ParserLifecycle;
 
     constructor(sourcePath: string | undefined, config: DownloaderConfig = {}) {
         this.sourcePath = sourcePath;
@@ -81,7 +79,7 @@ export class DownloadRuntime {
         return this.playlist;
     }
 
-    async prepareSite(mode: ParserMode, currentTasks: DownloadTaskItem[] = []): Promise<ParserResult> {
+    async prepareSite(mode: ParserMode): Promise<ParserResult> {
         if (!this.playlist || !this.sourcePath) {
             throw new Error("Playlist must be loaded before selecting a site adapter.");
         }
@@ -90,10 +88,8 @@ export class DownloadRuntime {
             m3u8Path: this.sourcePath,
             playlist: this.playlist,
             key: this.config.key,
-            threads: this.config.threads,
             retries: this.config.retries,
             http: this.http,
-            currentTasks,
         });
         if (this.sitePlan.chunks) {
             this.playlist.chunks = this.sitePlan.chunks;
@@ -104,8 +100,6 @@ export class DownloadRuntime {
         if (this.sitePlan.chunkNamer) {
             this.chunkNamer = this.sitePlan.chunkNamer;
         }
-        this.lifecycle = this.sitePlan.lifecycle;
-        await this.lifecycle?.onParsed?.();
         return this.sitePlan;
     }
 
@@ -158,29 +152,13 @@ export class DownloadRuntime {
         if (!this.playlist) {
             throw new Error("Cannot execute a chunk before loading its playlist.");
         }
-        const preparedTask = this.sitePlan.prepareTask ? this.sitePlan.prepareTask(task) : task;
-        const result = await this.chunkExecutor.execute(preparedTask, {
+        const result = await this.chunkExecutor.execute(task, {
             tempPath: this.tempPath,
             playlistUrl: this.playlist.m3u8Url,
             chunkTimeout: this.chunkTimeout,
             keepEncryptedChunks: this.config.keepEncryptedChunks,
         });
-        return { ...result, task: preparedTask };
-    }
-
-    async runAction(action: DownloadTaskGroupAction): Promise<void> {
-        const prepared = this.sitePlan.prepareAction ? this.sitePlan.prepareAction(action) : action;
-        try {
-            if (prepared.actionName === "ping") {
-                await this.http.get(prepared.actionParams);
-            } else if (prepared.actionName === "sleep") {
-                await sleep(parseInt(prepared.actionParams));
-            }
-            logger.info(`Chunk group action <${prepared.actionName}> finished.`);
-        } catch (error) {
-            logger.info(`Chunk group action <${prepared.actionName}> failed.`);
-            logger.info(error);
-        }
+        return { ...result, task };
     }
 
     recordFinished(task: DownloadTask): void {
@@ -205,18 +183,6 @@ export class DownloadRuntime {
         }
         await this.fileConcentrator.waitAllFilesWritten();
         return this.fileConcentrator.getOutputFilePaths();
-    }
-
-    async notifyDownloaded(): Promise<void> {
-        await this.lifecycle?.onDownloaded?.();
-    }
-
-    async notifyFinished(): Promise<void> {
-        await this.lifecycle?.onFinished?.();
-    }
-
-    async notifyCriticalError(): Promise<void> {
-        await this.lifecycle?.onCriticalError?.();
     }
 
     private validateTemporaryBasePath(): void {

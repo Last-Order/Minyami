@@ -8,7 +8,7 @@ import { TaskStatus } from "./file_concentrator";
 import { isNormalChunk } from "./m3u8";
 import { DownloadEvent, DownloadEventListener, DownloadSnapshot, DownloadStatus } from "./download/controller";
 import { DownloadRuntime, ExecutedChunk } from "./download/runtime";
-import { RetryDecision, TaskScheduler } from "./download/task_scheduler";
+import { TaskScheduler } from "./download/task_scheduler";
 
 interface LiveState {
     status: DownloadStatus;
@@ -222,7 +222,7 @@ async function onLiveTaskSuccess(context: LiveContext, task: DownloadTask, resul
     events.emit("chunk-downloaded", chunkInfo);
 }
 
-function onLiveTaskError(context: LiveContext, task: DownloadTask, error: unknown): RetryDecision {
+function onLiveTaskError(context: LiveContext, task: DownloadTask, error: unknown): boolean {
     const { runtime, state, events } = context;
     events.emit("chunk-error", error, task.filename);
     task.retryCount = task.retryCount ? task.retryCount + 1 : 1;
@@ -230,10 +230,10 @@ function onLiveTaskError(context: LiveContext, task: DownloadTask, error: unknow
         runtime.markDropped(task);
         state.downloadTasks = state.downloadTasks.filter((queuedTask) => queuedTask.id !== task.id);
         logger.warning(`Processing ${task.filename} failed, max retries exceed, drop.`);
-        return { retry: false };
+        return false;
     }
     logger.warning(`Processing ${task.filename} failed, retry later.`);
-    return { retry: true };
+    return true;
 }
 
 async function finishLiveDownload(context: LiveContext): Promise<void> {
@@ -243,7 +243,6 @@ async function finishLiveDownload(context: LiveContext): Promise<void> {
     }
     state.isDownloadFinished = true;
     clearLiveVerboseTimer(state);
-    await runtime.notifyDownloaded();
     events.emit("downloaded");
     if (runtime.config.noMerge || runtime.config.keepTemporaryFiles) {
         saveLiveTask(context);
@@ -252,7 +251,6 @@ async function finishLiveDownload(context: LiveContext): Promise<void> {
         logger.info("Skip merging. Please merge video chunks manually.");
         logger.info(`Temporary files are located at ${runtime.tempPath}`);
         state.status = "finished";
-        await runtime.notifyFinished();
         events.emit("finished");
         return;
     }
@@ -273,7 +271,6 @@ async function finishLiveDownload(context: LiveContext): Promise<void> {
     }
     logLiveOutputPaths(outputPaths);
     state.status = "finished";
-    await runtime.notifyFinished();
     events.emit("finished");
 }
 
@@ -362,7 +359,6 @@ function installLiveSigintHandler(context: LiveContext): void {
         if (!state.isDownloadFinished) {
             state.isDownloadFinished = true;
             state.status = "finished";
-            await runtime.notifyFinished();
             events.emit("finished");
         }
     });
@@ -377,7 +373,6 @@ async function failLive(context: LiveContext, error: unknown): Promise<void> {
         logger.info(`Your temporary files are located at [${path.resolve(runtime.tempPath)}]`);
         saveLiveTask(context);
     }
-    await runtime.notifyCriticalError();
     events.emit("critical-error", error);
 }
 

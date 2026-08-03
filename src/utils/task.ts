@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { DownloadTaskItem } from "../core/downloader";
+import { DownloadTask } from "../core/downloader";
 
 export interface MinyamiTask {
     /** 唯一标识符 */
@@ -39,9 +39,9 @@ export interface MinyamiTask {
     proxy: string;
 
     /** 未下载的块 */
-    downloadTasks: DownloadTaskItem[];
+    downloadTasks: DownloadTask[];
     /** 全部块 */
-    allDownloadTasks: DownloadTaskItem[];
+    allDownloadTasks: DownloadTask[];
     /** 已完成文件名 */
     finishedFilenames: { [index: string]: any };
 }
