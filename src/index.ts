@@ -3,8 +3,8 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import Erii from "erii";
-import ArchiveDownloader from "./core/archive";
-import LiveDownloader from "./core/live";
+import { createArchiveDownloader } from "./core/archive";
+import { createLiveDownloader } from "./core/live";
 import { exec, forceDeleteDirectory, readConfigFile } from "./utils/system";
 import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
@@ -77,7 +77,7 @@ Erii.bind(
         }
         const finalOptions = Object.assign(options, { cliMode: true, logger });
         if (options.live) {
-            const downloader = new LiveDownloader(path, finalOptions);
+            const downloader = createLiveDownloader(path, finalOptions);
             downloader.on("finished", () => {
                 process.exit();
             });
@@ -86,14 +86,13 @@ Erii.bind(
             });
             await downloader.download();
         } else {
-            const downloader = new ArchiveDownloader(path, finalOptions);
+            const downloader = createArchiveDownloader(path, finalOptions);
             downloader.on("finished", () => {
                 process.exit();
             });
             downloader.on("critical-error", () => {
                 process.exit(1);
             });
-            await downloader.init();
             await downloader.download();
         }
     }
@@ -113,7 +112,7 @@ Erii.bind(
         if (options.verbose) {
             logger.enableDebugMode();
         }
-        const downloader = new ArchiveDownloader(undefined, {
+        const downloader = createArchiveDownloader(undefined, {
             cliMode: true,
         });
         downloader.on("finished", () => {
@@ -122,7 +121,7 @@ Erii.bind(
         downloader.on("critical-error", () => {
             process.exit(1);
         });
-        downloader.resume(path);
+        await downloader.resume(path);
     }
 );
 

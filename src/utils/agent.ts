@@ -156,4 +156,10 @@ class ProxyAgentHelper {
     }
 }
 
+export function createProxyAgent(proxy: string, options: { allowNonPrefixSocksProxy?: boolean } = {}): Agent {
+    const helper = new ProxyAgentHelper();
+    helper.setProxy(proxy, options);
+    return helper.getProxyAgentInstance();
+}
+
 export default new ProxyAgentHelper();

@@ -77,7 +77,6 @@ Q: How to set proxy for Minyami?
 
 A: You can use `--proxy` to set proxy server for Minyami. HTTP/SOCKS5 proxy are supported. Or you can use environment variables `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` to provide proxy configuration for Minyami. And Minyami will read proxy settings from environment variables and Windows system proxy settings. To disable any proxy setting from context, you can add `--disable-proxy` or set `env.NO_PROXY` to and non-empty values.
 
-
 Q: How to set temporary file location?
 
 A: You can use `--temp-dir` to set the directory of temporary files.
@@ -86,12 +85,45 @@ Q: How to set multiple HTTP headers?
 
 A: By providing multiple -H/--headers option. For example, `minyami -d xxxx -H "Cookie: xxxx" --headers "User-Agent: yyy"`.
 
-## Use as a library (3.1.0+)
+## Use as a library
+
+Downloaders are created through factory functions. Controllers expose lifecycle operations, events, and read-only
+snapshots; internal queues and playlists are not public mutable state.
 
 ```TypeScript
-import { ArchiveDownloader } from 'minyami';
-import { LiveDownloader } from 'minyami';
+import { createArchiveDownloader, createLiveDownloader } from "minyami";
+
+const archive = createArchiveDownloader("https://example.com/archive.m3u8", {
+    output: "./archive.ts",
+    threads: 8,
+});
+
+archive.on("chunk-downloaded", (chunk) => {
+    console.log(chunk);
+});
+
+await archive.download();
+console.log(archive.getSnapshot());
+
+const live = createLiveDownloader("https://example.com/live.m3u8");
+setTimeout(() => live.stop(), 60_000);
+await live.download();
 ```
+
+To resume an archive task:
+
+```TypeScript
+const archive = createArchiveDownloader();
+await archive.resume(taskId);
+```
+
+### Major-version migration
+
+-   `new ArchiveDownloader(source, config)` becomes `createArchiveDownloader(source, config)`.
+-   `new LiveDownloader(source, config)` becomes `createLiveDownloader(source, config)`.
+-   `live.stopDownload()` becomes `live.stop()`.
+-   Public mutable state is replaced by `controller.getSnapshot()`.
+-   `download()` and `resume()` reject after emitting `critical-error` when a fatal error occurs.
 
 ### Event: `chunk-downloaded`
 
@@ -112,12 +144,6 @@ The `'downloaded'` event is emitted after all chunks are downloaded but before s
 ### Event: `finished`
 
 The `'finished'` event is emitted after all the works are done. CLI program exits after this event is emitted.
-
-### Event: `merge-error`
-
--   `error: Error`
-
-The `merge-error` event is emitted when a merge progress is failed.
 
 ### Event: `critical-error`
 

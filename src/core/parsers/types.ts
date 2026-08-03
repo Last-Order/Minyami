@@ -1,20 +1,70 @@
-import { AxiosProxyConfig } from "axios";
-import M3U8 from "../m3u8";
-import Downloader from "../downloader";
+import { DownloadTask, DownloadTaskGroupAction, DownloadTaskItem } from "../downloader";
+import { M3U8Chunk, Playlist } from "../m3u8";
+import { ChunkNamer } from "../download/chunk_naming";
+import { DownloadHttpClient } from "../download/http_client";
+
+export type ParserMode = "archive" | "live";
 
 export interface ParserOptions {
+    mode: ParserMode;
+    m3u8Path: string;
+    playlist: Playlist;
     key?: string;
-    iv?: string;
-    options?: ParserAdditionalOptions;
-    downloader?: Downloader;
+    threads: number;
+    retries: number;
+    http: DownloadHttpClient;
+    currentTasks?: DownloadTaskItem[];
 }
 
-export interface ParserAdditionalOptions {
-    key?: string;
-    m3u8Url?: string;
-    m3u8?: M3U8;
-    proxy?: AxiosProxyConfig;
-    downloader?: Downloader;
+export interface KeyResolverOptions {
+    keyUrls: string[];
+    explicitKeys: string[];
+    playlistUrl: string;
 }
 
-export interface ParserResult {}
+export type KeyResolver = (options: KeyResolverOptions) => Promise<Record<string, string>>;
+
+export interface ParserLifecycle {
+    onParsed?: () => Promise<void> | void;
+    onDownloaded?: () => Promise<void> | void;
+    onFinished?: () => Promise<void> | void;
+    onCriticalError?: () => Promise<void> | void;
+}
+
+export interface ParserResult {
+    tasks?: DownloadTaskItem[];
+    autoGenerateTasks?: boolean;
+    chunks?: M3U8Chunk[];
+    encryptionKeys?: Record<string, string>;
+    keyResolver?: KeyResolver;
+    chunkNamer?: ChunkNamer;
+    dropChunksOnMaxRetries?: boolean;
+    prepareTask?: (task: DownloadTask) => DownloadTask;
+    prepareAction?: (action: DownloadTaskGroupAction) => DownloadTaskGroupAction;
+    lifecycle?: ParserLifecycle;
+}
+
+export function mergeParserResults(...results: ParserResult[]): ParserResult {
+    const defined = results.filter(Boolean);
+    const lifecycles = defined.map((result) => result.lifecycle).filter(Boolean);
+    const callLifecycle = (name: keyof ParserLifecycle) => async () => {
+        for (const lifecycle of lifecycles) {
+            await lifecycle[name]?.();
+        }
+    };
+
+    return {
+        ...defined.reduce((combined, result) => ({ ...combined, ...result }), {}),
+        encryptionKeys: Object.assign({}, ...defined.map((result) => result.encryptionKeys || {})),
+        ...(lifecycles.length > 0
+            ? {
+                  lifecycle: {
+                      onParsed: callLifecycle("onParsed"),
+                      onDownloaded: callLifecycle("onDownloaded"),
+                      onFinished: callLifecycle("onFinished"),
+                      onCriticalError: callLifecycle("onCriticalError"),
+                  },
+              }
+            : {}),
+    };
+}

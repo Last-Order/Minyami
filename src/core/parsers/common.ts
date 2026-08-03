@@ -1,50 +1,43 @@
-import { requestRaw } from "../../utils/media";
 import logger from "../../utils/log";
 import { buildFullUrl } from "../../utils/common";
 import { ParserOptions, ParserResult } from "./types";
 
 class EncryptionKeyFetchError extends Error {}
 
-export default class Parser {
-    static async parse({ downloader }: ParserOptions): Promise<ParserResult> {
-        downloader.setOnKeyUpdated(async ({ keyUrls, explicitKeys, m3u8Url, saveEncryptionKey }) => {
-            const keys = {};
-            // collect all key urls
-            for (let i = 0; i <= keyUrls.length - 1; i++) {
-                keys[buildFullUrl(m3u8Url, keyUrls[i])] = explicitKeys[i] || "";
-            }
-            // download all keys
-            let counter = 1;
-            for (const url of Object.keys(keys)) {
-                logger.info(`Downloading decrypt keys. (${counter} / ${Object.keys(keys).length})`);
-                if (explicitKeys[counter - 1]) {
-                    saveEncryptionKey(buildFullUrl(m3u8Url, url), explicitKeys[counter - 1]);
+export async function parseCommon({ http, retries }: ParserOptions): Promise<ParserResult> {
+    return {
+        keyResolver: async ({ keyUrls, explicitKeys, playlistUrl }) => {
+            const resolved: Record<string, string> = {};
+            for (let index = 0; index < keyUrls.length; index++) {
+                const url = buildFullUrl(playlistUrl, keyUrls[index]);
+                logger.info(`Downloading decrypt keys. (${index + 1} / ${keyUrls.length})`);
+
+                if (explicitKeys[index]) {
+                    resolved[url] = explicitKeys[index];
                     continue;
                 }
-                let retryCounter = downloader.retries;
-                while (retryCounter > 0) {
+
+                let retriesLeft = retries;
+                while (retriesLeft > 0) {
                     try {
-                        const response = await requestRaw(url, {
+                        const response = await http.request<ArrayBuffer>(url, {
                             responseType: "arraybuffer",
                         });
-                        const hexKey = Array.from(new Uint8Array(response.data))
-                            .map((i) => (i.toString(16).length === 1 ? "0" + i.toString(16) : i.toString(16)))
+                        resolved[url] = Array.from(new Uint8Array(response.data))
+                            .map((value) => value.toString(16).padStart(2, "0"))
                             .join("");
-                        saveEncryptionKey(buildFullUrl(m3u8Url, url), hexKey);
                         break;
-                    } catch (e) {
-                        if (retryCounter > 1) {
-                            retryCounter--;
-                            logger.debug(e);
-                            logger.info("Download decryption key failed, retry.");
-                        } else {
+                    } catch (error) {
+                        retriesLeft--;
+                        if (retriesLeft === 0) {
                             throw new EncryptionKeyFetchError("Max retries exceeded. Abort.");
                         }
+                        logger.debug(error);
+                        logger.info("Download decryption key failed, retry.");
                     }
                 }
-                counter++;
             }
-        });
-        return {};
-    }
+            return resolved;
+        },
+    };
 }

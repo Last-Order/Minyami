@@ -182,6 +182,10 @@ class FileConcentrator {
             await sleep(200);
         }
         await this.checkWritableTasks();
+        if (!this.writeStream) {
+            this.writeSequence = -1;
+            return;
+        }
         await this.closeWriteStream();
         if (this.taskWriteCount[this.writeSequence] === 0) {
             // 如果最后一个文件为空，则删除
@@ -207,6 +211,9 @@ class FileConcentrator {
 
     public getOutputFilePaths(): string[] {
         const result = [];
+        if (this.writeSequence < 0) {
+            return result;
+        }
         if (this.writeSequence === 0) {
             result.push(`${this.outputFilename}${this.outputFileExt ? `.${this.outputFileExt}` : ""}`);
             return result;

@@ -1,2 +1,13 @@
-export { default as ArchiveDownloader } from "./core/archive";
-export { default as LiveDownloader } from "./core/live";
+export { createArchiveDownloader } from "./core/archive";
+export type { ArchiveDownloadController, ArchiveDownloadSnapshot } from "./core/archive";
+export { createLiveDownloader } from "./core/live";
+export type { LiveDownloadController, LiveDownloadSnapshot } from "./core/live";
+export type { DownloadEvent, DownloadSnapshot, DownloadStatus } from "./core/download/controller";
+export type {
+    ArchiveDownloaderConfig,
+    DownloadTask,
+    DownloadTaskGroup,
+    DownloadTaskItem,
+    DownloaderConfig,
+    LiveDownloaderConfig,
+} from "./core/downloader";

@@ -10,6 +10,7 @@
     },
     "scripts": {
         "build": "tsc --newLine lf",
+        "test:smoke": "npm run build && node test/smoke.js",
         "lint": "prettier ./src/**/* --check",
         "lint-fix": "prettier ./src/**/* --write",
         "prepare": "husky install"

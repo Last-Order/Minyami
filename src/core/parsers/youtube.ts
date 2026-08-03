@@ -1,15 +1,13 @@
 import { ParserOptions, ParserResult } from "./types";
 
-export default class Parser {
-    static parse({ downloader }: ParserOptions): ParserResult {
-        downloader.setOnTaskOutputFileNaming((chunk) => {
-            const chunkIdMatch = chunk.url.match(/\/(\d+?)\/goap/);
-            if (chunkIdMatch) {
-                return chunkIdMatch[1];
-            } else {
+export function parseYoutube(_options: ParserOptions): ParserResult {
+    return {
+        chunkNamer: (chunk) => {
+            const match = chunk.url.match(/\/(\d+?)\/goap/);
+            if (!match) {
                 throw new Error(`Bad chunk url: ${chunk.url}`);
             }
-        });
-        return {};
-    }
+            return match[1];
+        },
+    };
 }
