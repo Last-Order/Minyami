@@ -44,6 +44,8 @@ export interface MinyamiTask {
     allDownloadTasks: DownloadTask[];
     /** 已完成文件名 */
     finishedFilenames: { [index: string]: any };
+    /** 已放弃文件名 */
+    droppedFilenames?: { [index: string]: any };
 }
 
 /**

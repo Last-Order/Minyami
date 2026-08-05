@@ -321,7 +321,7 @@ function getLiveSnapshot(context: LiveContext): LiveDownloadSnapshot {
         finishedChunkCount: runtime.progress.finishedChunkCount,
         finishedChunkLength: runtime.progress.finishedChunkLength,
         runningTaskCount: state.scheduler?.runningCount || 0,
-        pendingTaskCount: state.scheduler?.pendingCount || state.downloadTasks.length,
+        pendingTaskCount: state.scheduler?.pendingCount ?? state.downloadTasks.length,
         totalChunkCount: state.totalChunkCount,
         isEnd: state.isEnd,
     };

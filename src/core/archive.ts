@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import * as fs from "fs";
 import * as path from "path";
 import logger from "../utils/log";
 import { deleteEmptyDirectory } from "../utils/system";
@@ -16,6 +17,7 @@ interface ArchiveState {
     downloadTasks: DownloadTask[];
     allDownloadTasks: DownloadTask[];
     finishedFilenames: Record<string, boolean>;
+    droppedFilenames: Record<string, boolean>;
     totalChunkCount: number;
     sliceStart?: number;
     sliceEnd?: number;
@@ -56,6 +58,7 @@ export function createArchiveDownloader(
         downloadTasks: [],
         allDownloadTasks: [],
         finishedFilenames: {},
+        droppedFilenames: {},
         totalChunkCount: 0,
         isResumed: false,
         isDownloaded: false,
@@ -117,6 +120,13 @@ async function downloadArchive(context: ArchiveContext): Promise<void> {
 }
 
 async function resumeArchive(context: ArchiveContext, taskId: string): Promise<void> {
+    if (!context.runtime.config.keepTemporaryFiles) {
+        const error = new Error(
+            "Archive resume is only supported when temporary chunks are preserved with { keep: true }."
+        );
+        await failArchive(context, error);
+        throw error;
+    }
     const previousTask = getTask(taskId.split("?")[0]);
     if (!previousTask) {
         const error = new Error("Can't find a task to resume.");
@@ -130,7 +140,7 @@ async function resumeArchive(context: ArchiveContext, taskId: string): Promise<v
     context.state.isStarted = true;
     logger.info("Previous task found. Resuming.");
 
-    const cliMode = context.runtime.config.cliMode;
+    const currentConfig = context.runtime.config;
     context.runtime = new DownloadRuntime(taskId, {
         threads: previousTask.threads,
         output: previousTask.outputPath,
@@ -139,7 +149,13 @@ async function resumeArchive(context: ArchiveContext, taskId: string): Promise<v
         headers: Object.entries(previousTask.headers || {}).map(([name, value]) => `${name}: ${value}`),
         retries: previousTask.retries,
         proxy: previousTask.proxy,
-        cliMode,
+        verbose: currentConfig.verbose,
+        format: currentConfig.format,
+        noMerge: currentConfig.noMerge,
+        keep: currentConfig.keepTemporaryFiles,
+        keepEncryptedChunks: currentConfig.keepEncryptedChunks,
+        chunkNamingStrategy: currentConfig.chunkNamingStrategy,
+        cliMode: currentConfig.cliMode,
     });
     const { runtime, state } = context;
     state.status = "preparing";
@@ -152,6 +168,7 @@ async function resumeArchive(context: ArchiveContext, taskId: string): Promise<v
     state.downloadTasks = cloneTasks(previousTask.downloadTasks || []);
     state.allDownloadTasks = cloneTasks(previousTask.allDownloadTasks || state.downloadTasks);
     state.finishedFilenames = previousTask.finishedFilenames || {};
+    state.droppedFilenames = previousTask.droppedFilenames || {};
     state.totalChunkCount = previousTask.totalChunksCount || state.allDownloadTasks.length;
     state.isResumed = true;
     installArchiveSigintHandler(context);
@@ -160,6 +177,7 @@ async function resumeArchive(context: ArchiveContext, taskId: string): Promise<v
         await runtime.loadInitialPlaylist();
         await prepareArchiveSiteAndKeys(context);
         initializeArchiveTaskStatuses(context, state.allDownloadTasks);
+        restoreCompletedArchiveOutputs(context);
         state.status = "downloading";
         await runArchiveScheduler(context);
     } catch (error) {
@@ -192,9 +210,30 @@ function initializeArchiveTaskStatuses(context: ArchiveContext, tasks: DownloadT
         runtime.taskStatusRecord[id] = TaskStatus.DROPPED;
     }
     for (const task of tasks) {
-        runtime.taskStatusRecord[task.id] = state.finishedFilenames[task.filename]
+        runtime.taskStatusRecord[task.id] = state.droppedFilenames[task.filename]
             ? TaskStatus.DROPPED
+            : state.finishedFilenames[task.filename]
+            ? TaskStatus.DONE
             : TaskStatus.PENDING;
+    }
+}
+
+function restoreCompletedArchiveOutputs(context: ArchiveContext): void {
+    const { runtime, state } = context;
+    if (runtime.config.noMerge) {
+        return;
+    }
+    for (const task of state.allDownloadTasks) {
+        if (!state.finishedFilenames[task.filename] || state.droppedFilenames[task.filename]) {
+            continue;
+        }
+        const outputPath = runtime.getTaskOutputPath(task);
+        if (!fs.existsSync(outputPath)) {
+            throw new Error(
+                `Cannot safely resume because completed chunk '${task.filename}' is missing from '${runtime.tempPath}'.`
+            );
+        }
+        runtime.markOutputReady(task, outputPath);
     }
 }
 
@@ -256,6 +295,7 @@ function onArchiveTaskError(context: ArchiveContext, task: DownloadTask, error: 
         runtime.markDropped(task);
         runtime.progress.recordDropped();
         state.finishedFilenames[task.filename] = true;
+        state.droppedFilenames[task.filename] = true;
         logger.warning(`Processing ${task.filename} failed, max retries exceed, drop.`);
         return false;
     }
@@ -332,6 +372,7 @@ function saveArchiveTaskStatus(context: ArchiveContext): void {
             downloadTasks: cloneTasks(unfinishedTasks),
             allDownloadTasks: cloneTasks(state.allDownloadTasks),
             finishedFilenames: state.finishedFilenames,
+            droppedFilenames: state.droppedFilenames,
         });
     } catch (error) {
         logger.warning("Fail to save previous task status, ignored.");
@@ -350,7 +391,7 @@ function getArchiveSnapshot(context: ArchiveContext): ArchiveDownloadSnapshot {
         finishedChunkCount: runtime.progress.finishedChunkCount,
         finishedChunkLength: runtime.progress.finishedChunkLength,
         runningTaskCount: state.scheduler?.runningCount || 0,
-        pendingTaskCount: state.scheduler?.pendingCount || state.downloadTasks.length,
+        pendingTaskCount: state.scheduler?.pendingCount ?? state.downloadTasks.length,
         totalChunkCount: state.totalChunkCount,
         isResumed: state.isResumed,
     };

@@ -33,7 +33,7 @@ export function sliceArchiveTasks(tasks: DownloadTask[], sliceStart?: number, sl
         const taskStart = currentTime;
         const taskEnd = currentTime + task.chunk.length;
         currentTime = taskEnd;
-        if (taskEnd >= sliceStart && taskStart < sliceEnd) {
+        if (taskEnd > sliceStart && taskStart < sliceEnd) {
             selected.push(task);
         }
     }

@@ -144,6 +144,11 @@ export class DownloadRuntime {
         return this.chunkNamer(task, id);
     }
 
+    getTaskOutputPath(task: DownloadTask): string {
+        const downloadedPath = path.resolve(this.tempPath, task.filename);
+        return task.chunk.isEncrypted ? downloadedPath + ".decrypt" : downloadedPath;
+    }
+
     get dropChunksOnMaxRetries(): boolean {
         return !!this.sitePlan.dropChunksOnMaxRetries;
     }

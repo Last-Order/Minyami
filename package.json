@@ -1,6 +1,6 @@
 {
     "name": "minyami",
-    "version": "5.5.1",
+    "version": "6.0.0-beta.1",
     "description": "",
     "main": "dist/exports.js",
     "types": "dist/exports.d.ts",
@@ -9,7 +9,7 @@
         "url": "https://github.com/Last-Order/Minyami"
     },
     "scripts": {
-        "build": "tsc --newLine lf",
+        "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc --newLine lf",
         "test:smoke": "npm run build && node test/smoke.js",
         "lint": "prettier ./src/**/* --check",
         "lint-fix": "prettier ./src/**/* --write",
