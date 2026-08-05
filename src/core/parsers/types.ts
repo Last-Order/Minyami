@@ -26,14 +26,4 @@ export interface ParserResult {
     encryptionKeys?: Record<string, string>;
     keyResolver?: KeyResolver;
     chunkNamer?: ChunkNamer;
-    dropChunksOnMaxRetries?: boolean;
-}
-
-export function mergeParserResults(...results: ParserResult[]): ParserResult {
-    const defined = results.filter(Boolean);
-
-    return {
-        ...defined.reduce((combined, result) => ({ ...combined, ...result }), {}),
-        encryptionKeys: Object.assign({}, ...defined.map((result) => result.encryptionKeys || {})),
-    };
 }

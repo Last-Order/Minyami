@@ -178,12 +178,9 @@ async function onArchiveTaskSuccess(context: ArchiveContext, task: DownloadTask,
 }
 
 function onArchiveTaskError(context: ArchiveContext, task: DownloadTask, error: unknown): boolean {
-    const { runtime, state, events } = context;
+    const { runtime, events } = context;
     events.emit("chunk-error", error, task.filename);
-    task.retryCount = task.retryCount ? task.retryCount + 1 : 1;
-    if (runtime.dropChunksOnMaxRetries && task.retryCount >= runtime.config.retries) {
-        runtime.markDropped(task);
-        runtime.progress.recordDropped();
+    if (runtime.recordTaskFailure(task) === "drop") {
         logger.warning(`Processing ${task.filename} failed, max retries exceed, drop.`);
         return false;
     }

@@ -135,10 +135,6 @@ export class DownloadRuntime {
         return this.chunkNamer(task, id);
     }
 
-    get dropChunksOnMaxRetries(): boolean {
-        return !!this.sitePlan.dropChunksOnMaxRetries;
-    }
-
     async execute(task: DownloadTask): Promise<ExecutedChunk> {
         if (!this.playlist) {
             throw new Error("Cannot execute a chunk before loading its playlist.");
@@ -164,8 +160,14 @@ export class DownloadRuntime {
         this.taskStatusRecord[task.id] = TaskStatus.DONE;
     }
 
-    markDropped(task: DownloadTask): void {
+    recordTaskFailure(task: DownloadTask): "retry" | "drop" {
+        task.retryCount = task.retryCount ? task.retryCount + 1 : 1;
+        if (task.retryCount < this.config.retries) {
+            return "retry";
+        }
         this.taskStatusRecord[task.id] = TaskStatus.DROPPED;
+        this.progress.recordDropped();
+        return "drop";
     }
 
     async finishOutput(): Promise<string[]> {

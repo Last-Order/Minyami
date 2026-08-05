@@ -145,6 +145,59 @@ async function testTaskPersistenceRemoved() {
     });
 }
 
+async function testChunkRetryLimit() {
+    let chunkRequests = 0;
+    const server = http.createServer((request, response) => {
+        if (request.url === "/failed.ts") {
+            chunkRequests++;
+            response.statusCode = 500;
+            response.end("failed");
+            return;
+        }
+        const address = server.address();
+        response.setHeader("content-type", "application/vnd.apple.mpegurl");
+        response.end(
+            [
+                "#EXTM3U",
+                "#EXT-X-TARGETDURATION:1",
+                "#EXT-X-MEDIA-SEQUENCE:0",
+                "#EXTINF:1,",
+                `http://127.0.0.1:${address.port}/failed.ts`,
+                "#EXT-X-ENDLIST",
+            ].join("\n")
+        );
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+        for (const [createDownloader, name] of [
+            [createArchiveDownloader, "archive"],
+            [createLiveDownloader, "live"],
+        ]) {
+            const root = fs.mkdtempSync(path.join(os.tmpdir(), `minyami-retry-limit-${name}-`));
+            chunkRequests = 0;
+            let chunkErrors = 0;
+            try {
+                const downloader = createDownloader(`http://127.0.0.1:${server.address().port}/playlist.m3u8`, {
+                    noMerge: true,
+                    retries: 2,
+                    tempDir: root,
+                });
+                downloader.on("chunk-error", () => chunkErrors++);
+                await downloader.download();
+                assert.strictEqual(chunkRequests, 2);
+                assert.strictEqual(chunkErrors, 2);
+                assert.strictEqual(downloader.getSnapshot().finishedChunkCount, 1);
+                assert.strictEqual(downloader.getSnapshot().totalChunkCount, 1);
+                assert.strictEqual(downloader.getSnapshot().status, "finished");
+            } finally {
+                fs.rmSync(root, { recursive: true, force: true });
+            }
+        }
+    } finally {
+        await new Promise((resolve) => server.close(resolve));
+    }
+}
+
 function testHttpIsolation() {
     const originalHeader = axios.defaults.headers.common["X-Minyami-Smoke"];
     createArchiveDownloader("http://127.0.0.1/playlist.m3u8", {
@@ -222,6 +275,7 @@ async function main() {
     await testDownloader(createLiveDownloader, "live");
     await testEncryptedArchive();
     await testTaskPersistenceRemoved();
+    await testChunkRetryLimit();
     await testFailureContract();
     process.stdout.write("Smoke tests passed.\n");
 }

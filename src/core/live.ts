@@ -220,9 +220,7 @@ async function onLiveTaskSuccess(context: LiveContext, task: DownloadTask, resul
 function onLiveTaskError(context: LiveContext, task: DownloadTask, error: unknown): boolean {
     const { runtime, state, events } = context;
     events.emit("chunk-error", error, task.filename);
-    task.retryCount = task.retryCount ? task.retryCount + 1 : 1;
-    if (task.retryCount >= runtime.config.retries) {
-        runtime.markDropped(task);
+    if (runtime.recordTaskFailure(task) === "drop") {
         state.downloadTasks = state.downloadTasks.filter((queuedTask) => queuedTask.id !== task.id);
         logger.warning(`Processing ${task.filename} failed, max retries exceed, drop.`);
         return false;

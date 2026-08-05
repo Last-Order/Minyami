@@ -1,10 +1,9 @@
 import logger from "../../utils/log";
 import { parseAbema } from "../parsers/abema";
-import { parseBcovLive } from "../parsers/bcovlive";
 import { parseCommon } from "../parsers/common";
 import { parseHibiki } from "../parsers/hibiki";
 import { parseYoutube } from "../parsers/youtube";
-import { mergeParserResults, ParserOptions, ParserResult } from "../parsers/types";
+import { ParserOptions, ParserResult } from "../parsers/types";
 
 export async function prepareSite(options: ParserOptions): Promise<ParserResult> {
     const { playlist, m3u8Path, mode } = options;
@@ -30,7 +29,7 @@ export async function prepareSite(options: ParserOptions): Promise<ParserResult>
 
     if (mode === "archive" && m3u8Path.includes("bcovlive")) {
         logger.info("Site confirmed: Stagecrowd.");
-        return mergeParserResults(parseBcovLive(options), await parseCommon(options));
+        return parseCommon(options);
     }
 
     logger.warning("Site is not supported by Minyami Core. Try common parser.");
