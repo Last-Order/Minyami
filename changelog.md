@@ -16,11 +16,13 @@
 
 -   Added isolated download runtimes for configuration, HTTP sessions, playlist loading, key resolution, chunk execution, progress tracking, and output coordination.
 -   Added a shared task scheduler with concurrency control and retry handling.
+-   Added a `DownloadSource` abstraction, a configurable `HLSSource`, and a shared `createDownloader` execution engine for custom task sources.
 -   Added smoke coverage for archive, live, encrypted, scheduler, HTTP-isolation, and failure flows.
 
 ### Changed
 
 -   Parser integrations now return declarative download plans instead of mutating global downloader state.
+-   Archive and live factories now use the same downloader lifecycle; their HLS sources differ only in snapshot versus follow discovery mode.
 -   HTTP headers, cookies, and proxy configuration are isolated per downloader instance.
 -   Archive downloads continue to delete chunks after they are written to merged output unless `keep` is enabled.
 -   Builds now clean `dist` before compiling so removed modules cannot remain in release artifacts.

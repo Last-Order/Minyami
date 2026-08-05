@@ -110,6 +110,24 @@ setTimeout(() => live.stop(), 60_000);
 await live.download();
 ```
 
+The same execution engine can also consume a source directly. An HLS source in `snapshot` mode yields one batch;
+`follow` mode refreshes the playlist and yields newly discovered chunks until the stream ends or the controller is
+stopped.
+
+```TypeScript
+import { createDownloader, createHLSSource } from "minyami";
+
+const downloader = createDownloader(
+    createHLSSource("https://example.com/live.m3u8", { mode: "follow" }),
+    { output: "./live.ts" }
+);
+
+await downloader.download();
+```
+
+Custom implementations of `DownloadSource` may yield any number of `SourceBatch` values. Sources produce immutable
+`DownloadItem` values; the downloader owns task ids, filenames, retries, scheduling, progress, and output merging.
+
 ### Progress semantics
 
 Snapshots report successful, dropped, and completed work separately:

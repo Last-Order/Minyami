@@ -1,4 +1,5 @@
 import { M3U8Chunk } from "./m3u8";
+import { DownloadItem } from "./source/types";
 import { NamingStrategy } from "./types";
 
 export interface DownloaderConfig {
@@ -25,7 +26,7 @@ export interface ArchiveDownloaderConfig extends DownloaderConfig {
 
 export interface LiveDownloaderConfig extends DownloaderConfig {}
 
-export interface DownloadTask {
+export interface DownloadTask extends DownloadItem {
     id: number;
     filename: string;
     retryCount: number;

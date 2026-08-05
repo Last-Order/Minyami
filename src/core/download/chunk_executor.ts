@@ -1,6 +1,5 @@
 import * as path from "path";
 import logger from "../../utils/log";
-import { buildFullUrl } from "../../utils/common";
 import { decrypt } from "../../utils/media";
 import { DownloadTask } from "../downloader";
 import { isInitialChunk } from "../m3u8";
@@ -9,7 +8,6 @@ import { KeyStore } from "./key_store";
 
 export interface ExecuteChunkOptions {
     tempPath: string;
-    playlistUrl: string;
     chunkTimeout: number;
     keepEncryptedChunks: boolean;
 }
@@ -38,7 +36,11 @@ export class ChunkExecutor {
             const decryptIV = isInitialChunk(task.chunk)
                 ? task.chunk.iv
                 : task.chunk.iv || task.chunk.sequenceId.toString(16);
-            const keyUrl = buildFullUrl(options.playlistUrl, task.chunk.key);
+            // The item carries an absolute key URL so execution is independent of later playlist refreshes.
+            const keyUrl = task.encryptionKeyUrl;
+            if (!keyUrl) {
+                throw new Error(`Missing encryption key URL for ${task.chunk.url}`);
+            }
             const key = this.keys.get(keyUrl);
             if (!key) {
                 throw new Error(`Missing encryption key for ${keyUrl}`);

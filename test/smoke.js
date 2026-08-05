@@ -5,8 +5,7 @@ const http = require("http");
 const os = require("os");
 const path = require("path");
 const axios = require("axios");
-const { createArchiveDownloader, createLiveDownloader } = require("../dist/exports");
-const { sliceArchiveTasks } = require("../dist/core/download/archive_tasks");
+const { createArchiveDownloader, createDownloader, createLiveDownloader } = require("../dist/exports");
 const { TaskScheduler } = require("../dist/core/download/task_scheduler");
 
 async function testScheduler() {
@@ -31,26 +30,6 @@ async function testScheduler() {
 
     assert.strictEqual(attempts.get(1), 2);
     assert.strictEqual(attempts.get(2), 1);
-}
-
-function testArchiveSliceBoundary() {
-    const tasks = [0, 1].map((id) => ({
-        id,
-        filename: `${id}.ts`,
-        retryCount: 0,
-        chunk: {
-            url: `http://127.0.0.1/${id}.ts`,
-            length: 1,
-            sequenceId: id,
-            isInitialChunk: false,
-            isEncrypted: false,
-        },
-    }));
-
-    assert.deepStrictEqual(
-        sliceArchiveTasks(tasks, 1, 2).map((task) => task.id),
-        [1]
-    );
 }
 
 async function withMediaServer(run) {
@@ -88,6 +67,27 @@ async function withMediaServer(run) {
     } finally {
         await new Promise((resolve) => server.close(resolve));
     }
+}
+
+async function testArchiveSliceBoundary() {
+    await withMediaServer(async (playlistUrl) => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-archive-slice-"));
+        const output = path.join(root, "slice.ts");
+        try {
+            const downloader = createArchiveDownloader(playlistUrl, {
+                output,
+                tempDir: root,
+                slice: "00:00:01-00:00:02",
+            });
+            await downloader.download();
+            const snapshot = downloader.getSnapshot();
+            assert.strictEqual(snapshot.totalChunkCount, 1);
+            assert.strictEqual(snapshot.completedChunkCount, 1);
+            assert.deepStrictEqual(fs.readFileSync(output), Buffer.from("second-chunk"));
+        } finally {
+            fs.rmSync(root, { recursive: true, force: true });
+        }
+    });
 }
 
 async function testDownloader(createDownloader, name) {
@@ -130,6 +130,138 @@ async function testDownloader(createDownloader, name) {
             fs.rmSync(root, { recursive: true, force: true });
         }
     });
+}
+
+async function testCustomSource() {
+    await withMediaServer(async (playlistUrl, expectedOutput) => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-custom-source-"));
+        const output = path.join(root, "custom.ts");
+        const chunks = [0, 1].map((sequenceId) => ({
+            url: new URL(`/${sequenceId}.ts`, playlistUrl).href,
+            length: 1,
+            sequenceId,
+            isInitialChunk: false,
+            isEncrypted: false,
+        }));
+        const source = {
+            sourcePath: "custom://media",
+            continuous: false,
+            async prepare() {
+                return { sourcePath: this.sourcePath };
+            },
+            async *discover() {
+                yield { items: [{ chunk: chunks[0] }], totalItemCount: 2 };
+                yield { items: [{ chunk: chunks[1] }], totalItemCount: 2 };
+            },
+        };
+        try {
+            const downloader = createDownloader(source, { output, tempDir: root, threads: 2 });
+            await downloader.download();
+            const snapshot = downloader.getSnapshot();
+            assert.strictEqual(snapshot.sourcePath, "custom://media");
+            assert.strictEqual(snapshot.totalChunkCount, 2);
+            assert.strictEqual(snapshot.completedChunkCount, 2);
+            assert.strictEqual(snapshot.isEnd, true);
+            assert.deepStrictEqual(fs.readFileSync(output), expectedOutput);
+        } finally {
+            fs.rmSync(root, { recursive: true, force: true });
+        }
+    });
+}
+
+async function testLiveIncrementalDiscovery() {
+    let playlistRequests = 0;
+    const chunkRequests = new Map();
+    const chunks = {
+        "/0.ts": Buffer.from("first-live-chunk"),
+        "/1.ts": Buffer.from("second-live-chunk"),
+    };
+    const server = http.createServer((request, response) => {
+        if (chunks[request.url]) {
+            chunkRequests.set(request.url, (chunkRequests.get(request.url) || 0) + 1);
+            response.end(chunks[request.url]);
+            return;
+        }
+        playlistRequests++;
+        const address = server.address();
+        const lines = [
+            "#EXTM3U",
+            "#EXT-X-TARGETDURATION:1",
+            "#EXT-X-MEDIA-SEQUENCE:0",
+            "#EXTINF:0.01,",
+            `http://127.0.0.1:${address.port}/0.ts`,
+        ];
+        if (playlistRequests > 1) {
+            lines.push("#EXTINF:0.01,", `http://127.0.0.1:${address.port}/1.ts`, "#EXT-X-ENDLIST");
+        }
+        response.setHeader("content-type", "application/vnd.apple.mpegurl");
+        response.end(lines.join("\n"));
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-live-incremental-"));
+    const output = path.join(root, "live.ts");
+    try {
+        const downloader = createLiveDownloader(`http://127.0.0.1:${server.address().port}/playlist.m3u8`, {
+            output,
+            tempDir: root,
+            threads: 2,
+        });
+        await downloader.download();
+        const snapshot = downloader.getSnapshot();
+        assert.strictEqual(playlistRequests, 2);
+        assert.strictEqual(chunkRequests.get("/0.ts"), 1);
+        assert.strictEqual(chunkRequests.get("/1.ts"), 1);
+        assert.strictEqual(snapshot.totalChunkCount, 2);
+        assert.strictEqual(snapshot.completedChunkCount, 2);
+        assert.strictEqual(snapshot.isEnd, true);
+        assert.deepStrictEqual(fs.readFileSync(output), Buffer.concat(Object.values(chunks)));
+    } finally {
+        await new Promise((resolve) => server.close(resolve));
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+}
+
+async function testLiveGracefulStop() {
+    let playlistRequests = 0;
+    const chunk = Buffer.from("stopped-live-chunk");
+    const server = http.createServer((request, response) => {
+        if (request.url === "/0.ts") {
+            response.end(chunk);
+            return;
+        }
+        playlistRequests++;
+        const address = server.address();
+        response.setHeader("content-type", "application/vnd.apple.mpegurl");
+        response.end(
+            [
+                "#EXTM3U",
+                "#EXT-X-TARGETDURATION:10",
+                "#EXT-X-MEDIA-SEQUENCE:0",
+                "#EXTINF:10,",
+                `http://127.0.0.1:${address.port}/0.ts`,
+            ].join("\n")
+        );
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-live-stop-"));
+    const output = path.join(root, "live.ts");
+    try {
+        const downloader = createLiveDownloader(`http://127.0.0.1:${server.address().port}/playlist.m3u8`, {
+            output,
+            tempDir: root,
+        });
+        downloader.once("chunk-downloaded", () => downloader.stop());
+        await downloader.download();
+        const snapshot = downloader.getSnapshot();
+        assert.strictEqual(playlistRequests, 1);
+        assert.strictEqual(snapshot.status, "finished");
+        assert.strictEqual(snapshot.completedChunkCount, 1);
+        assert.strictEqual(snapshot.isEnd, true);
+        assert.deepStrictEqual(fs.readFileSync(output), chunk);
+    } finally {
+        await new Promise((resolve) => server.close(resolve));
+        fs.rmSync(root, { recursive: true, force: true });
+    }
 }
 
 function testRecoverySurfaceRemoved() {
@@ -287,11 +419,14 @@ async function testFailureContract() {
 
 async function main() {
     await testScheduler();
-    testArchiveSliceBoundary();
+    await testArchiveSliceBoundary();
     testRecoverySurfaceRemoved();
     testHttpIsolation();
     await testDownloader(createArchiveDownloader, "archive");
     await testDownloader(createLiveDownloader, "live");
+    await testCustomSource();
+    await testLiveIncrementalDiscovery();
+    await testLiveGracefulStop();
     await testEncryptedArchive();
     await testTaskPersistenceRemoved();
     await testChunkRetryLimit();
