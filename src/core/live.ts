@@ -5,7 +5,13 @@ import { deleteEmptyDirectory, sleep } from "../utils/system";
 import { DownloadTask, LiveDownloaderConfig } from "./downloader";
 import { TaskStatus } from "./file_concentrator";
 import { isNormalChunk } from "./m3u8";
-import { DownloadEvent, DownloadEventListener, DownloadSnapshot, DownloadStatus } from "./download/controller";
+import {
+    ChunkDownloadedInfo,
+    DownloadEvent,
+    DownloadEventListener,
+    DownloadSnapshot,
+    DownloadStatus,
+} from "./download/controller";
 import { DownloadRuntime, ExecutedChunk } from "./download/runtime";
 import { TaskScheduler } from "./download/task_scheduler";
 
@@ -103,7 +109,7 @@ async function downloadLive(context: LiveContext): Promise<void> {
         if (runtime.config.verbose) {
             state.verboseTimer = setInterval(() => {
                 logger.debug(
-                    `Waiting tasks: ${state.scheduler.pendingCount}, finished chunks: ${runtime.progress.finishedChunkCount}`
+                    `Waiting tasks: ${state.scheduler.pendingCount}, completed chunks: ${runtime.progress.completedChunkCount}, successful chunks: ${runtime.progress.successfulChunkCount}, dropped chunks: ${runtime.progress.droppedChunkCount}`
                 );
             }, 3000);
         }
@@ -177,7 +183,7 @@ async function refreshLivePlaylist(context: LiveContext): Promise<void> {
         await runtime.refreshPlaylist(state.totalChunkCount);
     } catch (error) {
         const status = (error as any)?.response?.status;
-        if (runtime.progress.finishedChunkCount > 0) {
+        if (runtime.progress.successfulChunkCount > 0) {
             if (status >= 400 && status <= 599) {
                 logger.info("M3U8 file is no longer available. Stop downloading.");
                 state.isEnd = true;
@@ -202,17 +208,20 @@ function createLiveScheduler(context: LiveContext): void {
 
 async function onLiveTaskSuccess(context: LiveContext, task: DownloadTask, result: ExecutedChunk): Promise<void> {
     const { runtime, state, events } = context;
-    runtime.recordFinished(task);
+    runtime.recordTaskSuccess(task);
     runtime.markOutputReady(task, result.outputPath);
     state.downloadTasks = state.downloadTasks.filter((queuedTask) => queuedTask.id !== task.id);
-    const chunkInfo = {
-        taskname: task.filename,
-        finishedChunksCount: runtime.progress.finishedChunkCount,
-        chunkSpeed: runtime.progress.speedByChunk(),
-        ratioSpeed: runtime.progress.speedByRatio(),
+    const chunkInfo: ChunkDownloadedInfo = {
+        taskName: task.filename,
+        completedChunkCount: runtime.progress.completedChunkCount,
+        successfulChunkCount: runtime.progress.successfulChunkCount,
+        droppedChunkCount: runtime.progress.droppedChunkCount,
+        totalChunkCount: state.totalChunkCount,
+        successfulChunksPerSecond: runtime.progress.successfulChunksPerSecond(),
+        successfulDurationRatio: runtime.progress.successfulDurationRatio(),
     };
     logger.info(
-        `Processing ${chunkInfo.taskname} finished. (${chunkInfo.finishedChunksCount} chunks downloaded | Avg Speed: ${chunkInfo.chunkSpeed} chunks/s or ${chunkInfo.ratioSpeed}x)`
+        `Processing ${chunkInfo.taskName} finished. (Completed: ${chunkInfo.completedChunkCount} / ${chunkInfo.totalChunkCount} discovered | Successful: ${chunkInfo.successfulChunkCount} | Dropped: ${chunkInfo.droppedChunkCount} | Avg successful speed: ${chunkInfo.successfulChunksPerSecond} chunks/s or ${chunkInfo.successfulDurationRatio}x)`
     );
     events.emit("chunk-downloaded", chunkInfo);
 }
@@ -236,6 +245,9 @@ async function finishLiveDownload(context: LiveContext): Promise<void> {
     }
     state.isDownloadFinished = true;
     clearLiveVerboseTimer(state);
+    logger.info(
+        `All discovered chunks processed. Successful: ${runtime.progress.successfulChunkCount}; dropped: ${runtime.progress.droppedChunkCount}.`
+    );
     events.emit("downloaded");
     if (runtime.config.noMerge) {
         logger.info("Skip merging. Please merge video chunks manually.");
@@ -280,8 +292,10 @@ function getLiveSnapshot(context: LiveContext): LiveDownloadSnapshot {
         tempPath: runtime.tempPath,
         outputPath: runtime.outputPath,
         startedAt: runtime.progress.startedAt,
-        finishedChunkCount: runtime.progress.finishedChunkCount,
-        finishedChunkLength: runtime.progress.finishedChunkLength,
+        completedChunkCount: runtime.progress.completedChunkCount,
+        successfulChunkCount: runtime.progress.successfulChunkCount,
+        droppedChunkCount: runtime.progress.droppedChunkCount,
+        successfulDuration: runtime.progress.successfulDuration,
         runningTaskCount: state.scheduler?.runningCount || 0,
         pendingTaskCount: state.scheduler?.pendingCount ?? state.downloadTasks.length,
         totalChunkCount: state.totalChunkCount,

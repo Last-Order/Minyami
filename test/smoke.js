@@ -101,14 +101,29 @@ async function testDownloader(createDownloader, name) {
                 threads: 2,
             });
             let finished = false;
+            let latestChunkInfo;
+            downloader.on("chunk-downloaded", (chunkInfo) => {
+                latestChunkInfo = chunkInfo;
+            });
             downloader.once("finished", () => {
                 finished = true;
             });
             await downloader.download();
+            const snapshot = downloader.getSnapshot();
             assert.strictEqual(finished, true);
-            assert.strictEqual(downloader.getSnapshot().status, "finished");
-            assert.strictEqual(downloader.getSnapshot().finishedChunkCount, 2);
-            assert.strictEqual(downloader.getSnapshot().pendingTaskCount, 0);
+            assert.strictEqual(snapshot.status, "finished");
+            assert.strictEqual(snapshot.completedChunkCount, 2);
+            assert.strictEqual(snapshot.successfulChunkCount, 2);
+            assert.strictEqual(snapshot.droppedChunkCount, 0);
+            assert.strictEqual(snapshot.successfulDuration, 2);
+            assert.strictEqual(snapshot.pendingTaskCount, 0);
+            assert.strictEqual("finishedChunkCount" in snapshot, false);
+            assert.strictEqual("finishedChunkLength" in snapshot, false);
+            assert.strictEqual(latestChunkInfo.completedChunkCount, 2);
+            assert.strictEqual(latestChunkInfo.successfulChunkCount, 2);
+            assert.strictEqual(latestChunkInfo.droppedChunkCount, 0);
+            assert.strictEqual(latestChunkInfo.totalChunkCount, 2);
+            assert.strictEqual("finishedChunksCount" in latestChunkInfo, false);
             assert.deepStrictEqual(fs.readFileSync(output), expectedOutput);
             assert.deepStrictEqual(fs.readdirSync(root), [`${name}.ts`]);
         } finally {
@@ -186,9 +201,13 @@ async function testChunkRetryLimit() {
                 await downloader.download();
                 assert.strictEqual(chunkRequests, 2);
                 assert.strictEqual(chunkErrors, 2);
-                assert.strictEqual(downloader.getSnapshot().finishedChunkCount, 1);
-                assert.strictEqual(downloader.getSnapshot().totalChunkCount, 1);
-                assert.strictEqual(downloader.getSnapshot().status, "finished");
+                const snapshot = downloader.getSnapshot();
+                assert.strictEqual(snapshot.completedChunkCount, 1);
+                assert.strictEqual(snapshot.successfulChunkCount, 0);
+                assert.strictEqual(snapshot.droppedChunkCount, 1);
+                assert.strictEqual(snapshot.successfulDuration, 0);
+                assert.strictEqual(snapshot.totalChunkCount, 1);
+                assert.strictEqual(snapshot.status, "finished");
             } finally {
                 fs.rmSync(root, { recursive: true, force: true });
             }

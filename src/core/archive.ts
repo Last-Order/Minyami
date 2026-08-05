@@ -6,7 +6,13 @@ import { timeStringToSeconds } from "../utils/time";
 import { TaskStatus } from "./file_concentrator";
 import { ArchiveDownloaderConfig, DownloadTask } from "./downloader";
 import { createArchiveTasks, sliceArchiveTasks } from "./download/archive_tasks";
-import { DownloadEvent, DownloadEventListener, DownloadSnapshot, DownloadStatus } from "./download/controller";
+import {
+    ChunkDownloadedInfo,
+    DownloadEvent,
+    DownloadEventListener,
+    DownloadSnapshot,
+    DownloadStatus,
+} from "./download/controller";
 import { DownloadRuntime, ExecutedChunk } from "./download/runtime";
 import { TaskScheduler } from "./download/task_scheduler";
 
@@ -142,7 +148,7 @@ async function runArchiveScheduler(context: ArchiveContext): Promise<void> {
     if (runtime.config.verbose) {
         state.verboseTimer = setInterval(() => {
             logger.debug(
-                `Waiting tasks: ${state.scheduler.pendingCount}, finished chunks: ${runtime.progress.finishedChunkCount}, total chunks: ${state.totalChunkCount}`
+                `Waiting tasks: ${state.scheduler.pendingCount}, completed chunks: ${runtime.progress.completedChunkCount}, successful chunks: ${runtime.progress.successfulChunkCount}, dropped chunks: ${runtime.progress.droppedChunkCount}, total chunks: ${state.totalChunkCount}`
             );
         }, 3000);
     }
@@ -156,23 +162,27 @@ async function runArchiveScheduler(context: ArchiveContext): Promise<void> {
 
 async function onArchiveTaskSuccess(context: ArchiveContext, task: DownloadTask, result: ExecutedChunk): Promise<void> {
     const { runtime, state, events } = context;
-    runtime.recordFinished(task);
+    runtime.recordTaskSuccess(task);
     runtime.markOutputReady(task, result.outputPath);
     const progress = runtime.progress;
-    const chunkInfo = {
-        taskname: task.filename,
-        finishedChunksCount: progress.finishedChunkCount,
-        totalChunksCount: state.totalChunkCount,
-        chunkSpeed: progress.speedByChunk(),
-        ratioSpeed: progress.speedByRatio(),
-        eta: progress.eta(state.totalChunkCount),
+    const chunkInfo: ChunkDownloadedInfo = {
+        taskName: task.filename,
+        completedChunkCount: progress.completedChunkCount,
+        successfulChunkCount: progress.successfulChunkCount,
+        droppedChunkCount: progress.droppedChunkCount,
+        totalChunkCount: state.totalChunkCount,
+        successfulChunksPerSecond: progress.successfulChunksPerSecond(),
+        successfulDurationRatio: progress.successfulDurationRatio(),
+        completionEta: progress.completionEta(state.totalChunkCount),
     };
     logger.info(
-        `Processing ${chunkInfo.taskname} finished. (${chunkInfo.finishedChunksCount} / ${
-            chunkInfo.totalChunksCount
-        } or ${((chunkInfo.finishedChunksCount / chunkInfo.totalChunksCount) * 100).toFixed(2)}% | Avg Speed: ${
-            chunkInfo.chunkSpeed
-        } chunks/s or ${chunkInfo.ratioSpeed}x | ETA: ${chunkInfo.eta})`
+        `Processing ${chunkInfo.taskName} finished. (Completed: ${chunkInfo.completedChunkCount} / ${
+            chunkInfo.totalChunkCount
+        } or ${((chunkInfo.completedChunkCount / chunkInfo.totalChunkCount) * 100).toFixed(2)}% | Successful: ${
+            chunkInfo.successfulChunkCount
+        } | Dropped: ${chunkInfo.droppedChunkCount} | Avg successful speed: ${
+            chunkInfo.successfulChunksPerSecond
+        } chunks/s or ${chunkInfo.successfulDurationRatio}x | Completion ETA: ${chunkInfo.completionEta})`
     );
     events.emit("chunk-downloaded", chunkInfo);
 }
@@ -194,7 +204,9 @@ async function finishArchiveDownload(context: ArchiveContext): Promise<void> {
         return;
     }
     state.isDownloaded = true;
-    logger.info("All chunks downloaded. Start merging chunks.");
+    logger.info(
+        `All chunks processed. Successful: ${runtime.progress.successfulChunkCount}; dropped: ${runtime.progress.droppedChunkCount}.`
+    );
     events.emit("downloaded");
 
     if (runtime.config.noMerge) {
@@ -232,8 +244,10 @@ function getArchiveSnapshot(context: ArchiveContext): ArchiveDownloadSnapshot {
         tempPath: runtime.tempPath,
         outputPath: runtime.outputPath,
         startedAt: runtime.progress.startedAt,
-        finishedChunkCount: runtime.progress.finishedChunkCount,
-        finishedChunkLength: runtime.progress.finishedChunkLength,
+        completedChunkCount: runtime.progress.completedChunkCount,
+        successfulChunkCount: runtime.progress.successfulChunkCount,
+        droppedChunkCount: runtime.progress.droppedChunkCount,
+        successfulDuration: runtime.progress.successfulDuration,
         runningTaskCount: state.scheduler?.runningCount || 0,
         pendingTaskCount: state.scheduler?.pendingCount ?? state.downloadTasks.length,
         totalChunkCount: state.totalChunkCount,

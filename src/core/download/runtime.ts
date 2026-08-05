@@ -148,8 +148,8 @@ export class DownloadRuntime {
         return { ...result, task };
     }
 
-    recordFinished(task: DownloadTask): void {
-        this.progress.recordFinished(task);
+    recordTaskSuccess(task: DownloadTask): void {
+        this.progress.recordSuccessful(task);
     }
 
     markOutputReady(task: DownloadTask, outputPath: string): void {

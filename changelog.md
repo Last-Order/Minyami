@@ -9,6 +9,7 @@
 -   Removed the Nico archive/live parsers, Nico-specific channel handling, and all Nico-only task grouping and persistence mechanisms.
 -   Removed archive task resume, the `resume` CLI command and controller API, and task-state persistence for both archive and live downloads.
 -   Archive and live downloads now both drop a chunk after reaching the user-configured retry limit; archive downloads no longer retry ordinary failed chunks indefinitely.
+-   Replaced ambiguous finished-chunk progress fields with explicit completed, successful, dropped, and successful-duration metrics in snapshots and chunk event payloads.
 -   Changed `--slice` selection to use segment overlap with a half-open `[start, end)` range. A segment is selected when its end is after `start` and its start is before `end`. Unlike 5.x, a segment ending exactly at `start` and a segment starting exactly at `end` are excluded; boundary segments and resulting output duration may therefore differ from previous releases.
 
 ### Added

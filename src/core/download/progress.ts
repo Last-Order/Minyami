@@ -3,64 +3,79 @@ import { isInitialChunk } from "../m3u8";
 
 export interface ProgressSnapshot {
     startedAt: number;
-    finishedChunkCount: number;
-    finishedChunkLength: number;
+    completedChunkCount: number;
+    successfulChunkCount: number;
+    droppedChunkCount: number;
+    successfulDuration: number;
 }
 
 export class ProgressTracker {
-    private state: ProgressSnapshot = {
+    private state = {
         startedAt: 0,
-        finishedChunkCount: 0,
-        finishedChunkLength: 0,
+        successfulChunkCount: 0,
+        droppedChunkCount: 0,
+        successfulDuration: 0,
     };
 
     start(startedAt = Date.now()): void {
         this.state.startedAt = startedAt;
     }
 
-    recordFinished(task: DownloadTask): void {
-        this.state.finishedChunkCount++;
+    recordSuccessful(task: DownloadTask): void {
+        this.state.successfulChunkCount++;
         if (!isInitialChunk(task.chunk)) {
-            this.state.finishedChunkLength += task.chunk.length;
+            this.state.successfulDuration += task.chunk.length;
         }
     }
 
     recordDropped(): void {
-        this.state.finishedChunkCount++;
+        this.state.droppedChunkCount++;
     }
 
     get snapshot(): ProgressSnapshot {
-        return { ...this.state };
+        return {
+            ...this.state,
+            completedChunkCount: this.completedChunkCount,
+        };
     }
 
     get startedAt(): number {
         return this.state.startedAt;
     }
 
-    get finishedChunkCount(): number {
-        return this.state.finishedChunkCount;
+    get completedChunkCount(): number {
+        return this.state.successfulChunkCount + this.state.droppedChunkCount;
     }
 
-    get finishedChunkLength(): number {
-        return this.state.finishedChunkLength;
+    get successfulChunkCount(): number {
+        return this.state.successfulChunkCount;
     }
 
-    speedByChunk(): string {
-        return (this.state.finishedChunkCount / this.elapsedSeconds()).toFixed(2);
+    get droppedChunkCount(): number {
+        return this.state.droppedChunkCount;
     }
 
-    speedByRatio(): string {
-        return (this.state.finishedChunkLength / this.elapsedSeconds()).toFixed(2);
+    get successfulDuration(): number {
+        return this.state.successfulDuration;
     }
 
-    eta(totalChunkCount: number): string {
-        if (this.state.finishedChunkCount === 0) {
+    successfulChunksPerSecond(): string {
+        return (this.state.successfulChunkCount / this.elapsedSeconds()).toFixed(2);
+    }
+
+    successfulDurationRatio(): string {
+        return (this.state.successfulDuration / this.elapsedSeconds()).toFixed(2);
+    }
+
+    completionEta(totalChunkCount: number): string {
+        const completedChunkCount = this.completedChunkCount;
+        if (completedChunkCount === 0) {
             return "--";
         }
         const usedTime = Date.now() - this.state.startedAt;
         const remainingSeconds = Math.max(
             0,
-            Math.round(((usedTime / this.state.finishedChunkCount) * totalChunkCount - usedTime) / 1000)
+            Math.round(((usedTime / completedChunkCount) * totalChunkCount - usedTime) / 1000)
         );
         if (remainingSeconds < 60) {
             return `${remainingSeconds}s`;

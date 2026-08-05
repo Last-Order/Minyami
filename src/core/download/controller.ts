@@ -10,14 +10,27 @@ export type DownloadEvent =
 
 export type DownloadEventListener = (...args: any[]) => void;
 
+export interface ChunkDownloadedInfo {
+    taskName: string;
+    completedChunkCount: number;
+    successfulChunkCount: number;
+    droppedChunkCount: number;
+    totalChunkCount: number;
+    successfulChunksPerSecond: string;
+    successfulDurationRatio: string;
+    completionEta?: string;
+}
+
 export interface DownloadSnapshot {
     status: DownloadStatus;
     sourcePath: string;
     tempPath: string;
     outputPath: string;
     startedAt: number;
-    finishedChunkCount: number;
-    finishedChunkLength: number;
+    completedChunkCount: number;
+    successfulChunkCount: number;
+    droppedChunkCount: number;
+    successfulDuration: number;
     runningTaskCount: number;
     pendingTaskCount: number;
 }

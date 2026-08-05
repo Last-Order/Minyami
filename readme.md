@@ -110,11 +110,30 @@ setTimeout(() => live.stop(), 60_000);
 await live.download();
 ```
 
+### Progress semantics
+
+Snapshots report successful, dropped, and completed work separately:
+
+-   `completedChunkCount`: resolved tasks, equal to `successfulChunkCount + droppedChunkCount`.
+-   `successfulChunkCount`: chunks downloaded and processed successfully.
+-   `droppedChunkCount`: chunks abandoned after reaching the configured retry limit.
+-   `successfulDuration`: total media duration in seconds from successfully processed media chunks; initialization segments and dropped chunks do not add duration.
+
+Completion percentage and ETA use `completedChunkCount`. Download speed and the successful-duration ratio use only
+successful chunks.
+
 ### Event: `chunk-downloaded`
 
--   `currentChunkInfo` `<object>` The information of the chunk which is just downloaded.
+-   `taskName` `<string>` The filename of the chunk that was just downloaded.
+-   `completedChunkCount` `<number>` Successful plus dropped chunks.
+-   `successfulChunkCount` `<number>` Successfully processed chunks.
+-   `droppedChunkCount` `<number>` Chunks dropped after reaching the retry limit.
+-   `totalChunkCount` `<number>` Total archive chunks or live chunks discovered so far.
+-   `successfulChunksPerSecond` `<string>` Average successful chunks processed per second.
+-   `successfulDurationRatio` `<string>` Successfully processed media duration divided by elapsed wall time.
+-   `completionEta` `<string | undefined>` Archive completion ETA; omitted for live downloads.
 
-The `'chunk-downloaded'` event is emitted when every media chunk is downloaded.
+The `'chunk-downloaded'` event is emitted only after a chunk is downloaded and processed successfully.
 
 ### Event: `chunk-error`
 
@@ -124,7 +143,8 @@ The `'chunk-error'` event is emitted when failed to download or decrypt media ch
 
 ### Event: `downloaded`
 
-The `'downloaded'` event is emitted after all chunks are downloaded but before starting merge.
+The `'downloaded'` event is emitted after every scheduled chunk has either succeeded or been dropped, but before
+starting merge.
 
 ### Event: `finished`
 
