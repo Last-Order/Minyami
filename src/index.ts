@@ -100,33 +100,6 @@ Erii.bind(
 
 Erii.bind(
     {
-        name: ["resume", "r"],
-        description: "Resume a download. (Archive)",
-        argument: {
-            name: "input_path",
-            description: "m3u8 file path",
-        },
-    },
-    async (ctx, options) => {
-        const path = ctx.getArgument().toString();
-        if (options.verbose) {
-            logger.enableDebugMode();
-        }
-        const downloader = createArchiveDownloader(undefined, {
-            cliMode: true,
-        });
-        downloader.on("finished", () => {
-            process.exit();
-        });
-        downloader.on("critical-error", () => {
-            process.exit(1);
-        });
-        await downloader.resume(path);
-    }
-);
-
-Erii.bind(
-    {
         name: ["clean"],
         description: "Clean cache files",
     },
@@ -143,7 +116,6 @@ Erii.bind(
                 forceDeleteDirectory(path.resolve(os.tmpdir(), `./${file}`));
             }
         }
-        fs.writeFileSync(path.resolve(__dirname, "../tasks.json"), "[]");
     }
 );
 

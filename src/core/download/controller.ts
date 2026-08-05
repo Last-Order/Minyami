@@ -12,7 +12,7 @@ export type DownloadEventListener = (...args: any[]) => void;
 
 export interface DownloadSnapshot {
     status: DownloadStatus;
-    sourcePath?: string;
+    sourcePath: string;
     tempPath: string;
     outputPath: string;
     startedAt: number;

@@ -8,7 +8,6 @@ const axios = require("axios");
 const { createArchiveDownloader, createLiveDownloader } = require("../dist/exports");
 const { sliceArchiveTasks } = require("../dist/core/download/archive_tasks");
 const { TaskScheduler } = require("../dist/core/download/task_scheduler");
-const taskStore = require("../dist/utils/task");
 
 async function testScheduler() {
     const events = [];
@@ -84,8 +83,7 @@ async function withMediaServer(run) {
     try {
         await run(
             `http://127.0.0.1:${server.address().port}/playlist.m3u8`,
-            Buffer.concat(Object.values(chunks)),
-            chunks
+            Buffer.concat(Object.values(chunks))
         );
     } finally {
         await new Promise((resolve) => server.close(resolve));
@@ -119,139 +117,32 @@ async function testDownloader(createDownloader, name) {
     });
 }
 
-function createResumeTasks(playlistUrl) {
-    const baseUrl = new URL(playlistUrl);
-    return [0, 1].map((id) => ({
-        id,
-        filename: `${id.toString().padStart(6, "0")}_${id}.ts`,
-        retryCount: 0,
-        chunk: {
-            url: new URL(`/${id}.ts`, baseUrl).toString(),
-            length: 1,
-            sequenceId: id,
-            isInitialChunk: false,
-            isEncrypted: false,
-        },
-    }));
+function testRecoverySurfaceRemoved() {
+    const downloader = createArchiveDownloader("http://127.0.0.1/playlist.m3u8");
+    assert.strictEqual(downloader.resume, undefined);
+    assert.strictEqual("isResumed" in downloader.getSnapshot(), false);
 }
 
-function createSavedArchiveTask(playlistUrl, tempPath, outputPath, tasks) {
-    return {
-        id: playlistUrl,
-        tempPath,
-        m3u8Path: playlistUrl,
-        outputPath,
-        threads: 1,
-        headers: {},
-        startedAt: Date.now() - 1000,
-        finishedChunksCount: 1,
-        finishedChunkLength: 1,
-        totalChunksCount: tasks.length,
-        retries: 2,
-        timeout: 60000,
-        proxy: "",
-        downloadTasks: [tasks[1]],
-        allDownloadTasks: tasks,
-        finishedFilenames: { [tasks[0].filename]: true },
-        droppedFilenames: {},
-    };
-}
-
-async function withMockedArchiveTask(savedTask, run) {
-    const originalGetTask = taskStore.getTask;
-    const originalSaveTask = taskStore.saveTask;
-    const originalDeleteTask = taskStore.deleteTask;
-    const calls = { saved: [], deleted: [] };
-    taskStore.getTask = () => savedTask;
-    taskStore.saveTask = (task) => calls.saved.push(task);
-    taskStore.deleteTask = (id) => calls.deleted.push(id);
-    try {
-        await run(calls);
-    } finally {
-        taskStore.getTask = originalGetTask;
-        taskStore.saveTask = originalSaveTask;
-        taskStore.deleteTask = originalDeleteTask;
-    }
-}
-
-async function testArchiveResumeIntegrity() {
-    await withMediaServer(async (playlistUrl, expectedOutput, chunks) => {
-        const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-resume-"));
-        const tempPath = path.join(root, "session");
-        const outputPath = path.join(root, "resumed.ts");
-        const partialOutputPath = path.join(root, "resumed_0.ts");
-        const tasks = createResumeTasks(playlistUrl);
-        fs.mkdirSync(tempPath);
-        fs.writeFileSync(path.join(tempPath, tasks[0].filename), chunks["/0.ts"]);
-        fs.writeFileSync(partialOutputPath, "stale-partial-output");
-        const savedTask = createSavedArchiveTask(playlistUrl, tempPath, outputPath, tasks);
-
-        try {
-            await withMockedArchiveTask(savedTask, async (calls) => {
-                const downloader = createArchiveDownloader(undefined, { keep: true });
-                await downloader.resume(playlistUrl);
-                assert.deepStrictEqual(fs.readFileSync(outputPath), expectedOutput);
-                assert.strictEqual(downloader.getSnapshot().pendingTaskCount, 0);
-                assert.strictEqual(fs.existsSync(path.join(tempPath, tasks[0].filename)), true);
-                assert.strictEqual(fs.existsSync(path.join(tempPath, tasks[1].filename)), true);
-                assert.deepStrictEqual(calls.deleted, [playlistUrl]);
-            });
-        } finally {
-            fs.rmSync(root, { recursive: true, force: true });
-        }
-    });
-}
-
-async function testArchiveResumeOptions() {
-    await withMediaServer(async (playlistUrl, _expectedOutput, chunks) => {
-        const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-resume-options-"));
-        const tempPath = path.join(root, "session");
-        const outputPath = path.join(root, "should-not-be-created.ts");
-        const tasks = createResumeTasks(playlistUrl);
-        fs.mkdirSync(tempPath);
-        fs.writeFileSync(path.join(tempPath, tasks[0].filename), chunks["/0.ts"]);
-        const savedTask = createSavedArchiveTask(playlistUrl, tempPath, outputPath, tasks);
-
-        try {
-            await withMockedArchiveTask(savedTask, async (calls) => {
-                const downloader = createArchiveDownloader(undefined, { noMerge: true, keep: true });
-                await downloader.resume(playlistUrl);
-                assert.strictEqual(fs.existsSync(outputPath), false);
-                assert.strictEqual(fs.existsSync(path.join(tempPath, tasks[0].filename)), true);
-                assert.strictEqual(fs.existsSync(path.join(tempPath, tasks[1].filename)), true);
-                assert.strictEqual(calls.deleted.length, 0);
-            });
-        } finally {
-            fs.rmSync(root, { recursive: true, force: true });
-        }
-    });
-}
-
-async function testArchiveResumeMissingChunkFailure() {
+async function testTaskPersistenceRemoved() {
     await withMediaServer(async (playlistUrl) => {
-        const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-resume-missing-"));
-        const tempPath = path.join(root, "session");
-        const outputPath = path.join(root, "missing.ts");
-        const tasks = createResumeTasks(playlistUrl);
-        fs.mkdirSync(tempPath);
-        const savedTask = createSavedArchiveTask(playlistUrl, tempPath, outputPath, tasks);
-
-        try {
-            await withMockedArchiveTask(savedTask, async () => {
-                const downloader = createArchiveDownloader(undefined, { keep: true });
-                await assert.rejects(() => downloader.resume(playlistUrl), /completed chunk .* is missing/);
-                assert.strictEqual(downloader.getSnapshot().status, "failed");
-            });
-        } finally {
-            fs.rmSync(root, { recursive: true, force: true });
+        for (const [createDownloader, name] of [
+            [createArchiveDownloader, "archive"],
+            [createLiveDownloader, "live"],
+        ]) {
+            const root = fs.mkdtempSync(path.join(os.tmpdir(), `minyami-no-task-state-${name}-`));
+            try {
+                const downloader = createDownloader(playlistUrl, {
+                    noMerge: true,
+                    output: path.join(root, `${name}.ts`),
+                    tempDir: root,
+                });
+                await downloader.download();
+                assert.strictEqual(fs.existsSync(path.join(downloader.getSnapshot().tempPath, "task.json")), false);
+            } finally {
+                fs.rmSync(root, { recursive: true, force: true });
+            }
         }
     });
-}
-
-async function testArchiveResumeRequiresKeep() {
-    const downloader = createArchiveDownloader();
-    await assert.rejects(() => downloader.resume("http://127.0.0.1/playlist.m3u8"), /keep: true/);
-    assert.strictEqual(downloader.getSnapshot().status, "failed");
 }
 
 function testHttpIsolation() {
@@ -325,14 +216,12 @@ async function testFailureContract() {
 async function main() {
     await testScheduler();
     testArchiveSliceBoundary();
+    testRecoverySurfaceRemoved();
     testHttpIsolation();
     await testDownloader(createArchiveDownloader, "archive");
     await testDownloader(createLiveDownloader, "live");
     await testEncryptedArchive();
-    await testArchiveResumeIntegrity();
-    await testArchiveResumeOptions();
-    await testArchiveResumeMissingChunkFailure();
-    await testArchiveResumeRequiresKeep();
+    await testTaskPersistenceRemoved();
     await testFailureContract();
     process.stdout.write("Smoke tests passed.\n");
 }

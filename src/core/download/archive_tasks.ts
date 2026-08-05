@@ -11,10 +11,6 @@ export function createArchiveTasks(playlist: Playlist, nameChunk: ChunkNamer): D
     }));
 }
 
-export function cloneTasks(tasks: DownloadTask[]): DownloadTask[] {
-    return tasks.map((task) => ({ ...task, chunk: { ...task.chunk } }));
-}
-
 export function sliceArchiveTasks(tasks: DownloadTask[], sliceStart?: number, sliceEnd?: number): DownloadTask[] {
     if (sliceStart === undefined || sliceEnd === undefined) {
         return tasks;

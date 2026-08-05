@@ -29,7 +29,7 @@ export class DownloadRuntime {
     readonly playlistLoader: PlaylistLoader;
     readonly chunkExecutor: ChunkExecutor;
 
-    sourcePath?: string;
+    sourcePath: string;
     tempPath: string;
     outputPath: string;
     playlist?: Playlist;
@@ -42,7 +42,7 @@ export class DownloadRuntime {
     private chunkNamer: ChunkNamer;
     private sitePlan: ParserResult = {};
 
-    constructor(sourcePath: string | undefined, config: DownloaderConfig = {}) {
+    constructor(sourcePath: string, config: DownloaderConfig = {}) {
         this.sourcePath = sourcePath;
         this.config = normalizeDownloaderConfig(config);
         this.tempPath = this.config.tempPath;
@@ -131,22 +131,8 @@ export class DownloadRuntime {
         this.prepareOutput();
     }
 
-    useExistingWorkspace(tempPath: string, outputPath: string): void {
-        this.tempPath = tempPath;
-        this.outputPath = outputPath;
-        if (!fs.existsSync(this.tempPath)) {
-            throw new Error(`Temporary path '${this.tempPath}' does not exist.`);
-        }
-        this.prepareOutput(false);
-    }
-
     nameChunk(task: DownloadTask["chunk"], id: number): string {
         return this.chunkNamer(task, id);
-    }
-
-    getTaskOutputPath(task: DownloadTask): string {
-        const downloadedPath = path.resolve(this.tempPath, task.filename);
-        return task.chunk.isEncrypted ? downloadedPath + ".decrypt" : downloadedPath;
     }
 
     get dropChunksOnMaxRetries(): boolean {
@@ -196,13 +182,11 @@ export class DownloadRuntime {
         }
     }
 
-    private prepareOutput(selectAvailablePath = true): void {
+    private prepareOutput(): void {
         if (this.outputPrepared || this.config.noMerge) {
             return;
         }
-        if (selectAvailablePath) {
-            this.outputPath = getAvailableOutputPath(this.outputPath);
-        }
+        this.outputPath = getAvailableOutputPath(this.outputPath);
         this.fileConcentrator = new FileConcentrator({
             outputPath: this.outputPath,
             taskStatusRecord: this.taskStatusRecord,

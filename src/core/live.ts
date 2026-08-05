@@ -1,5 +1,4 @@
 import { EventEmitter } from "events";
-import * as fs from "fs";
 import * as path from "path";
 import logger from "../utils/log";
 import { deleteEmptyDirectory, sleep } from "../utils/system";
@@ -15,7 +14,6 @@ interface LiveState {
     readonly initialChunkUrls: Set<string>;
     readonly sequenceIds: Set<number>;
     downloadTasks: DownloadTask[];
-    allDownloadTasks: DownloadTask[];
     totalChunkCount: number;
     isEnd: boolean;
     isDownloadFinished: boolean;
@@ -55,7 +53,6 @@ export function createLiveDownloader(m3u8Path: string, config: LiveDownloaderCon
             initialChunkUrls: new Set<string>(),
             sequenceIds: new Set<number>(),
             downloadTasks: [],
-            allDownloadTasks: [],
             totalChunkCount: 0,
             isEnd: false,
             isDownloadFinished: false,
@@ -108,7 +105,6 @@ async function downloadLive(context: LiveContext): Promise<void> {
                 logger.debug(
                     `Waiting tasks: ${state.scheduler.pendingCount}, finished chunks: ${runtime.progress.finishedChunkCount}`
                 );
-                saveLiveTask(context);
             }, 3000);
         }
 
@@ -160,7 +156,6 @@ async function cycleLivePlaylist(context: LiveContext): Promise<void> {
             runtime.taskStatusRecord[task.id] = TaskStatus.PENDING;
         }
         state.downloadTasks.push(...newTasks);
-        state.allDownloadTasks.push(...newTasks);
         state.totalChunkCount += newTasks.length;
         if (newTasks.length > 0) {
             state.scheduler.add(newTasks);
@@ -244,9 +239,6 @@ async function finishLiveDownload(context: LiveContext): Promise<void> {
     state.isDownloadFinished = true;
     clearLiveVerboseTimer(state);
     events.emit("downloaded");
-    if (runtime.config.noMerge || runtime.config.keepTemporaryFiles) {
-        saveLiveTask(context);
-    }
     if (runtime.config.noMerge) {
         logger.info("Skip merging. Please merge video chunks manually.");
         logger.info(`Temporary files are located at ${runtime.tempPath}`);
@@ -272,34 +264,6 @@ async function finishLiveDownload(context: LiveContext): Promise<void> {
     logLiveOutputPaths(outputPaths);
     state.status = "finished";
     events.emit("finished");
-}
-
-function saveLiveTask(context: LiveContext): void {
-    const { runtime, state } = context;
-    if (!runtime.tempPath || !fs.existsSync(runtime.tempPath)) {
-        return;
-    }
-    const taskInfo = {
-        tempPath: runtime.tempPath,
-        m3u8Path: runtime.sourcePath,
-        outputPath: runtime.outputPath,
-        threads: runtime.config.threads,
-        cookies: runtime.config.cookies,
-        headers: runtime.config.headers,
-        key: runtime.config.key,
-        verbose: runtime.config.verbose,
-        startedAt: runtime.progress.startedAt,
-        retries: runtime.config.retries,
-        timeout: runtime.timeout,
-        proxy: runtime.config.proxy,
-        downloadTasks: state.allDownloadTasks,
-    };
-    try {
-        fs.writeFileSync(path.resolve(runtime.tempPath, "task.json"), JSON.stringify(taskInfo, null, 2));
-    } catch (error) {
-        logger.warning("Fail to save task info.");
-        logger.debug(error);
-    }
 }
 
 function stopLive(context: LiveContext): void {
@@ -355,7 +319,6 @@ function installLiveSigintHandler(context: LiveContext): void {
         logger.info("Force stopped.");
         logger.info(`Your temporary files are located at [${path.resolve(runtime.tempPath)}]`);
         state.scheduler?.abort();
-        saveLiveTask(context);
         if (!state.isDownloadFinished) {
             state.isDownloadFinished = true;
             state.status = "finished";
@@ -371,7 +334,6 @@ async function failLive(context: LiveContext, error: unknown): Promise<void> {
     logger.error("Aborted due to critical error.", error as Error);
     if (runtime.tempPath) {
         logger.info(`Your temporary files are located at [${path.resolve(runtime.tempPath)}]`);
-        saveLiveTask(context);
     }
     events.emit("critical-error", error);
 }

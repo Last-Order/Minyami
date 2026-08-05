@@ -1,13 +1,11 @@
 import { EventEmitter } from "events";
-import * as fs from "fs";
 import * as path from "path";
 import logger from "../utils/log";
 import { deleteEmptyDirectory } from "../utils/system";
-import { deleteTask, getTask, saveTask } from "../utils/task";
 import { timeStringToSeconds } from "../utils/time";
 import { TaskStatus } from "./file_concentrator";
 import { ArchiveDownloaderConfig, DownloadTask } from "./downloader";
-import { cloneTasks, createArchiveTasks, sliceArchiveTasks } from "./download/archive_tasks";
+import { createArchiveTasks, sliceArchiveTasks } from "./download/archive_tasks";
 import { DownloadEvent, DownloadEventListener, DownloadSnapshot, DownloadStatus } from "./download/controller";
 import { DownloadRuntime, ExecutedChunk } from "./download/runtime";
 import { TaskScheduler } from "./download/task_scheduler";
@@ -15,34 +13,27 @@ import { TaskScheduler } from "./download/task_scheduler";
 interface ArchiveState {
     status: DownloadStatus;
     downloadTasks: DownloadTask[];
-    allDownloadTasks: DownloadTask[];
-    finishedFilenames: Record<string, boolean>;
-    droppedFilenames: Record<string, boolean>;
     totalChunkCount: number;
     sliceStart?: number;
     sliceEnd?: number;
-    isResumed: boolean;
     isDownloaded: boolean;
     isStarted: boolean;
     scheduler?: TaskScheduler<DownloadTask, ExecutedChunk>;
     verboseTimer?: NodeJS.Timeout;
-    sigintInstalled: boolean;
 }
 
 interface ArchiveContext {
-    runtime: DownloadRuntime;
+    readonly runtime: DownloadRuntime;
     readonly events: EventEmitter;
     readonly state: ArchiveState;
 }
 
 export interface ArchiveDownloadSnapshot extends DownloadSnapshot {
     totalChunkCount: number;
-    isResumed: boolean;
 }
 
 export interface ArchiveDownloadController {
     download(): Promise<void>;
-    resume(taskId: string): Promise<void>;
     getSnapshot(): ArchiveDownloadSnapshot;
     on(event: DownloadEvent, listener: DownloadEventListener): ArchiveDownloadController;
     once(event: DownloadEvent, listener: DownloadEventListener): ArchiveDownloadController;
@@ -50,20 +41,15 @@ export interface ArchiveDownloadController {
 }
 
 export function createArchiveDownloader(
-    m3u8Path?: string,
+    m3u8Path: string,
     config: ArchiveDownloaderConfig = {}
 ): ArchiveDownloadController {
     const state: ArchiveState = {
         status: "idle",
         downloadTasks: [],
-        allDownloadTasks: [],
-        finishedFilenames: {},
-        droppedFilenames: {},
         totalChunkCount: 0,
-        isResumed: false,
         isDownloaded: false,
         isStarted: false,
-        sigintInstalled: false,
     };
     if (config.slice) {
         const [start, end] = config.slice.split("-");
@@ -78,7 +64,6 @@ export function createArchiveDownloader(
     };
     const controller: ArchiveDownloadController = {
         download: () => downloadArchive(context),
-        resume: (taskId) => resumeArchive(context, taskId),
         getSnapshot: () => getArchiveSnapshot(context),
         on(event, listener) {
             context.events.on(event, listener);
@@ -106,78 +91,8 @@ async function downloadArchive(context: ArchiveContext): Promise<void> {
     runtime.progress.start();
     try {
         await runtime.allocateWorkspace();
-        installArchiveSigintHandler(context);
-        if (!runtime.playlist) {
-            await runtime.loadInitialPlaylist();
-        }
-        await prepareNewArchiveDownload(context);
-        state.status = "downloading";
-        await runArchiveScheduler(context);
-    } catch (error) {
-        await failArchive(context, error);
-        throw error;
-    }
-}
-
-async function resumeArchive(context: ArchiveContext, taskId: string): Promise<void> {
-    if (!context.runtime.config.keepTemporaryFiles) {
-        const error = new Error(
-            "Archive resume is only supported when temporary chunks are preserved with { keep: true }."
-        );
-        await failArchive(context, error);
-        throw error;
-    }
-    const previousTask = getTask(taskId.split("?")[0]);
-    if (!previousTask) {
-        const error = new Error("Can't find a task to resume.");
-        logger.error(error.message);
-        await failArchive(context, error);
-        throw error;
-    }
-    if (context.state.isStarted) {
-        throw new Error("This archive download controller has already been started.");
-    }
-    context.state.isStarted = true;
-    logger.info("Previous task found. Resuming.");
-
-    const currentConfig = context.runtime.config;
-    context.runtime = new DownloadRuntime(taskId, {
-        threads: previousTask.threads,
-        output: previousTask.outputPath,
-        key: previousTask.key,
-        cookies: previousTask.cookies,
-        headers: Object.entries(previousTask.headers || {}).map(([name, value]) => `${name}: ${value}`),
-        retries: previousTask.retries,
-        proxy: previousTask.proxy,
-        verbose: currentConfig.verbose,
-        format: currentConfig.format,
-        noMerge: currentConfig.noMerge,
-        keep: currentConfig.keepTemporaryFiles,
-        keepEncryptedChunks: currentConfig.keepEncryptedChunks,
-        chunkNamingStrategy: currentConfig.chunkNamingStrategy,
-        cliMode: currentConfig.cliMode,
-    });
-    const { runtime, state } = context;
-    state.status = "preparing";
-    runtime.useExistingWorkspace(previousTask.tempPath, previousTask.outputPath);
-    runtime.progress.restore({
-        startedAt: Date.now(),
-        finishedChunkCount: previousTask.finishedChunksCount,
-        finishedChunkLength: previousTask.finishedChunkLength,
-    });
-    state.downloadTasks = cloneTasks(previousTask.downloadTasks || []);
-    state.allDownloadTasks = cloneTasks(previousTask.allDownloadTasks || state.downloadTasks);
-    state.finishedFilenames = previousTask.finishedFilenames || {};
-    state.droppedFilenames = previousTask.droppedFilenames || {};
-    state.totalChunkCount = previousTask.totalChunksCount || state.allDownloadTasks.length;
-    state.isResumed = true;
-    installArchiveSigintHandler(context);
-
-    try {
         await runtime.loadInitialPlaylist();
-        await prepareArchiveSiteAndKeys(context);
-        initializeArchiveTaskStatuses(context, state.allDownloadTasks);
-        restoreCompletedArchiveOutputs(context);
+        await prepareNewArchiveDownload(context);
         state.status = "downloading";
         await runArchiveScheduler(context);
     } catch (error) {
@@ -191,9 +106,8 @@ async function prepareNewArchiveDownload(context: ArchiveContext): Promise<void>
     await prepareArchiveSiteAndKeys(context);
     state.downloadTasks = createArchiveTasks(runtime.playlist, (chunk, id) => runtime.nameChunk(chunk, id));
     state.downloadTasks = sliceArchiveTasks(state.downloadTasks, state.sliceStart, state.sliceEnd);
-    state.allDownloadTasks = cloneTasks(state.downloadTasks);
     state.totalChunkCount = state.downloadTasks.length;
-    initializeArchiveTaskStatuses(context, state.allDownloadTasks);
+    initializeArchiveTaskStatuses(context, state.downloadTasks);
 }
 
 async function prepareArchiveSiteAndKeys(context: ArchiveContext) {
@@ -204,36 +118,13 @@ async function prepareArchiveSiteAndKeys(context: ArchiveContext) {
 }
 
 function initializeArchiveTaskStatuses(context: ArchiveContext, tasks: DownloadTask[]): void {
-    const { runtime, state } = context;
+    const { runtime } = context;
     const maxId = tasks.reduce((highest, task) => Math.max(highest, task.id), -1);
     for (let id = 0; id <= maxId; id++) {
         runtime.taskStatusRecord[id] = TaskStatus.DROPPED;
     }
     for (const task of tasks) {
-        runtime.taskStatusRecord[task.id] = state.droppedFilenames[task.filename]
-            ? TaskStatus.DROPPED
-            : state.finishedFilenames[task.filename]
-            ? TaskStatus.DONE
-            : TaskStatus.PENDING;
-    }
-}
-
-function restoreCompletedArchiveOutputs(context: ArchiveContext): void {
-    const { runtime, state } = context;
-    if (runtime.config.noMerge) {
-        return;
-    }
-    for (const task of state.allDownloadTasks) {
-        if (!state.finishedFilenames[task.filename] || state.droppedFilenames[task.filename]) {
-            continue;
-        }
-        const outputPath = runtime.getTaskOutputPath(task);
-        if (!fs.existsSync(outputPath)) {
-            throw new Error(
-                `Cannot safely resume because completed chunk '${task.filename}' is missing from '${runtime.tempPath}'.`
-            );
-        }
-        runtime.markOutputReady(task, outputPath);
+        runtime.taskStatusRecord[task.id] = TaskStatus.PENDING;
     }
 }
 
@@ -266,7 +157,6 @@ async function runArchiveScheduler(context: ArchiveContext): Promise<void> {
 async function onArchiveTaskSuccess(context: ArchiveContext, task: DownloadTask, result: ExecutedChunk): Promise<void> {
     const { runtime, state, events } = context;
     runtime.recordFinished(task);
-    state.finishedFilenames[task.filename] = true;
     runtime.markOutputReady(task, result.outputPath);
     const progress = runtime.progress;
     const chunkInfo = {
@@ -294,8 +184,6 @@ function onArchiveTaskError(context: ArchiveContext, task: DownloadTask, error: 
     if (runtime.dropChunksOnMaxRetries && task.retryCount >= runtime.config.retries) {
         runtime.markDropped(task);
         runtime.progress.recordDropped();
-        state.finishedFilenames[task.filename] = true;
-        state.droppedFilenames[task.filename] = true;
         logger.warning(`Processing ${task.filename} failed, max retries exceed, drop.`);
         return false;
     }
@@ -311,7 +199,6 @@ async function finishArchiveDownload(context: ArchiveContext): Promise<void> {
     state.isDownloaded = true;
     logger.info("All chunks downloaded. Start merging chunks.");
     events.emit("downloaded");
-    saveArchiveTaskStatus(context);
 
     if (runtime.config.noMerge) {
         logger.info("Skip merging. Please merge video chunks manually.");
@@ -335,49 +222,9 @@ async function finishArchiveDownload(context: ArchiveContext): Promise<void> {
             );
         }
     }
-    try {
-        deleteTask(runtime.sourcePath.split("?")[0]);
-    } catch (error) {
-        logger.warning("Fail to delete previous task status, ignored.");
-        logger.warning((error as Error).message);
-    }
     logArchiveOutputPaths(outputPaths);
     state.status = "finished";
     events.emit("finished");
-}
-
-function saveArchiveTaskStatus(context: ArchiveContext): void {
-    const { runtime, state } = context;
-    const unfinishedTasks = state.allDownloadTasks.filter((task) => !state.finishedFilenames[task.filename]);
-    const unfinishedTaskCount = unfinishedTasks.length;
-    logger.info(`Downloaded: ${runtime.progress.finishedChunkCount}; Waiting for download: ${unfinishedTaskCount}`);
-
-    try {
-        saveTask({
-            id: runtime.sourcePath.split("?")[0],
-            tempPath: runtime.tempPath,
-            m3u8Path: runtime.sourcePath,
-            outputPath: runtime.outputPath,
-            threads: runtime.config.threads,
-            cookies: runtime.config.cookies,
-            headers: runtime.config.headers,
-            key: runtime.config.key,
-            startedAt: runtime.progress.startedAt,
-            finishedChunksCount: state.totalChunkCount - unfinishedTaskCount,
-            finishedChunkLength: runtime.progress.finishedChunkLength,
-            totalChunksCount: state.totalChunkCount,
-            retries: runtime.config.retries,
-            timeout: runtime.timeout,
-            proxy: runtime.config.proxy,
-            downloadTasks: cloneTasks(unfinishedTasks),
-            allDownloadTasks: cloneTasks(state.allDownloadTasks),
-            finishedFilenames: state.finishedFilenames,
-            droppedFilenames: state.droppedFilenames,
-        });
-    } catch (error) {
-        logger.warning("Fail to save previous task status, ignored.");
-        logger.warning((error as Error).message);
-    }
 }
 
 function getArchiveSnapshot(context: ArchiveContext): ArchiveDownloadSnapshot {
@@ -393,7 +240,6 @@ function getArchiveSnapshot(context: ArchiveContext): ArchiveDownloadSnapshot {
         runningTaskCount: state.scheduler?.runningCount || 0,
         pendingTaskCount: state.scheduler?.pendingCount ?? state.downloadTasks.length,
         totalChunkCount: state.totalChunkCount,
-        isResumed: state.isResumed,
     };
 }
 
@@ -409,21 +255,6 @@ function logArchiveOutputPaths(outputPaths: string[]): void {
                 .join(", ")}.`
         );
     }
-}
-
-function installArchiveSigintHandler(context: ArchiveContext): void {
-    const { runtime, state, events } = context;
-    if (!runtime.config.cliMode || state.sigintInstalled) {
-        return;
-    }
-    state.sigintInstalled = true;
-    process.on("SIGINT", () => {
-        state.status = "stopping";
-        logger.info("Saving task status.");
-        saveArchiveTaskStatus(context);
-        logger.info("Please wait.");
-        events.emit("finished");
-    });
 }
 
 async function failArchive(context: ArchiveContext, error: unknown): Promise<void> {

@@ -57,8 +57,6 @@ Help:
          --keep, k                 Keep temporary files.
          --keep-encrypted-chunks   Do not delete encrypted chunks after decryption.
          --chunk-naming-strategy   Temporary file naming strategy. Defaults to 1.
-     --resume <input_path>         Resume a download. (Archive)  -r
-         <input_path>              m3u8 file path
      --clean                       Clean cache files
 
 Options:
@@ -110,20 +108,13 @@ setTimeout(() => live.stop(), 60_000);
 await live.download();
 ```
 
-To resume an archive task:
-
-```TypeScript
-const archive = createArchiveDownloader();
-await archive.resume(taskId);
-```
-
 ### Major-version migration
 
 -   `new ArchiveDownloader(source, config)` becomes `createArchiveDownloader(source, config)`.
 -   `new LiveDownloader(source, config)` becomes `createLiveDownloader(source, config)`.
 -   `live.stopDownload()` becomes `live.stop()`.
 -   Public mutable state is replaced by `controller.getSnapshot()`.
--   `download()` and `resume()` reject after emitting `critical-error` when a fatal error occurs.
+-   `download()` rejects after emitting `critical-error` when a fatal error occurs.
 
 ### Event: `chunk-downloaded`
 

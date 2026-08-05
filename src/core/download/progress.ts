@@ -18,10 +18,6 @@ export class ProgressTracker {
         this.state.startedAt = startedAt;
     }
 
-    restore(snapshot: Partial<ProgressSnapshot>): void {
-        this.state = { ...this.state, ...snapshot };
-    }
-
     recordFinished(task: DownloadTask): void {
         this.state.finishedChunkCount++;
         if (!isInitialChunk(task.chunk)) {
