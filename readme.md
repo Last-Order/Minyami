@@ -4,6 +4,8 @@
 
 [中文说明](readme.zh-cn.md)
 
+> **Deprecation Notice:** Minyami is aging and has entered maintenance mode. No new features will be implemented in the foreseeable future; only bug fixes will be accepted. We recommend using [iori](https://github.com/iori-rs/iori) as an alternative.
+
 ## Dependencies
 
 -   mkvmerge (optional, mkv output required)
@@ -107,14 +109,6 @@ const live = createLiveDownloader("https://example.com/live.m3u8");
 setTimeout(() => live.stop(), 60_000);
 await live.download();
 ```
-
-### Major-version migration
-
--   `new ArchiveDownloader(source, config)` becomes `createArchiveDownloader(source, config)`.
--   `new LiveDownloader(source, config)` becomes `createLiveDownloader(source, config)`.
--   `live.stopDownload()` becomes `live.stop()`.
--   Public mutable state is replaced by `controller.getSnapshot()`.
--   `download()` rejects after emitting `critical-error` when a fatal error occurs.
 
 ### Event: `chunk-downloaded`
 
