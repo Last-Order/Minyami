@@ -1,7 +1,7 @@
 import * as fs from "fs";
-import logger from "../../utils/log";
-import M3U8, { MasterPlaylist, Playlist } from "../m3u8";
-import { DownloadHttpClient } from "./http_client";
+import logger from "../../../utils/log";
+import { DownloadHttpClient } from "../../download/http_client";
+import M3U8, { MasterPlaylist, Playlist } from "../../m3u8";
 
 export interface LoadPlaylistOptions {
     retries?: number;

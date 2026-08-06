@@ -2,9 +2,16 @@ import logger from "../../utils/log";
 import { buildFullUrl } from "../../utils/common";
 import { isInitialChunk, isNormalChunk, MasterPlaylist, M3U8Chunk, Playlist } from "../m3u8";
 import { ParserMode, ParserResult } from "../parsers/types";
-import { PlaylistLoader } from "../download/playlist_loader";
-import { prepareSite } from "../download/site_adapter";
-import { DownloadItem, DownloadSource, DownloadSourceContext, SourceBatch, SourceMetadata } from "./types";
+import { PlaylistLoader } from "./hls/playlist_loader";
+import { prepareSite } from "./hls/site_adapter";
+import {
+    DownloadEncryption,
+    DownloadItem,
+    DownloadSource,
+    DownloadSourceContext,
+    SourceBatch,
+    SourceMetadata,
+} from "./types";
 
 export type HLSSourceMode = "snapshot" | "follow";
 
@@ -72,8 +79,8 @@ export class HLSSource implements DownloadSource {
 
         return {
             sourcePath: this.sourcePath,
-            chunkNamer: this.sitePlan.chunkNamer,
-            chunkTimeout: this.continuous ? this.followChunkTimeout : undefined,
+            itemNamer: this.sitePlan.itemNamer,
+            itemTimeout: this.continuous ? this.followItemTimeout : undefined,
         };
     }
 
@@ -139,7 +146,7 @@ export class HLSSource implements DownloadSource {
         return Number.isFinite(chunkLength) && chunkLength > 0 ? chunkLength : 5;
     }
 
-    private get followChunkTimeout(): number {
+    private get followItemTimeout(): number {
         return Math.min(this.safeChunkLength * 1000 * 20, 60000);
     }
 
@@ -221,11 +228,35 @@ export class HLSSource implements DownloadSource {
     }
 
     private toItems(chunks: M3U8Chunk[]): DownloadItem[] {
-        return chunks.map((chunk) => ({
-            chunk,
+        return chunks.map((chunk) => {
+            const encryption = this.toEncryption(chunk);
+            if (isInitialChunk(chunk)) {
+                return {
+                    url: chunk.url,
+                    kind: "init",
+                    ...(encryption ? { encryption } : {}),
+                };
+            }
+            return {
+                url: chunk.url,
+                kind: "media",
+                duration: chunk.length,
+                ...(encryption ? { encryption } : {}),
+            };
+        });
+    }
+
+    private toEncryption(chunk: M3U8Chunk): DownloadEncryption | undefined {
+        if (!chunk.isEncrypted) {
+            return undefined;
+        }
+        return {
+            scheme: "aes-128-cbc",
             // Resolve now: the playlist URL can change on a later refresh while this item is still queued.
-            ...(chunk.isEncrypted ? { encryptionKeyUrl: buildFullUrl(this.playlist.m3u8Url, chunk.key) } : {}),
-        }));
+            keyId: buildFullUrl(this.playlist.m3u8Url, chunk.key),
+            // HLS derives an omitted media IV from its sequence; executors should not know that protocol rule.
+            iv: isInitialChunk(chunk) ? chunk.iv : chunk.iv || chunk.sequenceId.toString(16),
+        };
     }
 }
 
@@ -244,13 +275,13 @@ function sliceItems(items: DownloadItem[], slice?: HLSSourceOptions["slice"]): D
         if (currentTime >= slice.end) {
             break;
         }
-        if (isInitialChunk(item.chunk)) {
+        if (item.kind === "init") {
             // A selected fragmented-MP4 range is unusable without its initialization segment.
             selected.push(item);
             continue;
         }
         const itemStart = currentTime;
-        const itemEnd = currentTime + item.chunk.length;
+        const itemEnd = currentTime + item.duration;
         currentTime = itemEnd;
         if (itemEnd > slice.start && itemStart < slice.end) {
             selected.push(item);

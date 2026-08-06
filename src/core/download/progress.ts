@@ -1,5 +1,4 @@
 import { DownloadTask } from "../downloader";
-import { isInitialChunk } from "../m3u8";
 
 export interface ProgressSnapshot {
     startedAt: number;
@@ -23,9 +22,7 @@ export class ProgressTracker {
 
     recordSuccessful(task: DownloadTask): void {
         this.state.successfulChunkCount++;
-        if (!isInitialChunk(task.chunk)) {
-            this.state.successfulDuration += task.chunk.length;
-        }
+        this.state.successfulDuration += task.item.kind === "media" ? task.item.duration : 0;
     }
 
     recordDropped(): void {

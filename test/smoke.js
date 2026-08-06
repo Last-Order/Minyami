@@ -156,13 +156,17 @@ async function testCustomSource() {
     await withMediaServer(async (playlistUrl, expectedOutput) => {
         const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-custom-source-"));
         const output = path.join(root, "custom.ts");
-        const chunks = [0, 1].map((sequenceId) => ({
-            url: new URL(`/${sequenceId}.ts`, playlistUrl).href,
-            length: 1,
-            sequenceId,
-            isInitialChunk: false,
-            isEncrypted: false,
-        }));
+        const items = [
+            {
+                url: new URL("/0.ts", playlistUrl).href,
+                kind: "init",
+            },
+            {
+                url: new URL("/1.ts", playlistUrl).href,
+                kind: "media",
+                duration: 1,
+            },
+        ];
         const source = {
             sourcePath: "custom://media",
             continuous: false,
@@ -170,8 +174,8 @@ async function testCustomSource() {
                 return { sourcePath: this.sourcePath };
             },
             async *discover() {
-                yield { items: [{ chunk: chunks[0] }], totalItemCount: 2 };
-                yield { items: [{ chunk: chunks[1] }], totalItemCount: 2 };
+                yield { items: [items[0]], totalItemCount: 2 };
+                yield { items: [items[1]], totalItemCount: 2 };
             },
         };
         try {
@@ -181,12 +185,64 @@ async function testCustomSource() {
             assert.strictEqual(snapshot.sourcePath, "custom://media");
             assert.strictEqual(snapshot.totalChunkCount, 2);
             assert.strictEqual(snapshot.completedChunkCount, 2);
+            assert.strictEqual(snapshot.successfulDuration, 1);
             assert.strictEqual(snapshot.isEnd, true);
             assert.deepStrictEqual(fs.readFileSync(output), expectedOutput);
         } finally {
             fs.rmSync(root, { recursive: true, force: true });
         }
     });
+}
+
+function testDownloadLayerProtocolBoundary() {
+    const downloadDir = path.resolve(__dirname, "../src/core/download");
+    for (const entry of fs.readdirSync(downloadDir, { withFileTypes: true })) {
+        if (!entry.isFile() || !entry.name.endsWith(".ts")) {
+            continue;
+        }
+        const source = fs.readFileSync(path.join(downloadDir, entry.name), "utf8");
+        assert.doesNotMatch(
+            source,
+            /from\s+["'][^"']*(?:\/m3u8|\/parsers(?:\/|["']))/,
+            `${entry.name} must not depend on HLS parser types`
+        );
+    }
+}
+
+async function testRejectsUnpreparedEncryptedItem() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-invalid-encrypted-source-"));
+    const source = {
+        sourcePath: "custom://encrypted-media",
+        continuous: false,
+        async prepare() {
+            return { sourcePath: this.sourcePath };
+        },
+        async *discover() {
+            yield {
+                items: [
+                    {
+                        url: "http://127.0.0.1:1/unreachable.ts",
+                        kind: "media",
+                        duration: 1,
+                        encryption: {
+                            scheme: "aes-128-cbc",
+                            keyId: "custom:missing-key",
+                            iv: "00000000000000000000000000000001",
+                        },
+                    },
+                ],
+                totalItemCount: 1,
+            };
+        },
+    };
+    try {
+        const downloader = createDownloader(source, { noMerge: true, tempDir: root });
+        await assert.rejects(() => downloader.download(), /Encryption key is not registered/);
+        assert.strictEqual(downloader.getSnapshot().completedChunkCount, 0);
+        assert.strictEqual(downloader.getSnapshot().status, "failed");
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+    }
 }
 
 async function testLiveIncrementalDiscovery() {
@@ -439,6 +495,8 @@ async function testFailureContract() {
 
 async function main() {
     await testScheduler();
+    testDownloadLayerProtocolBoundary();
+    await testRejectsUnpreparedEncryptedItem();
     await testArchiveSliceBoundary();
     await testFixedMixedChunkNaming();
     testRecoverySurfaceRemoved();

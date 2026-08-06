@@ -1,4 +1,3 @@
-import { M3U8Chunk } from "./m3u8";
 import { DownloadItem } from "./source/types";
 
 export interface DownloaderConfig {
@@ -24,9 +23,9 @@ export interface ArchiveDownloaderConfig extends DownloaderConfig {
 
 export interface LiveDownloaderConfig extends DownloaderConfig {}
 
-export interface DownloadTask extends DownloadItem {
-    id: number;
-    filename: string;
+export interface DownloadTask {
+    readonly id: number;
+    readonly filename: string;
+    readonly item: DownloadItem;
     retryCount: number;
-    chunk: M3U8Chunk;
 }

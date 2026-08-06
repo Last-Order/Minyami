@@ -4,10 +4,11 @@ import { randomBytes } from "crypto";
 import { getAvailableOutputPath } from "../../utils/common";
 import FileConcentrator, { TaskStatus } from "../file_concentrator";
 import { DownloadTask, DownloaderConfig } from "../downloader";
+import { DownloadItem, DownloadItemNamer } from "../source/types";
 import { ChunkExecutor, ChunkResult } from "./chunk_executor";
-import { ChunkNamer, mixedChunkNamer } from "./chunk_naming";
 import { normalizeDownloaderConfig, NormalizedDownloaderConfig } from "./config";
 import { DownloadHttpClient } from "./http_client";
+import { mixedItemNamer } from "./item_naming";
 import { KeyStore } from "./key_store";
 import { ProgressTracker } from "./progress";
 
@@ -26,11 +27,11 @@ export class DownloadRuntime {
     sourcePath = "";
     tempPath: string;
     outputPath: string;
-    chunkTimeout = 60000;
+    itemTimeout = 60000;
     fileConcentrator?: FileConcentrator;
 
     private outputPrepared = false;
-    private chunkNamer: ChunkNamer = mixedChunkNamer;
+    private itemNamer: DownloadItemNamer = mixedItemNamer;
 
     constructor(config: DownloaderConfig = {}) {
         this.config = normalizeDownloaderConfig(config);
@@ -47,19 +48,19 @@ export class DownloadRuntime {
         this.prepareOutput();
     }
 
-    nameChunk(task: DownloadTask["chunk"], id: number): string {
-        return this.chunkNamer(task, id);
+    nameItem(item: DownloadItem, id: number): string {
+        return this.itemNamer(item, id);
     }
 
-    setChunkNamer(chunkNamer: ChunkNamer): void {
+    setItemNamer(itemNamer: DownloadItemNamer): void {
         // Naming is source metadata; task ids and the moment filenames are assigned remain downloader-owned.
-        this.chunkNamer = chunkNamer;
+        this.itemNamer = itemNamer;
     }
 
     async execute(task: DownloadTask): Promise<ExecutedChunk> {
         const result = await this.chunkExecutor.execute(task, {
             tempPath: this.tempPath,
-            chunkTimeout: this.chunkTimeout,
+            itemTimeout: this.itemTimeout,
             keepEncryptedChunks: this.config.keepEncryptedChunks,
         });
         return { ...result, task };

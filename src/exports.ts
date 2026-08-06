@@ -7,9 +7,15 @@ export type { DownloadController, SourceDownloadSnapshot } from "./core/download
 export { createHLSSource, HLSSource } from "./core/source/hls";
 export type { HLSSourceMode, HLSSourceOptions } from "./core/source/hls";
 export type {
+    Aes128CbcEncryption,
+    DownloadEncryption,
     DownloadItem,
+    DownloadItemKind,
+    DownloadItemNamer,
     DownloadSource,
     DownloadSourceContext,
+    InitialDownloadItem,
+    MediaDownloadItem,
     SourceBatch,
     SourceMetadata,
 } from "./core/source/types";

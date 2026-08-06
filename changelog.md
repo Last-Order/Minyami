@@ -12,10 +12,11 @@
 -   Replaced ambiguous finished-chunk progress fields with explicit completed, successful, dropped, and successful-duration metrics in snapshots and chunk event payloads.
 -   Changed `--slice` selection to use segment overlap with a half-open `[start, end)` range. A segment is selected when its end is after `start` and its start is before `end`. Unlike 5.x, a segment ending exactly at `start` and a segment starting exactly at `end` are excluded; boundary segments and resulting output duration may therefore differ from previous releases.
 -   Removed the `--chunk-naming-strategy` CLI option, the `DownloaderConfig.chunkNamingStrategy` API, and the `NamingStrategy` enum. General-purpose chunks now always use the mixed `sequence_upstream-name` format; source-specific internal naming remains available to site adapters.
+-   Replaced the HLS-shaped `DownloadItem.chunk` and `DownloadTask.chunk` fields with a protocol-neutral `DownloadItem`; runtime tasks now expose the immutable item through `DownloadTask.item`. Renamed source metadata fields from `chunkNamer`/`chunkTimeout` to `itemNamer`/`itemTimeout`.
 
 ### Added
 
--   Added isolated download runtimes for configuration, HTTP sessions, playlist loading, key resolution, chunk execution, progress tracking, and output coordination.
+-   Added isolated download runtimes for configuration, HTTP sessions, item execution, progress tracking, and output coordination.
 -   Added a shared task scheduler with concurrency control and retry handling.
 -   Added a `DownloadSource` abstraction, a configurable `HLSSource`, and a shared `createDownloader` execution engine for custom task sources.
 -   Added smoke coverage for archive, live, encrypted, scheduler, HTTP-isolation, and failure flows.
@@ -24,6 +25,7 @@
 
 -   Parser integrations now return declarative download plans instead of mutating global downloader state.
 -   Archive and live factories now use the same downloader lifecycle; their HLS sources differ only in snapshot versus follow discovery mode.
+-   HLS sources now translate parser chunks into protocol-neutral download items and fully resolve duration, initialization, encryption-key, and IV semantics before scheduling.
 -   HTTP headers, cookies, and proxy configuration are isolated per downloader instance.
 -   Archive downloads continue to delete chunks after they are written to merged output unless `keep` is enabled.
 -   Builds now clean `dist` before compiling so removed modules cannot remain in release artifacts.

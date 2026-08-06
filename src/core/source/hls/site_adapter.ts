@@ -1,9 +1,9 @@
-import logger from "../../utils/log";
-import { parseAbema } from "../parsers/abema";
-import { parseCommon } from "../parsers/common";
-import { parseHibiki } from "../parsers/hibiki";
-import { parseYoutube } from "../parsers/youtube";
-import { ParserOptions, ParserResult } from "../parsers/types";
+import logger from "../../../utils/log";
+import { parseAbema } from "../../parsers/abema";
+import { parseCommon } from "../../parsers/common";
+import { parseHibiki } from "../../parsers/hibiki";
+import { ParserOptions, ParserResult } from "../../parsers/types";
+import { parseYoutube } from "../../parsers/youtube";
 
 export async function prepareSite(options: ParserOptions): Promise<ParserResult> {
     const { playlist, m3u8Path, mode } = options;

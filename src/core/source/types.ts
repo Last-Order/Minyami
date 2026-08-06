@@ -1,28 +1,50 @@
-import { ChunkNamer } from "../download/chunk_naming";
 import { DownloadHttpClient } from "../download/http_client";
 import { KeyStore } from "../download/key_store";
-import { M3U8Chunk } from "../m3u8";
+
+export type DownloadItemKind = "init" | "media";
+
+export interface Aes128CbcEncryption {
+    readonly scheme: "aes-128-cbc";
+    /** Stable key-store identity. HLS sources use the absolute key URL. */
+    readonly keyId: string;
+    /** Fully resolved hexadecimal IV; executors do not derive protocol defaults. */
+    readonly iv: string;
+}
+
+export type DownloadEncryption = Aes128CbcEncryption;
+
+interface BaseDownloadItem {
+    readonly url: string;
+    readonly encryption?: DownloadEncryption;
+}
+
+export interface InitialDownloadItem extends BaseDownloadItem {
+    readonly kind: "init";
+}
+
+export interface MediaDownloadItem extends BaseDownloadItem {
+    readonly kind: "media";
+    readonly duration: number;
+}
 
 /**
  * An immutable piece of work discovered by a source. Runtime-only state such as
  * retry counters, task ids, and output filenames is added by the downloader.
  */
-export interface DownloadItem {
-    chunk: M3U8Chunk;
-    /** Absolute lookup key; executors must not depend on mutable source/playlist state. */
-    encryptionKeyUrl?: string;
-}
+export type DownloadItem = InitialDownloadItem | MediaDownloadItem;
+
+export type DownloadItemNamer = (item: DownloadItem, id: number) => string;
 
 export interface SourceBatch {
-    items: DownloadItem[];
+    readonly items: readonly DownloadItem[];
     /** Present when the source knows the final number of items. */
     totalItemCount?: number;
 }
 
 export interface SourceMetadata {
     sourcePath: string;
-    chunkNamer?: ChunkNamer;
-    chunkTimeout?: number;
+    itemNamer?: DownloadItemNamer;
+    itemTimeout?: number;
 }
 
 export interface DownloadSourceContext {

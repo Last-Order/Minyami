@@ -1,6 +1,6 @@
 import { M3U8Chunk, Playlist } from "../m3u8";
-import { ChunkNamer } from "../download/chunk_naming";
 import { DownloadHttpClient } from "../download/http_client";
+import { DownloadItemNamer } from "../source/types";
 
 export type ParserMode = "archive" | "live";
 
@@ -25,5 +25,5 @@ export interface ParserResult {
     chunks?: M3U8Chunk[];
     encryptionKeys?: Record<string, string>;
     keyResolver?: KeyResolver;
-    chunkNamer?: ChunkNamer;
+    itemNamer?: DownloadItemNamer;
 }

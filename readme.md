@@ -127,6 +127,30 @@ await downloader.download();
 Custom implementations of `DownloadSource` may yield any number of `SourceBatch` values. Sources produce immutable
 `DownloadItem` values; the downloader owns task ids, filenames, retries, scheduling, progress, and output merging.
 
+`DownloadItem` is protocol-neutral. A custom source describes initialization and timed media resources directly;
+protocol-specific parser objects must not escape into the downloader:
+
+```TypeScript
+const item = {
+    url: "https://example.com/segment-1.m4s",
+    kind: "media" as const,
+    duration: 2,
+};
+
+// Encrypted items additionally carry a complete execution descriptor:
+const encryptedItem = {
+    ...item,
+    encryption: {
+        scheme: "aes-128-cbc" as const,
+        keyId: "https://example.com/key.bin",
+        iv: "00000000000000000000000000000001",
+    },
+};
+```
+
+Before yielding an encrypted item, the source must register its key in `DownloadSourceContext.keys` under the same
+`keyId`. The downloader validates this contract before issuing the item's network request.
+
 ### Progress semantics
 
 Snapshots report successful, dropped, and completed work separately:

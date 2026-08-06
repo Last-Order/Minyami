@@ -2,13 +2,12 @@ import * as path from "path";
 import logger from "../../utils/log";
 import { decrypt } from "../../utils/media";
 import { DownloadTask } from "../downloader";
-import { isInitialChunk } from "../m3u8";
 import { DownloadHttpClient } from "./http_client";
 import { KeyStore } from "./key_store";
 
 export interface ExecuteChunkOptions {
     tempPath: string;
-    chunkTimeout: number;
+    itemTimeout: number;
     keepEncryptedChunks: boolean;
 }
 
@@ -20,33 +19,27 @@ export class ChunkExecutor {
     constructor(private readonly http: DownloadHttpClient, private readonly keys: KeyStore) {}
 
     async execute(task: DownloadTask, options: ExecuteChunkOptions): Promise<ChunkResult> {
-        logger.debug(`Downloading ${task.chunk.url}`);
+        const { item } = task;
+        logger.debug(`Downloading ${item.url}`);
         logger.debug(`Downloading ${task.filename}`);
-        const encryptedPath = path.resolve(options.tempPath, task.filename);
-        const timeout = Math.min(((task.retryCount || 0) + 1) * options.chunkTimeout, options.chunkTimeout * 5);
+        const downloadedPath = path.resolve(options.tempPath, task.filename);
+        const timeout = Math.min(((task.retryCount || 0) + 1) * options.itemTimeout, options.itemTimeout * 5);
 
         try {
-            await this.http.download(task.chunk.url, encryptedPath, { timeout });
+            await this.http.download(item.url, downloadedPath, { timeout });
             logger.debug(`Downloading ${task.filename} succeed.`);
 
-            if (!task.chunk.isEncrypted) {
-                return { outputPath: encryptedPath };
+            if (!item.encryption) {
+                return { outputPath: downloadedPath };
             }
 
-            const decryptIV = isInitialChunk(task.chunk)
-                ? task.chunk.iv
-                : task.chunk.iv || task.chunk.sequenceId.toString(16);
-            // The item carries an absolute key URL so execution is independent of later playlist refreshes.
-            const keyUrl = task.encryptionKeyUrl;
-            if (!keyUrl) {
-                throw new Error(`Missing encryption key URL for ${task.chunk.url}`);
-            }
-            const key = this.keys.get(keyUrl);
+            // Sources resolve protocol-specific key identities and IV defaults before an item reaches execution.
+            const key = this.keys.get(item.encryption.keyId);
             if (!key) {
-                throw new Error(`Missing encryption key for ${keyUrl}`);
+                throw new Error(`Missing encryption key for ${item.encryption.keyId}`);
             }
-            const decryptedPath = encryptedPath + ".decrypt";
-            await decrypt(encryptedPath, decryptedPath, key, decryptIV, options.keepEncryptedChunks);
+            const decryptedPath = downloadedPath + ".decrypt";
+            await decrypt(downloadedPath, decryptedPath, key, item.encryption.iv, options.keepEncryptedChunks);
             logger.debug(`Decrypting ${task.filename} succeed`);
             return { outputPath: decryptedPath };
         } catch (error) {

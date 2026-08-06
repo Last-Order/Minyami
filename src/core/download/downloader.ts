@@ -4,7 +4,7 @@ import logger from "../../utils/log";
 import { deleteEmptyDirectory } from "../../utils/system";
 import { DownloadTask, DownloaderConfig } from "../downloader";
 import { TaskStatus } from "../file_concentrator";
-import { DownloadSource, DownloadSourceContext, SourceBatch } from "../source/types";
+import { DownloadItem, DownloadSource, DownloadSourceContext, SourceBatch } from "../source/types";
 import {
     ChunkDownloadedInfo,
     DownloadEvent,
@@ -115,11 +115,11 @@ async function runDownloader(context: DownloaderContext): Promise<void> {
         installSigintHandler(context);
         const metadata = await source.prepare(sourceContext, abortController.signal);
         runtime.sourcePath = metadata.sourcePath;
-        if (metadata.chunkNamer) {
-            runtime.setChunkNamer(metadata.chunkNamer);
+        if (metadata.itemNamer) {
+            runtime.setItemNamer(metadata.itemNamer);
         }
-        if (metadata.chunkTimeout) {
-            runtime.chunkTimeout = metadata.chunkTimeout;
+        if (metadata.itemTimeout) {
+            runtime.itemTimeout = metadata.itemTimeout;
         }
         events.emit("parsed");
 
@@ -169,12 +169,13 @@ function addSourceBatch(context: DownloaderContext, batch: SourceBatch): void {
     const { runtime, state } = context;
     // Runtime fields are assigned here so sources remain reusable and independent from retry/output policy.
     const tasks = batch.items.map((item): DownloadTask => {
+        validateDownloadItem(context, item);
         // Discovery order is also merge order; ids must stay monotonic across every yielded batch.
         const id = state.nextTaskId++;
         return {
-            ...item,
             id,
-            filename: runtime.nameChunk(item.chunk, id),
+            item,
+            filename: runtime.nameItem(item, id),
             retryCount: 0,
         };
     });
@@ -185,6 +186,22 @@ function addSourceBatch(context: DownloaderContext, batch: SourceBatch): void {
     state.totalChunkCount = batch.totalItemCount ?? state.nextTaskId;
     if (tasks.length > 0) {
         state.scheduler.add(tasks);
+    }
+}
+
+function validateDownloadItem(context: DownloaderContext, item: DownloadItem): void {
+    if (!item.encryption) {
+        return;
+    }
+    // Reject a broken source contract before downloading the same unusable item on every retry.
+    if (item.encryption.scheme !== "aes-128-cbc") {
+        throw new Error(`Unsupported encryption scheme: ${item.encryption.scheme}`);
+    }
+    if (!item.encryption.iv) {
+        throw new Error(`Missing encryption IV for ${item.url}`);
+    }
+    if (!context.runtime.keys.has(item.encryption.keyId)) {
+        throw new Error(`Encryption key is not registered: ${item.encryption.keyId}`);
     }
 }
 
