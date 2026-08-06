@@ -11,6 +11,7 @@
 -   Archive and live downloads now both drop a chunk after reaching the user-configured retry limit; archive downloads no longer retry ordinary failed chunks indefinitely.
 -   Replaced ambiguous finished-chunk progress fields with explicit completed, successful, dropped, and successful-duration metrics in snapshots and chunk event payloads.
 -   Changed `--slice` selection to use segment overlap with a half-open `[start, end)` range. A segment is selected when its end is after `start` and its start is before `end`. Unlike 5.x, a segment ending exactly at `start` and a segment starting exactly at `end` are excluded; boundary segments and resulting output duration may therefore differ from previous releases.
+-   Removed the `--chunk-naming-strategy` CLI option, the `DownloaderConfig.chunkNamingStrategy` API, and the `NamingStrategy` enum. General-purpose chunks now always use the mixed `sequence_upstream-name` format; source-specific internal naming remains available to site adapters.
 
 ### Added
 

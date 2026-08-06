@@ -1,6 +1,5 @@
 import { M3U8Chunk } from "./m3u8";
 import { DownloadItem } from "./source/types";
-import { NamingStrategy } from "./types";
 
 export interface DownloaderConfig {
     threads?: number;
@@ -16,7 +15,6 @@ export interface DownloaderConfig {
     noMerge?: boolean;
     keep?: boolean;
     keepEncryptedChunks?: boolean;
-    chunkNamingStrategy?: NamingStrategy;
     cliMode?: boolean;
 }
 

@@ -1,7 +1,6 @@
 import * as os from "os";
 import * as path from "path";
 import logger from "../../utils/log";
-import { NamingStrategy } from "../types";
 import { DownloaderConfig } from "../downloader";
 
 export interface NormalizedDownloaderConfig {
@@ -19,7 +18,6 @@ export interface NormalizedDownloaderConfig {
     cliMode: boolean;
     keepTemporaryFiles: boolean;
     keepEncryptedChunks: boolean;
-    chunkNamingStrategy: NamingStrategy;
 }
 
 function parseHeaders(headers?: string | string[]): Record<string, string> {
@@ -78,9 +76,5 @@ export function normalizeDownloaderConfig(config: DownloaderConfig = {}): Normal
         cliMode: !!config.cliMode,
         keepTemporaryFiles: !!config.keep,
         keepEncryptedChunks: !!config.keepEncryptedChunks,
-        chunkNamingStrategy:
-            config.chunkNamingStrategy === undefined
-                ? NamingStrategy.MIXED
-                : (+config.chunkNamingStrategy as NamingStrategy),
     };
 }

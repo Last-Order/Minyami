@@ -58,7 +58,6 @@ Help:
          --no-merge                Do not merge m3u8 chunks.
          --keep, k                 Keep temporary files.
          --keep-encrypted-chunks   Do not delete encrypted chunks after decryption.
-         --chunk-naming-strategy   Temporary file naming strategy. Defaults to 1.
      --clean                       Clean cache files
 
 Options:

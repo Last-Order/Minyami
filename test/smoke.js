@@ -90,6 +90,26 @@ async function testArchiveSliceBoundary() {
     });
 }
 
+async function testFixedMixedChunkNaming() {
+    await withMediaServer(async (playlistUrl) => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-mixed-naming-"));
+        try {
+            const downloader = createArchiveDownloader(playlistUrl, {
+                noMerge: true,
+                tempDir: root,
+                threads: 1,
+            });
+            await downloader.download();
+            assert.deepStrictEqual(fs.readdirSync(downloader.getSnapshot().tempPath).sort(), [
+                "000000_0.ts",
+                "000001_1.ts",
+            ]);
+        } finally {
+            fs.rmSync(root, { recursive: true, force: true });
+        }
+    });
+}
+
 async function testDownloader(createDownloader, name) {
     await withMediaServer(async (playlistUrl, expectedOutput) => {
         const root = fs.mkdtempSync(path.join(os.tmpdir(), `minyami-${name}-`));
@@ -420,6 +440,7 @@ async function testFailureContract() {
 async function main() {
     await testScheduler();
     await testArchiveSliceBoundary();
+    await testFixedMixedChunkNaming();
     testRecoverySurfaceRemoved();
     testHttpIsolation();
     await testDownloader(createArchiveDownloader, "archive");

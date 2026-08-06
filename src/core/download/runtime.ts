@@ -5,7 +5,7 @@ import { getAvailableOutputPath } from "../../utils/common";
 import FileConcentrator, { TaskStatus } from "../file_concentrator";
 import { DownloadTask, DownloaderConfig } from "../downloader";
 import { ChunkExecutor, ChunkResult } from "./chunk_executor";
-import { ChunkNamer, createChunkNamer } from "./chunk_naming";
+import { ChunkNamer, mixedChunkNamer } from "./chunk_naming";
 import { normalizeDownloaderConfig, NormalizedDownloaderConfig } from "./config";
 import { DownloadHttpClient } from "./http_client";
 import { KeyStore } from "./key_store";
@@ -30,7 +30,7 @@ export class DownloadRuntime {
     fileConcentrator?: FileConcentrator;
 
     private outputPrepared = false;
-    private chunkNamer: ChunkNamer;
+    private chunkNamer: ChunkNamer = mixedChunkNamer;
 
     constructor(config: DownloaderConfig = {}) {
         this.config = normalizeDownloaderConfig(config);
@@ -38,7 +38,6 @@ export class DownloadRuntime {
         this.outputPath = this.config.outputPath;
         this.http = new DownloadHttpClient(this.config);
         this.chunkExecutor = new ChunkExecutor(this.http, this.keys);
-        this.chunkNamer = createChunkNamer(this.config.chunkNamingStrategy);
     }
 
     async allocateWorkspace(): Promise<void> {
