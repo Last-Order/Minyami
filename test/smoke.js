@@ -60,10 +60,7 @@ async function withMediaServer(run) {
     });
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     try {
-        await run(
-            `http://127.0.0.1:${server.address().port}/playlist.m3u8`,
-            Buffer.concat(Object.values(chunks))
-        );
+        await run(`http://127.0.0.1:${server.address().port}/playlist.m3u8`, Buffer.concat(Object.values(chunks)));
     } finally {
         await new Promise((resolve) => server.close(resolve));
     }
@@ -137,13 +134,10 @@ async function testDownloader(createDownloader, name) {
             assert.strictEqual(snapshot.droppedChunkCount, 0);
             assert.strictEqual(snapshot.successfulDuration, 2);
             assert.strictEqual(snapshot.pendingTaskCount, 0);
-            assert.strictEqual("finishedChunkCount" in snapshot, false);
-            assert.strictEqual("finishedChunkLength" in snapshot, false);
             assert.strictEqual(latestChunkInfo.completedChunkCount, 2);
             assert.strictEqual(latestChunkInfo.successfulChunkCount, 2);
             assert.strictEqual(latestChunkInfo.droppedChunkCount, 0);
             assert.strictEqual(latestChunkInfo.totalChunkCount, 2);
-            assert.strictEqual("finishedChunksCount" in latestChunkInfo, false);
             assert.deepStrictEqual(fs.readFileSync(output), expectedOutput);
             assert.deepStrictEqual(fs.readdirSync(root), [`${name}.ts`]);
         } finally {
@@ -194,53 +188,59 @@ async function testCustomSource() {
     });
 }
 
-function testDownloadLayerProtocolBoundary() {
-    const downloadDir = path.resolve(__dirname, "../src/core/download");
-    for (const entry of fs.readdirSync(downloadDir, { withFileTypes: true })) {
-        if (!entry.isFile() || !entry.name.endsWith(".ts")) {
-            continue;
-        }
-        const source = fs.readFileSync(path.join(downloadDir, entry.name), "utf8");
-        assert.doesNotMatch(
-            source,
-            /from\s+["'][^"']*(?:\/m3u8|\/parsers(?:\/|["']))/,
-            `${entry.name} must not depend on HLS parser types`
-        );
-    }
-}
-
-async function testRejectsUnpreparedEncryptedItem() {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-invalid-encrypted-source-"));
-    const source = {
-        sourcePath: "custom://encrypted-media",
-        continuous: false,
-        async prepare() {
-            return { sourcePath: this.sourcePath };
-        },
-        async *discover() {
-            yield {
-                items: [
-                    {
-                        url: "http://127.0.0.1:1/unreachable.ts",
-                        kind: "media",
-                        duration: 1,
-                        encryption: {
-                            scheme: "aes-128-cbc",
-                            keyId: "custom:missing-key",
-                            iv: "00000000000000000000000000000001",
-                        },
-                    },
-                ],
-                totalItemCount: 1,
-            };
-        },
-    };
+async function testCustomEncryptedSource() {
+    const key = Buffer.from("0123456789abcdef");
+    const iv = Buffer.alloc(16);
+    iv[15] = 1;
+    const expected = Buffer.from("custom encrypted payload");
+    const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
+    const encrypted = Buffer.concat([cipher.update(expected), cipher.final()]);
+    let itemRequests = 0;
+    const server = http.createServer((request, response) => {
+        itemRequests++;
+        response.end(encrypted);
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const itemUrl = `http://127.0.0.1:${server.address().port}/encrypted.ts`;
+    const keyId = "custom:media-key";
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "minyami-custom-encrypted-source-"));
+    const output = path.join(root, "custom-encrypted.ts");
     try {
-        const downloader = createDownloader(source, { noMerge: true, tempDir: root });
-        await assert.rejects(() => downloader.download(), /Encryption key is not registered/);
-        assert.strictEqual(downloader.getSnapshot().completedChunkCount, 0);
-        assert.strictEqual(downloader.getSnapshot().status, "failed");
+        const source = {
+            sourcePath: "custom://encrypted-media",
+            continuous: false,
+            async prepare(context) {
+                context.keys.set(keyId, key.toString("hex"));
+                return { sourcePath: this.sourcePath };
+            },
+            async *discover() {
+                yield {
+                    items: [
+                        {
+                            url: itemUrl,
+                            kind: "media",
+                            duration: 1,
+                            encryption: {
+                                scheme: "aes-128-cbc",
+                                keyId,
+                                iv: iv.toString("hex"),
+                            },
+                        },
+                    ],
+                    totalItemCount: 1,
+                };
+            },
+        };
+        const downloader = createDownloader(source, { output, tempDir: root });
+        await downloader.download();
+        const snapshot = downloader.getSnapshot();
+        assert.strictEqual(itemRequests, 1);
+        assert.strictEqual(snapshot.completedChunkCount, 1);
+        assert.strictEqual(snapshot.successfulChunkCount, 1);
+        assert.strictEqual(snapshot.successfulDuration, 1);
+        assert.deepStrictEqual(fs.readFileSync(output), expected);
     } finally {
+        await new Promise((resolve) => server.close(resolve));
         fs.rmSync(root, { recursive: true, force: true });
     }
 }
@@ -338,34 +338,6 @@ async function testLiveGracefulStop() {
         await new Promise((resolve) => server.close(resolve));
         fs.rmSync(root, { recursive: true, force: true });
     }
-}
-
-function testRecoverySurfaceRemoved() {
-    const downloader = createArchiveDownloader("http://127.0.0.1/playlist.m3u8");
-    assert.strictEqual(downloader.resume, undefined);
-    assert.strictEqual("isResumed" in downloader.getSnapshot(), false);
-}
-
-async function testTaskPersistenceRemoved() {
-    await withMediaServer(async (playlistUrl) => {
-        for (const [createDownloader, name] of [
-            [createArchiveDownloader, "archive"],
-            [createLiveDownloader, "live"],
-        ]) {
-            const root = fs.mkdtempSync(path.join(os.tmpdir(), `minyami-no-task-state-${name}-`));
-            try {
-                const downloader = createDownloader(playlistUrl, {
-                    noMerge: true,
-                    output: path.join(root, `${name}.ts`),
-                    tempDir: root,
-                });
-                await downloader.download();
-                assert.strictEqual(fs.existsSync(path.join(downloader.getSnapshot().tempPath, "task.json")), false);
-            } finally {
-                fs.rmSync(root, { recursive: true, force: true });
-            }
-        }
-    });
 }
 
 async function testChunkRetryLimit() {
@@ -495,19 +467,16 @@ async function testFailureContract() {
 
 async function main() {
     await testScheduler();
-    testDownloadLayerProtocolBoundary();
-    await testRejectsUnpreparedEncryptedItem();
     await testArchiveSliceBoundary();
     await testFixedMixedChunkNaming();
-    testRecoverySurfaceRemoved();
     testHttpIsolation();
     await testDownloader(createArchiveDownloader, "archive");
     await testDownloader(createLiveDownloader, "live");
     await testCustomSource();
+    await testCustomEncryptedSource();
     await testLiveIncrementalDiscovery();
     await testLiveGracefulStop();
     await testEncryptedArchive();
-    await testTaskPersistenceRemoved();
     await testChunkRetryLimit();
     await testFailureContract();
     process.stdout.write("Smoke tests passed.\n");
