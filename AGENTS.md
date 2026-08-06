@@ -19,5 +19,7 @@
 
 ## Verification
 
-- Add smoke coverage when introducing a new source or changing discovery, cancellation, ordering, retry, encryption, or merge behavior.
-- Before handing off changes, run `npm run test:smoke`, `npm run lint`, and `git diff --check`.
+- Mirror source-module boundaries under `test/` and keep shared servers/filesystem fixtures under `test/helpers/`. Do not accumulate unrelated behavior in a single end-to-end test file.
+- Tests should demonstrate supported behavior and observable results. Do not add source-text scans or tests whose sole purpose is proving that an API, dependency, or generated file is absent; keep those prohibitions in project constraints and review instead.
+- Add focused Jest coverage when introducing a source or changing discovery, cancellation, ordering, retry, encryption, progress, or merge behavior.
+- Before handing off changes, run `npm test`, `npm run build`, `npm run lint`, and `git diff --check`.

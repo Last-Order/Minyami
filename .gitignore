@@ -1,5 +1,6 @@
 .vscode/
 dist/
+coverage/
 tasks.json
 output.mkv
 

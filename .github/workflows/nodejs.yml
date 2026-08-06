@@ -7,42 +7,25 @@ on:
         branches: [master]
 
 jobs:
-    build:
+    verify:
         runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                node-version: [16, 18]
         steps:
-            - uses: actions/checkout@v2
-            - name: Use Node.js ${{ matrix.node-version }}
-              uses: actions/setup-node@v3
+            - uses: actions/checkout@v7
+            - name: Use Node.js 22
+              uses: actions/setup-node@v7
               with:
-                  node-version: ${{ matrix.node-version }}
+                  node-version: 22
                   cache: "npm"
                   cache-dependency-path: npm-shrinkwrap.json
-            - name: npm install, build
+            - name: Install dependencies
+              run: npm ci
+            - name: Test
+              run: npm test
+            - name: Build
               run: |
-                  npm ci
                   npm run build
                   node ./dist/index.js --version
-              env:
-                  CI: true
-    prettier:
-        runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                node-version: [18]
-        steps:
-            - uses: actions/checkout@v2
-            - name: Use Node.js ${{ matrix.node-version }}
-              uses: actions/setup-node@v3
-              with:
-                  node-version: ${{ matrix.node-version }}
-                  cache: "npm"
-                  cache-dependency-path: npm-shrinkwrap.json
-            - name: Checking code styles
-              run: |
-                  npm ci
-                  npm run lint
-              env:
-                  CI: true
+            - name: Check code style
+              run: npm run lint
+        env:
+            CI: true

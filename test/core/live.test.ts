@@ -1,0 +1,118 @@
+import * as fs from "fs";
+import * as http from "http";
+import * as path from "path";
+import { AddressInfo } from "net";
+import { describe, expect, test } from "@jest/globals";
+import { createLiveDownloader } from "../../src/core/live";
+import { withTempDirectory } from "../helpers/filesystem";
+import { close, listen } from "../helpers/http";
+
+describe("createLiveDownloader", () => {
+    test("discovers new segments across playlist refreshes and downloads each once", async () => {
+        let playlistRequests = 0;
+        const chunkRequests = new Map<string, number>();
+        const chunks = {
+            "/0.ts": Buffer.from("first-live-chunk"),
+            "/1.ts": Buffer.from("second-live-chunk"),
+        } as const;
+        const server = http.createServer((request, response) => {
+            const chunk = chunks[request.url as keyof typeof chunks];
+            if (chunk) {
+                chunkRequests.set(request.url!, (chunkRequests.get(request.url!) ?? 0) + 1);
+                response.end(chunk);
+                return;
+            }
+            playlistRequests++;
+            const address = server.address() as AddressInfo;
+            const lines = [
+                "#EXTM3U",
+                "#EXT-X-TARGETDURATION:1",
+                "#EXT-X-MEDIA-SEQUENCE:0",
+                "#EXTINF:0.01,",
+                `http://127.0.0.1:${address.port}/0.ts`,
+            ];
+            if (playlistRequests > 1) {
+                lines.push("#EXTINF:0.01,", `http://127.0.0.1:${address.port}/1.ts`, "#EXT-X-ENDLIST");
+            }
+            response.setHeader("content-type", "application/vnd.apple.mpegurl");
+            response.end(lines.join("\n"));
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-live-incremental-", async (directory) => {
+                const output = path.join(directory, "live.ts");
+                const downloader = createLiveDownloader(`${baseUrl}/playlist.m3u8`, {
+                    output,
+                    tempDir: directory,
+                    threads: 2,
+                });
+
+                await downloader.download();
+
+                expect(playlistRequests).toBe(2);
+                expect(chunkRequests).toEqual(
+                    new Map([
+                        ["/0.ts", 1],
+                        ["/1.ts", 1],
+                    ])
+                );
+                expect(downloader.getSnapshot()).toMatchObject({
+                    totalChunkCount: 2,
+                    completedChunkCount: 2,
+                    isEnd: true,
+                });
+                expect(fs.readFileSync(output)).toEqual(Buffer.concat(Object.values(chunks)));
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
+    test("stops discovery gracefully and merges work already discovered", async () => {
+        let playlistRequests = 0;
+        const chunk = Buffer.from("stopped-live-chunk");
+        const server = http.createServer((request, response) => {
+            if (request.url === "/0.ts") {
+                response.end(chunk);
+                return;
+            }
+            playlistRequests++;
+            const address = server.address() as AddressInfo;
+            response.setHeader("content-type", "application/vnd.apple.mpegurl");
+            response.end(
+                [
+                    "#EXTM3U",
+                    "#EXT-X-TARGETDURATION:10",
+                    "#EXT-X-MEDIA-SEQUENCE:0",
+                    "#EXTINF:10,",
+                    `http://127.0.0.1:${address.port}/0.ts`,
+                ].join("\n")
+            );
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-live-stop-", async (directory) => {
+                const output = path.join(directory, "live.ts");
+                const downloader = createLiveDownloader(`${baseUrl}/playlist.m3u8`, {
+                    output,
+                    tempDir: directory,
+                });
+                downloader.once("chunk-downloaded", () => downloader.stop());
+
+                await downloader.download();
+
+                expect(playlistRequests).toBe(1);
+                expect(downloader.getSnapshot()).toMatchObject({
+                    status: "finished",
+                    completedChunkCount: 1,
+                    isEnd: true,
+                });
+                expect(fs.readFileSync(output)).toEqual(chunk);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+});

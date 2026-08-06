@@ -10,9 +10,11 @@
     },
     "scripts": {
         "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc --newLine lf",
-        "test:smoke": "npm run build && node test/smoke.js",
-        "lint": "prettier ./src/**/* --check",
-        "lint-fix": "prettier ./src/**/* --write",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "lint": "prettier ./src/**/* ./test/**/* ./jest.config.js ./tsconfig*.json ./.github/workflows/*.yml --check",
+        "lint-fix": "prettier ./src/**/* ./test/**/* ./jest.config.js ./tsconfig*.json ./.github/workflows/*.yml --write",
         "prepare": "husky install"
     },
     "bin": {
@@ -22,7 +24,7 @@
         "/dist/"
     ],
     "engines": {
-        "node": "~16 || ~18 || ~20 || ~21 || ~22 || ~23 || ~24"
+        "node": ">=22"
     },
     "author": {
         "email": "sora@sound.moe",
@@ -41,13 +43,16 @@
         "winreg": "^1.2.5"
     },
     "devDependencies": {
-        "@types/node": "^17.0.17",
+        "@types/jest": "^30.0.0",
+        "@types/node": "^22.20.1",
         "husky": "^7.0.2",
+        "jest": "^30.4.2",
         "lint-staged": "^11.1.2",
         "prettier": "^2.3.2",
+        "ts-jest": "^29.4.12",
         "typescript": "^5.4.2"
     },
     "lint-staged": {
-        "./src/**/*.ts": "npm run lint"
+        "./{src,test}/**/*.ts": "npm run lint"
     }
 }

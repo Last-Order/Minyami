@@ -10,7 +10,7 @@
 
 -   mkvmerge (optional, mkv output required)
 
-! Minyami requires Node Active/Maintenance LTS latest or Current latest. Active LTS is recommended. Details [here](https://nodejs.org/en/about/previous-releases).
+! Minyami requires Node.js 22 or newer. An active LTS release is recommended.
 
 Make sure you had put the binary files into your system `PATH`.
 
@@ -199,18 +199,17 @@ The `critical-error` is emitted when a error that Minyami can't handle happens.
 
 ## Contribution
 
-Minyami is developed with TypeScript. You need to install TypeScript Compiler before you start coding.
+Minyami is developed with TypeScript and tested with Jest.
 
 **Install development dependencies**
 
 ```
-npm install -g typescript
 git clone https://github.com/Last-Order/Minyami
 cd Minyami
 npm install
 ```
 
-To build the project, just run `tsc`.
+Run `npm test` for the modular TypeScript test suite and `npm run build` to build the project.
 
 ## Copyright
 
