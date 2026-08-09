@@ -27,7 +27,13 @@ describe("multi-track downloads", () => {
                 const namingContexts: DownloadItemNamingContext[] = [];
                 const tracks: readonly SourceTrack[] = (["video", "audio"] as const).map((id) => ({
                     id,
-                    type: id,
+                    // Logical ids are intentionally unsafe as paths; only SourceTrack.id is an execution id.
+                    mediaTrack: {
+                        id: id === "video" ? "dash/video:1080p" : "dash/audio:en",
+                        type: id,
+                        ...(id === "video" ? { codecs: ["avc1.640028"] } : {}),
+                        ...(id === "audio" ? { language: "en", name: "English" } : {}),
+                    },
                     sourcePath: `${baseUrl}/${id}.m3u8`,
                     itemNamer: (_item, context) => {
                         namingContexts.push(context);
@@ -77,16 +83,30 @@ describe("multi-track downloads", () => {
                     { taskId: 3, trackId: "video", trackIndex: 1 },
                 ]);
                 expect(downloadedTrackIds.sort()).toEqual(["audio", "audio", "video", "video"]);
-                expect(downloader.getSnapshot()).toMatchObject({
+                const snapshot = downloader.getSnapshot();
+                expect(snapshot).toMatchObject({
                     sourcePath: "custom://presentation",
                     outputBasePath: output,
                     outputPaths: [videoOutput, audioOutput],
+                    artifacts: [
+                        {
+                            trackId: "video",
+                            mediaTrack: { id: "dash/video:1080p", type: "video" },
+                            outputPaths: [videoOutput],
+                        },
+                        {
+                            trackId: "audio",
+                            mediaTrack: { id: "dash/audio:en", type: "audio", language: "en" },
+                            outputPaths: [audioOutput],
+                        },
+                    ],
                     totalChunkCount: 4,
                     completedChunkCount: 4,
                     successfulDuration: 4,
                     tracks: [
                         {
                             id: "video",
+                            mediaTrack: { id: "dash/video:1080p", type: "video" },
                             sourcePath: `${baseUrl}/video.m3u8`,
                             plannedOutputPath: videoOutput,
                             outputPaths: [videoOutput],
@@ -96,6 +116,7 @@ describe("multi-track downloads", () => {
                         },
                         {
                             id: "audio",
+                            mediaTrack: { id: "dash/audio:en", type: "audio", language: "en" },
                             sourcePath: `${baseUrl}/audio.m3u8`,
                             plannedOutputPath: audioOutput,
                             outputPaths: [audioOutput],
@@ -105,6 +126,10 @@ describe("multi-track downloads", () => {
                         },
                     ],
                 });
+                expect(snapshot.tracks[0].mediaTrack).toBe(tracks[0].mediaTrack);
+                expect(snapshot.tracks[1].mediaTrack).toBe(tracks[1].mediaTrack);
+                expect(snapshot.artifacts[0].mediaTrack).toBe(tracks[0].mediaTrack);
+                expect(snapshot.artifacts[1].mediaTrack).toBe(tracks[1].mediaTrack);
                 expect(fs.readdirSync(directory).sort()).toEqual(["media.audio.ts", "media.video.ts"]);
             });
         } finally {
@@ -331,8 +356,12 @@ describe("multi-track downloads", () => {
     });
 });
 
-function createTrack(id: string, type: SourceTrack["type"] = "video"): SourceTrack {
-    return { id, type, sourcePath: `custom://${id}` };
+function createTrack(id: string, type: SourceTrack["mediaTrack"]["type"] = "video"): SourceTrack {
+    return {
+        id,
+        mediaTrack: { id: `logical-${id}`, type },
+        sourcePath: `custom://${id}`,
+    };
 }
 
 function createTwoTrackSource(

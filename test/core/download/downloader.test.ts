@@ -17,7 +17,15 @@ describe("createDownloader", () => {
                     sourcePath: "custom://media",
                     continuous: false,
                     async prepare() {
-                        return { tracks: [{ id: "main", type: "video", sourcePath: this.sourcePath }] };
+                        return {
+                            tracks: [
+                                {
+                                    id: "main",
+                                    mediaTrack: { id: "logical-main", type: "video" },
+                                    sourcePath: this.sourcePath,
+                                },
+                            ],
+                        };
                     },
                     async *discover() {
                         yield {
@@ -78,7 +86,15 @@ describe("createDownloader", () => {
                     continuous: false,
                     async prepare(context) {
                         context.keys.set(keyId, key.toString("hex"));
-                        return { tracks: [{ id: "main", type: "video", sourcePath: this.sourcePath }] };
+                        return {
+                            tracks: [
+                                {
+                                    id: "main",
+                                    mediaTrack: { id: "logical-main", type: "video" },
+                                    sourcePath: this.sourcePath,
+                                },
+                            ],
+                        };
                     },
                     async *discover() {
                         yield {
@@ -134,7 +150,15 @@ describe("createDownloader", () => {
                     sourcePath: "custom://gapped-media",
                     continuous: false,
                     async prepare() {
-                        return { tracks: [{ id: "main", type: "video", sourcePath: this.sourcePath }] };
+                        return {
+                            tracks: [
+                                {
+                                    id: "main",
+                                    mediaTrack: { id: "logical-main", type: "video" },
+                                    sourcePath: this.sourcePath,
+                                },
+                            ],
+                        };
                     },
                     async *discover() {
                         yield {

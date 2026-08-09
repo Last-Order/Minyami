@@ -54,20 +54,16 @@ export interface SourceBatch {
     readonly totalItemCount?: number;
 }
 
-/**
- * Current sources deliberately keep a 1:1 relationship between a logical MediaTrack,
- * one physical download track, and its concentrated output. Cases where one logical
- * track spans multiple physical tracks are uncommon in the formats we currently
- * support, so introducing separate logical/physical identities is deferred. If a
- * future protocol (for example, a multi-period presentation) needs a 1:N mapping,
- * split MediaTrack metadata from SourceTrack execution identity at this boundary.
- */
-export type SourceTrack = MediaTrack & {
+export interface SourceTrack {
+    /** Filesystem-safe execution identity used by batches, temporary paths, and output suffixes. */
+    readonly id: DownloadTrackId;
+    /** The same logical track descriptor exposed to stream selectors. */
+    readonly mediaTrack: MediaTrack;
     /** Actual upstream location for this track, which may differ from the source entry point. */
     readonly sourcePath: string;
     readonly itemNamer?: DownloadItemNamer;
     readonly itemTimeout?: number;
-};
+}
 
 export type SourceMetadata =
     | {

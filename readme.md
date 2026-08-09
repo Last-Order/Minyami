@@ -149,8 +149,16 @@ const source = {
     async prepare() {
         return {
             tracks: [
-                { id: "video", type: "video", sourcePath: "https://example.com/video.m3u8" },
-                { id: "audio", type: "audio", language: "en", sourcePath: "https://example.com/audio.m3u8" },
+                {
+                    id: "video",
+                    mediaTrack: { id: "presentation/video", type: "video" },
+                    sourcePath: "https://example.com/video.m3u8",
+                },
+                {
+                    id: "audio",
+                    mediaTrack: { id: "presentation/audio/en", type: "audio", language: "en" },
+                    sourcePath: "https://example.com/audio.m3u8",
+                },
             ],
         };
     },
@@ -161,12 +169,13 @@ const source = {
 };
 ```
 
-Every source track is discriminated by `type: "video" | "audio"`; track ids must be unique safe identifiers containing
-1–64 letters, numbers, `_`, or `-`. All tracks share one task scheduler but have isolated temporary directories,
-ordering, progress, and output concentration. A single track uses the requested output path; multiple tracks use
-`<basename>.<trackId><ext>`. Snapshot `sourcePath` is always the original entry point, while each track snapshot
-reports its actual upstream path and final outputs. The retained media metadata is also the input boundary for a
-future muxing stage.
+`SourceTrack.id` is the execution identity used in temporary paths and output suffixes, so it must be a unique safe
+identifier containing 1–64 letters, numbers, `_`, or `-`. `SourceTrack.mediaTrack` is the same logical
+descriptor exposed to selectors; its opaque id has no filesystem naming restriction. All tracks share one task
+scheduler but have isolated temporary directories, ordering, progress, and output concentration. A single track uses
+the requested output path; multiple tracks use `<basename>.<trackId><ext>`. Track snapshots and completed artifacts
+retain that same `MediaTrack` object together with their actual upstream path and final outputs, forming the input
+boundary for a future muxing stage.
 
 `DownloadItem` is protocol-neutral. A custom source describes initialization and timed media resources directly;
 protocol-specific parser objects must not escape into the downloader:

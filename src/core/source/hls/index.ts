@@ -2,7 +2,7 @@ import logger from "../../../utils/log";
 import { mergeAsyncIterables } from "../merge_async_iterables";
 import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } from "../stream_selection";
 import { selectDefaultStream } from "../stream_selector";
-import { DownloadSource, DownloadSourceContext, SourceBatch, SourceMetadata } from "../types";
+import { DownloadSource, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceMetadata } from "../types";
 import { HLSMediaPlaylist, HLSPlaylistKind } from "./parser";
 import { PlaylistLoader } from "./playlist_loader";
 import { HLSMediaPlaylistCursor, HLSMediaPlaylistCursorMode, HLSSlice } from "./media_playlist_cursor";
@@ -17,7 +17,8 @@ export interface HLSSourceOptions {
 }
 
 interface SelectedHLSMediaTrack {
-    readonly track: MediaTrack;
+    readonly sourceTrackId: DownloadTrackId;
+    readonly mediaTrack: MediaTrack;
     readonly sourcePath: string;
     readonly initialPlaylist?: HLSMediaPlaylist;
 }
@@ -55,7 +56,8 @@ export class HLSSource implements DownloadSource {
                 const playlist =
                     selected.initialPlaylist ?? (await this.loadSelectedMediaPlaylist(selected.sourcePath, context));
                 return new HLSMediaPlaylistCursor({
-                    track: selected.track,
+                    id: selected.sourceTrackId,
+                    mediaTrack: selected.mediaTrack,
                     sourcePath: selected.sourcePath,
                     mode: this.options.mode,
                     initialPlaylist: playlist,
@@ -102,9 +104,11 @@ export class HLSSource implements DownloadSource {
         });
         throwIfAborted(signal);
         if (loaded.kind === HLSPlaylistKind.Media) {
+            const mediaTrack = Object.freeze<MediaTrack>({ id: "main", type: "video" });
             return [
                 {
-                    track: { id: "main", type: "video" },
+                    sourceTrackId: "main",
+                    mediaTrack,
                     sourcePath: this.sourcePath,
                     initialPlaylist: loaded,
                 },
@@ -128,7 +132,11 @@ export class HLSSource implements DownloadSource {
             if (!mediaPlan) {
                 throw new Error(`Missing HLS media plan for selected track ${track.id}.`);
             }
-            return { track, sourcePath: mediaPlan.sourcePath };
+            return {
+                sourceTrackId: mediaPlan.sourceTrackId,
+                mediaTrack: track,
+                sourcePath: mediaPlan.sourcePath,
+            };
         });
     }
 

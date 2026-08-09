@@ -47,6 +47,7 @@ export type StreamSelector = (
     catalog: StreamCatalog
 ) => TrackSelection | undefined | Promise<TrackSelection | undefined>;
 
+/** Freezes the canonical descriptor in place so its identity survives every layer unchanged. */
 /** Prevents selectors from mutating the canonical identities and compatibility graph they inspect. */
 export function freezeStreamCatalog(catalog: StreamCatalog): StreamCatalog {
     for (const track of catalog.tracks) {

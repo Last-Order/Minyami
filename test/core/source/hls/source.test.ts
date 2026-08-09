@@ -8,7 +8,7 @@ import { createDownloader } from "../../../../src/core/download/downloader";
 import { createHLSSource } from "../../../../src/core/source/hls";
 import { HLSMediaPlaylist, HLSPlaylistKind, HLSVariant } from "../../../../src/core/source/hls/parser";
 import { PlaylistLoader } from "../../../../src/core/source/hls/playlist_loader";
-import { StreamSelector } from "../../../../src/core/source/stream_selection";
+import { StreamSelector, TrackSelection } from "../../../../src/core/source/stream_selection";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
 
@@ -122,12 +122,14 @@ describe("HLSSource", () => {
             .mockResolvedValueOnce(master)
             .mockResolvedValueOnce(emptyMediaPlaylist())
             .mockResolvedValueOnce(emptyMediaPlaylist());
+        let selectedTracks: TrackSelection | undefined;
         const streamSelector = jest.fn<StreamSelector>(async (catalog) => {
             expect(catalog.options).toHaveLength(1);
             expect(catalog.options[0].tracks.map((track) => track.type)).toEqual(["video", "audio", "audio"]);
             expect(catalog.options[0].tracks[2]).toMatchObject({ name: "Japanese", language: "ja" });
             expect(catalog.tracks.every((track) => !("url" in track))).toBe(true);
-            return [catalog.options[0].tracks[2], catalog.options[0].tracks[0]] as const;
+            selectedTracks = [catalog.options[0].tracks[2], catalog.options[0].tracks[0]];
+            return selectedTracks;
         });
 
         await withTempDirectory("minyami-selected-tracks-", async (directory) => {
@@ -139,13 +141,24 @@ describe("HLSSource", () => {
             await downloader.download();
 
             expect(streamSelector).toHaveBeenCalledTimes(1);
-            expect(downloader.getSnapshot()).toMatchObject({
+            const snapshot = downloader.getSnapshot();
+            expect(snapshot).toMatchObject({
                 sourcePath: "https://media.example/master.m3u8",
                 tracks: [
-                    { id: "audio-2", sourcePath: "https://media.example/ja.m3u8" },
-                    { id: "video-1", sourcePath: variant.url },
+                    {
+                        id: "audio-2",
+                        mediaTrack: { id: "audio-2", type: "audio", language: "ja" },
+                        sourcePath: "https://media.example/ja.m3u8",
+                    },
+                    {
+                        id: "video-1",
+                        mediaTrack: { id: "video-1", type: "video" },
+                        sourcePath: variant.url,
+                    },
                 ],
             });
+            expect(snapshot.tracks[0].mediaTrack).toBe(selectedTracks![0]);
+            expect(snapshot.tracks[1].mediaTrack).toBe(selectedTracks![1]);
         });
     });
 

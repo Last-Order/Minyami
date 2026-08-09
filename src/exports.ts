@@ -39,5 +39,6 @@ export type {
     DownloadSnapshot,
     DownloadStatus,
     DownloadTrackSnapshot,
+    TrackArtifact,
 } from "./core/download/controller";
 export type { DownloadTask, DownloaderConfig } from "./core/downloader";

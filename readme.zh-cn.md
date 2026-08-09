@@ -95,8 +95,16 @@ const source = {
     async prepare() {
         return {
             tracks: [
-                { id: "video", type: "video", sourcePath: "https://example.com/video.m3u8" },
-                { id: "audio", type: "audio", language: "en", sourcePath: "https://example.com/audio.m3u8" },
+                {
+                    id: "video",
+                    mediaTrack: { id: "presentation/video", type: "video" },
+                    sourcePath: "https://example.com/video.m3u8",
+                },
+                {
+                    id: "audio",
+                    mediaTrack: { id: "presentation/audio/en", type: "audio", language: "en" },
+                    sourcePath: "https://example.com/audio.m3u8",
+                },
             ],
         };
     },
@@ -107,9 +115,12 @@ const source = {
 };
 ```
 
-每条 source track 都通过 `type: "video" | "audio"` 判别媒体类型。HLS 外置音轨会成为独立下载轨，
-内嵌音频则保留在原始物理轨中，不会产生重复输出。snapshot 模式会为每条选中轨道产出 batch，follow
-模式会并发刷新所有选中播放列表。该轨道数组和媒体元数据也会作为后续自动混流功能的输入边界。
+`SourceTrack.id` 是临时目录和输出后缀使用的执行标识，因此必须是由字母、数字、`_`、`-` 组成的
+1–64 位安全且唯一的名称。`SourceTrack.mediaTrack` 则是 selector 接收到的同一个逻辑描述对象，
+其中的不透明 id 不受文件名规则限制。HLS 外置音轨会成为独立下载轨，内嵌音频则保留在原始物理轨中，
+不会产生重复输出。snapshot 模式会为每条选中轨道产出 batch，follow 模式会并发刷新所有选中播放列表。
+track snapshot 和已完成 artifact 都会保留同一个 `MediaTrack` 及其实际上游地址和输出文件，作为后续自动
+混流功能的输入边界。
 
 ## 常见问题
 

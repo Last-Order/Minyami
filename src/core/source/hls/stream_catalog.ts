@@ -6,9 +6,11 @@ import {
     StreamOption,
     VideoTrack,
 } from "../stream_selection";
+import { DownloadTrackId } from "../types";
 import { HLSAudioRendition, HLSMasterPlaylist, HLSParseError, HLSVariant } from "./models";
 
 export interface HLSMediaTrackPlan {
+    readonly sourceTrackId: DownloadTrackId;
     readonly sourcePath: string;
 }
 
@@ -67,7 +69,9 @@ export function createHLSStreamCatalogPlan(master: HLSMasterPlaylist): HLSStream
     function addTrack(track: MediaTrack, sourcePath: string): void {
         if (!tracks.includes(track)) {
             tracks.push(track);
-            mediaTracks.set(track, { sourcePath });
+            // HLS-generated logical ids are already safe, but the private plan owns
+            // the execution identity so future protocols need not reuse manifest ids.
+            mediaTracks.set(track, { sourceTrackId: track.id, sourcePath });
         }
     }
 }

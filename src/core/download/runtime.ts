@@ -4,7 +4,9 @@ import * as path from "path";
 import { getAvailableOutputPath } from "../../utils/common";
 import FileConcentrator from "../file_concentrator";
 import { DownloadTask, DownloaderConfig } from "../downloader";
+import { MediaTrack } from "../source/stream_selection";
 import { DownloadItem, DownloadTrackId, SourceTrack } from "../source/types";
+import { TrackArtifact } from "./controller";
 import { ChunkExecutor, ChunkResult } from "./chunk_executor";
 import { normalizeDownloaderConfig, NormalizedDownloaderConfig } from "./config";
 import { Aes128CbcHandler } from "./encryption/aes_128_cbc";
@@ -20,6 +22,7 @@ export interface ExecutedChunk extends ChunkResult {
 
 export interface RuntimeTrackSnapshot {
     readonly id: DownloadTrackId;
+    readonly mediaTrack: MediaTrack;
     readonly sourcePath: string;
     readonly plannedOutputPath: string;
     readonly outputPaths: readonly string[];
@@ -136,7 +139,7 @@ export class DownloadRuntime {
         return "drop";
     }
 
-    async finishOutput(expectedTaskCounts: ReadonlyMap<DownloadTrackId, number>): Promise<string[]> {
+    async finishOutput(expectedTaskCounts: ReadonlyMap<DownloadTrackId, number>): Promise<readonly TrackArtifact[]> {
         if (this.config.noMerge) {
             return [];
         }
@@ -159,7 +162,7 @@ export class DownloadRuntime {
         if (errors.length > 0) {
             throw errors[0];
         }
-        return this.getOutputPaths();
+        return this.getTrackArtifacts();
     }
 
     abortOutput(): void {
@@ -171,14 +174,26 @@ export class DownloadRuntime {
     getTrackSnapshots(): readonly RuntimeTrackSnapshot[] {
         return [...this.tracks.values()].map((track) => ({
             id: track.metadata.id,
+            mediaTrack: track.metadata.mediaTrack,
             sourcePath: track.metadata.sourcePath,
             plannedOutputPath: track.plannedOutputPath,
             outputPaths: [...track.outputPaths],
         }));
     }
 
+    getTrackArtifacts(): readonly TrackArtifact[] {
+        return [...this.tracks.values()]
+            .filter((track) => track.outputPaths.length > 0)
+            .map((track) => ({
+                trackId: track.metadata.id,
+                mediaTrack: track.metadata.mediaTrack,
+                sourcePath: track.metadata.sourcePath,
+                outputPaths: [...track.outputPaths],
+            }));
+    }
+
     getOutputPaths(): string[] {
-        return [...this.tracks.values()].flatMap((track) => track.outputPaths);
+        return this.getTrackArtifacts().flatMap((artifact) => artifact.outputPaths);
     }
 
     cleanupEmptyWorkspace(): void {

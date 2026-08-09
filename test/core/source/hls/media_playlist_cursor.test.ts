@@ -16,7 +16,11 @@ describe("HLSMediaPlaylistCursor", () => {
         const track = await cursor.prepare(context, signal);
         const batches = await collect(cursor.discover(context, signal));
 
-        expect(track).toMatchObject({ id: "video", sourcePath: "https://media.example/video.m3u8" });
+        expect(track).toMatchObject({
+            id: "video",
+            mediaTrack: { id: "logical-video", type: "video" },
+            sourcePath: "https://media.example/video.m3u8",
+        });
         expect(batches).toEqual([
             {
                 trackId: "video",
@@ -61,7 +65,8 @@ function createCursor(
     mode: "snapshot" | "follow" = "snapshot"
 ): HLSMediaPlaylistCursor {
     return new HLSMediaPlaylistCursor({
-        track: { id, type: "video" },
+        id,
+        mediaTrack: { id: `logical-${id}`, type: "video" },
         sourcePath: `https://media.example/${id}.m3u8`,
         mode,
         initialPlaylist: playlist,

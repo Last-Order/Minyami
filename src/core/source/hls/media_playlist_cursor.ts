@@ -1,5 +1,12 @@
 import logger from "../../../utils/log";
-import { DownloadEncryption, DownloadItem, DownloadSourceContext, SourceBatch, SourceTrack } from "../types";
+import {
+    DownloadEncryption,
+    DownloadItem,
+    DownloadSourceContext,
+    DownloadTrackId,
+    SourceBatch,
+    SourceTrack,
+} from "../types";
 import { MediaTrack } from "../stream_selection";
 import { SiteAdapterMode, SiteAdapterResult } from "./adapters/types";
 import { HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
@@ -14,7 +21,8 @@ export interface HLSSlice {
 }
 
 export interface HLSMediaPlaylistCursorOptions {
-    readonly track: MediaTrack;
+    readonly id: DownloadTrackId;
+    readonly mediaTrack: MediaTrack;
     readonly sourcePath: string;
     readonly mode: HLSMediaPlaylistCursorMode;
     readonly initialPlaylist: HLSMediaPlaylist;
@@ -41,7 +49,7 @@ export class HLSMediaPlaylistCursor {
 
     async prepare(context: DownloadSourceContext, signal: AbortSignal): Promise<SourceTrack> {
         if (this.prepared) {
-            throw new Error(`HLS media-playlist cursor ${this.options.track.id} has already been prepared.`);
+            throw new Error(`HLS media-playlist cursor ${this.options.id} has already been prepared.`);
         }
         throwIfAborted(signal);
         if (this.continuous) {
@@ -67,7 +75,8 @@ export class HLSMediaPlaylistCursor {
         this.prepared = true;
 
         return {
-            ...this.options.track,
+            id: this.options.id,
+            mediaTrack: this.options.mediaTrack,
             sourcePath: this.options.sourcePath,
             itemNamer: this.sitePlan.itemNamer,
             itemTimeout: this.continuous ? this.followItemTimeout : undefined,
@@ -76,14 +85,14 @@ export class HLSMediaPlaylistCursor {
 
     async *discover(context: DownloadSourceContext, signal: AbortSignal): AsyncIterable<SourceBatch> {
         if (!this.prepared) {
-            throw new Error(`HLS media-playlist cursor ${this.options.track.id} must be prepared before discovery.`);
+            throw new Error(`HLS media-playlist cursor ${this.options.id} must be prepared before discovery.`);
         }
 
         if (!this.continuous) {
             // Snapshot cursors know their final per-track total and yield once even when empty.
             const items = sliceItems(this.toItems(this.playlist.segments), this.options.slice);
             this.discoveredItemCount = items.length;
-            yield { trackId: this.options.track.id, items, totalItemCount: items.length };
+            yield { trackId: this.options.id, items, totalItemCount: items.length };
             return;
         }
 
@@ -93,17 +102,17 @@ export class HLSMediaPlaylistCursor {
             const segments = this.takeNewSegments(this.playlist.segments);
             const items = this.toItems(segments);
             this.discoveredItemCount += items.length;
-            logger.debug(`Get ${items.length} new chunk(s) for track ${this.options.track.id}.`);
+            logger.debug(`Get ${items.length} new chunk(s) for track ${this.options.id}.`);
             if (items.length > 0) {
-                yield { trackId: this.options.track.id, items };
+                yield { trackId: this.options.id, items };
             }
 
             if (streamEnded) {
-                logger.info(`Stream track ${this.options.track.id} ended. Waiting for current tasks finished.`);
+                logger.info(`Stream track ${this.options.id} ended. Waiting for current tasks finished.`);
                 return;
             }
 
-            logger.debug(`Cool down track ${this.options.track.id}... Wait for next check`);
+            logger.debug(`Cool down track ${this.options.id}... Wait for next check`);
             if (!(await waitForNextCheck(Math.min(5000, this.safeChunkLength * 1000), signal))) {
                 return;
             }
@@ -118,11 +127,11 @@ export class HLSMediaPlaylistCursor {
                 }
                 const status = (error as any)?.response?.status;
                 if (status >= 400 && status <= 599) {
-                    logger.info(`HLS playlist for track ${this.options.track.id} is no longer available.`);
+                    logger.info(`HLS playlist for track ${this.options.id} is no longer available.`);
                     return;
                 }
                 logger.warning(
-                    `Unable to refresh track ${this.options.track.id}. Keep the current playlist and retry later.`
+                    `Unable to refresh track ${this.options.id}. Keep the current playlist and retry later.`
                 );
             }
         }

@@ -302,7 +302,7 @@ async function finishDownload(context: DownloaderContext): Promise<void> {
 
     state.status = "merging";
     logger.info("Merging chunks...");
-    const outputPaths = await runtime.finishOutput(
+    const artifacts = await runtime.finishOutput(
         new Map([...state.tracks].map(([trackId, track]) => [trackId, track.nextTaskIndex]))
     );
     if (!runtime.config.keepTemporaryFiles) {
@@ -314,7 +314,7 @@ async function finishDownload(context: DownloaderContext): Promise<void> {
             logger.warning("Fail to delete temporary files, please delete them manually.");
         }
     }
-    logOutputPaths(outputPaths);
+    logOutputPaths(artifacts.flatMap((artifact) => artifact.outputPaths));
     state.status = "finished";
     events.emit("finished");
 }
@@ -358,6 +358,7 @@ function getDownloadSnapshot(context: DownloaderContext): SourceDownloadSnapshot
         tempPath: runtime.tempPath,
         outputBasePath: runtime.outputBasePath,
         outputPaths: runtime.getOutputPaths(),
+        artifacts: runtime.getTrackArtifacts(),
         tracks: runtime.getTrackSnapshots().map((track) => {
             const trackState = state.tracks.get(track.id);
             if (!trackState) {
