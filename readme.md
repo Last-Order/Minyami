@@ -1,269 +1,151 @@
-# README
+# Minyami
 
 [![Build Status](https://github.com/Last-Order/Minyami/workflows/Node%20CI/badge.svg)](https://github.com/Last-Order/Minyami/actions)
 
 [中文说明](readme.zh-cn.md)
 
-> **Deprecation Notice:** Minyami is aging and has entered maintenance mode. No new features will be implemented in the foreseeable future; only bug fixes will be accepted. We recommend using [iori](https://github.com/iori-rs/iori) as an alternative.
+> **Deprecation Notice:** Minyami is in maintenance mode. Only bug fixes are planned. We recommend [iori](https://github.com/iori-rs/iori) for new installations.
 
-## Dependencies
+## Requirements
 
--   mkvmerge or ffmpeg (optional; install either one and add it to `PATH` to mux separate audio/video tracks)
-
-! Minyami requires Node.js 22 or newer. An active LTS release is recommended.
-
-Make sure you had put the binary files into your system `PATH`.
+- Node.js 22 or newer; an active LTS release is recommended.
+- `mkvmerge` or `ffmpeg` is optional. Install either one and add it to `PATH` if you need to mux separate audio and video tracks.
 
 ## Installation
 
-`npm -g i minyami` or `yarn global add minyami`
-
-Please also install the following extension to work with Minyami
-
-1. Install Chrome extension (recommended): https://chrome.google.com/webstore/detail/minyami/cgejkofhdaffiifhcohjdbbheldkiaed (which is also open-sourced [here](https://github.com/Last-Order/Minyami-chrome-extension))
-
-## Usage
-
-```
-Help:
-     Commands                      Description                   Alias
-
-     --help <command>              Show help documentation       -h
-         <command>                 Show help of a specified comma
-     --version                     Show version
-     --download <input_path>       Download video                -d
-         <input_path>              m3u8 file path
-         --threads <limit>         Threads limit
-             <limit>               (Optional) Limit of threads, defaults to 5
-         --retries <limit>         Retry limit
-             <limit>               (Optional) Limit of retry times
-         --output, o <path>        Output basename
-             <path>                (Optional) Output basename, defaults to ./output
-         --temp-dir <path>         Temporary file path
-             <path>                (Optional) Temporary file path, defaults to the current working directory
-         --key <key>               Set key manually (Internal use)
-             <key>                 (Optional) Key for decrypt video.
-         --cookies <cookies>       Cookies used to download
-             <cookies>
-         --headers, H <headers>    HTTP Header used to download
-             <headers>             Custom header. eg. "User-Agent: xxxxx". This option will override --cookies.
-         --live                    Download live
-         --proxy <proxy-server>    Use the specified HTTP/HTTPS/SOCKS5 proxy
-             <proxy-server>        Set proxy in [protocol://<host>:<port>] format. eg. --proxy "http://127.0.0.1:1080".
-         --no-proxy                Disable reading proxy configuration from system environment variables or system settings.
-         --slice <range>           Download specified part of the stream
-             <range>               Set time range in [<hh:mm:ss>-<hh:mm:ss> format]. eg. --slice "45:00-53:00"
-         --no-merge                Do not merge m3u8 chunks.
-         --keep, k                 Keep temporary files.
-         --keep-encrypted-chunks   Do not delete encrypted chunks after decryption.
-Options:
-
-     Options                       Description
-     --verbose, debug              Debug output
+```shell
+npm install --global minyami
 ```
 
-When the CLI receives a master playlist containing multiple streams, Minyami opens an interactive menu. Streams are
-shown from highest to lowest bandwidth with their available resolution, frame rate, and codecs. If standard
-input or output is not attached to a TTY, Minyami warns and selects the highest-bandwidth stream so scripts do not
-block. A master playlist with only one stream continues without prompting.
+You can also install it with Yarn:
 
-## FAQ
+```shell
+yarn global add minyami
+```
 
-Q: Should I keep the browser open when downloading?
+For convenient playlist detection in Chrome, install the [Minyami Chrome extension](https://chrome.google.com/webstore/detail/minyami/cgejkofhdaffiifhcohjdbbheldkiaed). Its source is available in the [extension repository](https://github.com/Last-Order/Minyami-chrome-extension).
 
-A: It's not necessary.
+## Command-line usage
 
-Q: How to set proxy for Minyami?
+Download a playlist:
 
-A: You can use `--proxy` to set proxy server for Minyami. HTTP/SOCKS5 proxy are supported. Or you can use environment variables `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` to provide proxy configuration for Minyami. And Minyami will read proxy settings from environment variables and Windows system proxy settings. To disable any proxy setting from context, you can add `--disable-proxy` or set `env.NO_PROXY` to and non-empty values.
+```shell
+minyami --download "https://example.com/video.m3u8" --output "./video.ts"
+```
 
-Q: How to set temporary file location?
+Useful examples:
 
-A: By default, Minyami creates its `minyami_<timestamp>_<random>` temporary directory in the current working directory. You can use `--temp-dir` to select a different parent directory.
+```shell
+# Use eight concurrent downloads
+minyami -d "https://example.com/video.m3u8" --threads 8
 
-Q: How to set multiple HTTP headers?
+# Send multiple request headers
+minyami -d "https://example.com/video.m3u8" -H "Cookie: session=..." -H "User-Agent: ..."
 
-A: By providing multiple -H/--headers option. For example, `minyami -d xxxx -H "Cookie: xxxx" --headers "User-Agent: yyy"`.
+# Download a time range
+minyami -d "https://example.com/video.m3u8" --slice "45:00-53:00"
+
+# Follow a live playlist until you stop the command
+minyami -d "https://example.com/live.m3u8" --live
+
+# Use an HTTP, HTTPS, or SOCKS5 proxy
+minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
+```
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| `--help`, `-h` | Show help. Pass a command name to show command-specific help. |
+| `--version` | Show the installed version. |
+| `--download <input>`, `-d <input>` | Download an m3u8 URL or file. |
+| `--threads <number>` | Set the concurrency limit. The default is `5`. |
+| `--retries <number>` | Set the retry limit. |
+| `--output <path>`, `-o <path>` | Set the output basename. The default is `./output`. |
+| `--temp-dir <path>` | Choose the parent directory for temporary files. |
+| `--key <key>` | Supply a decryption key manually. |
+| `--cookies <cookies>` | Send cookies with download requests. |
+| `--headers <header>`, `-H <header>` | Send a custom HTTP header. Repeat the option to send multiple headers. |
+| `--live` | Follow a live playlist. |
+| `--proxy <url>` | Use an HTTP, HTTPS, or SOCKS5 proxy. |
+| `--no-proxy` | Ignore proxy environment variables and system proxy settings. |
+| `--slice <start-end>` | Download a time range such as `45:00-53:00`. |
+| `--no-merge` | Keep downloaded chunks separate. |
+| `--keep`, `-k` | Keep temporary files. |
+| `--keep-encrypted-chunks` | Keep encrypted chunks after decryption. Use with `--keep`. |
+| `--verbose`, `--debug` | Enable debug output. |
+
+If a master playlist contains multiple stream options, Minyami displays an interactive menu ordered by bandwidth. In a non-interactive terminal, it selects the highest-bandwidth option automatically. A playlist with only one option starts without prompting.
 
 ## Use as a library
 
-Downloaders are created through factory functions. Controllers expose lifecycle operations, events, and read-only
-snapshots; internal queues and playlists are not public mutable state.
+Download an archive playlist:
 
 ```TypeScript
-import { createArchiveDownloader, createLiveDownloader } from "minyami";
+import { createArchiveDownloader } from "minyami";
 
-const archive = createArchiveDownloader("https://example.com/archive.m3u8", {
+const downloader = createArchiveDownloader("https://example.com/archive.m3u8", {
     output: "./archive.ts",
     threads: 8,
+});
+
+downloader.on("chunk-downloaded", (chunk) => {
+    console.log(chunk);
+});
+
+await downloader.download();
+```
+
+For a live playlist, create a live downloader and call `stop()` when you want to finish:
+
+```TypeScript
+import { createLiveDownloader } from "minyami";
+
+const downloader = createLiveDownloader("https://example.com/live.m3u8", {
+    output: "./live.ts",
+});
+
+setTimeout(() => downloader.stop(), 60_000);
+await downloader.download();
+```
+
+Use `streamSelector` to choose tracks from a master playlist. Return tracks from one of the provided options, or return `undefined` to cancel the download:
+
+```TypeScript
+const downloader = createArchiveDownloader("https://example.com/master.m3u8", {
     streamSelector: (catalog) =>
         catalog.options.find((option) =>
             option.tracks.some((track) => track.type === "video" && track.height === 720)
         )?.tracks,
 });
 
-archive.on("chunk-downloaded", (chunk) => {
-    console.log(chunk);
-});
-
-await archive.download();
-console.log(archive.getSnapshot());
-
-const live = createLiveDownloader("https://example.com/live.m3u8");
-setTimeout(() => live.stop(), 60_000);
-await live.download();
-```
-
-`streamSelector` receives a protocol-neutral `StreamCatalog`. Its options describe compatible track sets derived from
-the manifest; the selector returns a non-empty array containing exact track objects from one option, a promise for
-one, or `undefined` to cancel normally. Returning a subset can select particular audio languages or produce an
-audio-only download. The same API can represent HLS now and MPEG-DASH later without exposing playlist URLs or
-protocol identifiers. It is available on archive downloads, live downloads, and `HLSSourceOptions`. Library calls
-select every track in the highest-bandwidth option when the selector is omitted.
-
-The same execution engine can also consume a source directly. An HLS source in `snapshot` mode yields one batch per
-selected physical track; `follow` mode refreshes all selected playlists concurrently and yields newly discovered
-chunks until every track ends or the controller is stopped.
-
-```TypeScript
-import { createDownloader, createHLSSource } from "minyami";
-
-const downloader = createDownloader(
-    createHLSSource("https://example.com/live.m3u8", { mode: "follow" }),
-    { output: "./live.ts" }
-);
-
 await downloader.download();
 ```
 
-Custom implementations of `DownloadSource` declare their tracks during `prepare()` and may then yield any number of
-single-track `SourceBatch` values. Sources produce immutable `DownloadItem` values; the downloader owns global task
-ids, track-local merge indices, filenames, retries, scheduling, progress, and output merging.
+When `streamSelector` is omitted, the library selects all tracks from the highest-bandwidth option.
 
-```TypeScript
-const source = {
-    sourcePath: "custom://presentation",
-    continuous: false,
-    async prepare() {
-        return {
-            tracks: [
-                {
-                    id: "video",
-                    mediaTrack: { id: "presentation/video", type: "video" },
-                    sourcePath: "https://example.com/video.m3u8",
-                },
-                {
-                    id: "audio",
-                    mediaTrack: { id: "presentation/audio/en", type: "audio", language: "en" },
-                    sourcePath: "https://example.com/audio.m3u8",
-                },
-            ],
-        };
-    },
-    async *discover() {
-        yield { trackId: "video", items: [videoItem], totalItemCount: 1 };
-        yield { trackId: "audio", items: [audioItem], totalItemCount: 1 };
-    },
-};
+## FAQ
+
+### Do I need to keep the browser open while downloading?
+
+No.
+
+### How do I configure a proxy?
+
+Pass `--proxy`, or set `HTTP_PROXY`, `HTTPS_PROXY`, or `ALL_PROXY`. On Windows, Minyami can also use the system proxy settings. Pass `--no-proxy` to ignore all of these settings.
+
+### How do I change the temporary file location?
+
+Pass `--temp-dir <path>`. By default, Minyami creates a `minyami_<timestamp>_<random>` directory under the current working directory.
+
+### How do I send multiple HTTP headers?
+
+Repeat `-H` or `--headers`:
+
+```shell
+minyami -d "https://example.com/video.m3u8" -H "Cookie: ..." --headers "User-Agent: ..."
 ```
 
-`SourceTrack.id` is the execution identity used in temporary paths and output suffixes, so it must be a unique safe
-identifier containing 1–64 letters, numbers, `_`, or `-`. `SourceTrack.mediaTrack` is the same logical
-descriptor exposed to selectors; its opaque id has no filesystem naming restriction. All tracks share one task
-scheduler but have isolated temporary directories, ordering, progress, and output concentration. A single track uses
-the requested output basename. To mux separate audio and video tracks, install either `mkvmerge` or `ffmpeg`, add it
-to `PATH`, and use the normal download command with the desired output basename.
+## License
 
-`DownloadItem` is protocol-neutral. A custom source describes initialization and timed media resources directly;
-protocol-specific parser objects must not escape into the downloader:
-
-```TypeScript
-const item = {
-    url: "https://example.com/segment-1.m4s",
-    kind: "media" as const,
-    duration: 2,
-};
-
-// Encrypted items additionally carry a complete execution descriptor:
-const encryptedItem = {
-    ...item,
-    encryption: {
-        scheme: "aes-128-cbc" as const,
-        keyId: "https://example.com/key.bin",
-        iv: "00000000000000000000000000000001",
-    },
-};
-```
-
-Before yielding an encrypted item, the source must register its key in `DownloadSourceContext.keys` under the same
-`keyId`. The downloader validates this contract before issuing the item's network request.
-
-### Progress semantics
-
-Snapshots report successful, dropped, and completed work separately:
-
--   `completedChunkCount`: resolved tasks, equal to `successfulChunkCount + droppedChunkCount`.
--   `successfulChunkCount`: chunks downloaded and processed successfully.
--   `droppedChunkCount`: chunks abandoned after reaching the configured retry limit.
--   `successfulDuration`: total media duration in seconds from successfully processed media chunks; initialization segments and dropped chunks do not add duration.
-
-Top-level progress is aggregated across all tracks. Each track snapshot exposes the same counters for that track;
-therefore multi-track top-level `successfulDuration` is media-processing throughput, not presentation duration.
-
-Completion percentage and ETA use `completedChunkCount`. Download speed and the successful-duration ratio use only
-successful chunks.
-
-### Event: `chunk-downloaded`
-
--   `taskName` `<string>` The filename of the chunk that was just downloaded.
--   `trackId` `<string>` The track that owns the chunk.
--   `completedChunkCount` `<number>` Successful plus dropped chunks.
--   `successfulChunkCount` `<number>` Successfully processed chunks.
--   `droppedChunkCount` `<number>` Chunks dropped after reaching the retry limit.
--   `totalChunkCount` `<number>` Total archive chunks or live chunks discovered so far.
--   `successfulChunksPerSecond` `<string>` Average successful chunks processed per second.
--   `successfulDurationRatio` `<string>` Successfully processed media duration divided by elapsed wall time.
--   `completionEta` `<string | undefined>` Archive completion ETA; omitted for live downloads.
-
-The `'chunk-downloaded'` event is emitted only after a chunk is downloaded and processed successfully.
-
-### Event: `chunk-error`
-
--   `error: Error`
--   `taskName: string`
--   `trackId: string`
-
-The `'chunk-error'` event is emitted when failed to download or decrypt media chunks.
-
-### Event: `downloaded`
-
-The `'downloaded'` event is emitted after every scheduled chunk has either succeeded or been dropped, but before
-starting merge.
-
-### Event: `finished`
-
-The `'finished'` event is emitted after all the works are done. CLI program exits after this event is emitted.
-
-### Event: `critical-error`
-
--   `error: Error`
-
-The `critical-error` is emitted when a error that Minyami can't handle happens.
-
-## Contribution
-
-Minyami is developed with TypeScript and tested with Jest.
-
-**Install development dependencies**
-
-```
-git clone https://github.com/Last-Order/Minyami
-cd Minyami
-npm install
-```
-
-Run `npm test` for the modular TypeScript test suite and `npm run build` to build the project.
-
-## Copyright
-
-Open-sourced under GPLv3. © 2018-2025, Eridanus Sora, member of MeowSound Idols.
+GPLv3. © 2018-2025 Eridanus Sora, member of MeowSound Idols.

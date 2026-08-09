@@ -1,71 +1,116 @@
-# 读读窝
+# Minyami
 
-## 依赖
-* mkvmerge 或 ffmpeg（可选；如需混流独立音视频轨道，请安装任意一个并加入 `PATH`）
+[English](readme.md)
 
-! Minyami 要求使用 Node.js 22 或更高版本，推荐选用活跃 LTS 版本。
+> **维护说明：** Minyami 已进入维护模式，后续仅接受问题修复。新安装建议使用 [iori](https://github.com/iori-rs/iori)。
 
-需安装并确保系统变量`PATH`中添加可执行程序所在的路径。
+## 运行要求
+
+- Node.js 22 或更高版本，推荐使用活跃的 LTS 版本。
+- `mkvmerge` 或 `ffmpeg` 为可选依赖。如需混流独立音视频轨道，请安装其中一个并将其加入 `PATH`。
 
 ## 安装
 
-`npm -g i minyami` 或 `yarn global add minyami`
-
-此外，请安装插件配合 Minyami 使用。
-
-1. 安装 Chrome 插件（推荐）：https://chrome.google.com/webstore/detail/minyami/cgejkofhdaffiifhcohjdbbheldkiaed （同样[开源](https://github.com/Last-Order/Minyami-chrome-extension)）。
-
-
-## 用法
-```
-Help:
-     命令                      描述                   别名
-
-     --help <command>              显示帮助       -h
-         <command>                 显示某命令的帮助
-     --version                     显示版本号
-     --download <input_path>       下载视频             -d
-         <input_path>              m3u8 文件路径
-         --threads <limit>         并发数量限制
-             <limit>               (可选) 并发数量的限制，默认为5
-         --retries <limit>         重试次数
-             <limit>               (可选) 重试次数的限制
-         --output, o <path>        输出文件基名
-             <path>                (可选) 输出文件基名，默认为 ./output
-         --temp-dir <path>         临时文件路径
-             <path>                (可选) 临时文件路径，默认为当前工作目录
-         --key <key>               手动设置 Key
-             <key>                 (可选) 视频解密 Key.
-         --cookies <cookies>       (可选) 视频下载 Cookies
-             <cookies>
-         --headers, H <headers>    手动设定 HTTP Header
-             <headers>             自定义 HTTP Header，例如："User-Agent: X-UA"
-         --live                    直播下载模式
-         --proxy <proxy-server>    为 Minyami 设置代理
-             <proxy-server>        代理地址，格式为 [protocol://<host>:<port>] 例如 --proxy "http://127.0.0.1:1080"
-         --slice <range>           下载部分内容
-             <range>               设置时间范围，格式为 [<hh:mm:ss>-<hh:mm:ss> format] 例如 --slice "45:00-53:00"
-         --nomerge, keep           不合并视频分块。
-         --keep-encrypted-chunks   不删除解密前分块。与--keep一起使用。
-选项:
-
-     选项名                       描述
-     --verbose, debug             调试输出
+```shell
+npm install --global minyami
 ```
 
-当 CLI 收到包含多个流选项的 master playlist 时，Minyami 会显示交互式菜单，并按带宽从高到低列出
-视频规格和关联音轨。如果标准输入或输出没有连接到 TTY，Minyami 会输出警告并回退到最高带宽选项，
-避免脚本阻塞。只有一个选项时不会询问。
+也可以使用 Yarn：
+
+```shell
+yarn global add minyami
+```
+
+如需在 Chrome 中方便地检测播放列表，请安装 [Minyami Chrome 扩展](https://chrome.google.com/webstore/detail/minyami/cgejkofhdaffiifhcohjdbbheldkiaed)。扩展源码位于[独立仓库](https://github.com/Last-Order/Minyami-chrome-extension)。
+
+## 命令行用法
+
+下载播放列表：
+
+```shell
+minyami --download "https://example.com/video.m3u8" --output "./video.ts"
+```
+
+常用示例：
+
+```shell
+# 使用 8 个并发下载任务
+minyami -d "https://example.com/video.m3u8" --threads 8
+
+# 添加多个请求头
+minyami -d "https://example.com/video.m3u8" -H "Cookie: session=..." -H "User-Agent: ..."
+
+# 下载指定时间范围
+minyami -d "https://example.com/video.m3u8" --slice "45:00-53:00"
+
+# 持续下载直播，直至手动停止命令
+minyami -d "https://example.com/live.m3u8" --live
+
+# 使用 HTTP、HTTPS 或 SOCKS5 代理
+minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
+```
+
+### 参数
+
+| 参数 | 说明 |
+| --- | --- |
+| `--help`、`-h` | 显示帮助；传入命令名可查看对应命令的帮助。 |
+| `--version` | 显示当前版本。 |
+| `--download <input>`、`-d <input>` | 下载 m3u8 地址或文件。 |
+| `--threads <数量>` | 设置并发数量，默认为 `5`。 |
+| `--retries <次数>` | 设置重试次数上限。 |
+| `--output <路径>`、`-o <路径>` | 设置输出文件基名，默认为 `./output`。 |
+| `--temp-dir <路径>` | 设置临时文件所在的父目录。 |
+| `--key <密钥>` | 手动指定解密密钥。 |
+| `--cookies <内容>` | 为下载请求添加 Cookie。 |
+| `--headers <请求头>`、`-H <请求头>` | 添加 HTTP 请求头；可重复使用以添加多个请求头。 |
+| `--live` | 持续下载直播播放列表。 |
+| `--proxy <地址>` | 使用 HTTP、HTTPS 或 SOCKS5 代理。 |
+| `--no-proxy` | 忽略代理环境变量和系统代理设置。 |
+| `--slice <开始-结束>` | 下载指定时间范围，例如 `45:00-53:00`。 |
+| `--no-merge` | 不合并已下载的分块。 |
+| `--keep`、`-k` | 保留临时文件。 |
+| `--keep-encrypted-chunks` | 解密后保留加密分块，需与 `--keep` 一起使用。 |
+| `--verbose`、`--debug` | 输出调试信息。 |
+
+如果 master playlist 包含多个流选项，Minyami 会按带宽从高到低显示交互式菜单。在非交互式终端中，程序会自动选择带宽最高的选项。只有一个选项时会直接开始下载。
 
 ## 作为库使用
 
-可以通过 `streamSelector` 自定义 master playlist 的轨道选择：
+下载点播播放列表：
 
 ```TypeScript
 import { createArchiveDownloader } from "minyami";
 
-const downloader = createArchiveDownloader("https://example.com/master.m3u8", {
+const downloader = createArchiveDownloader("https://example.com/archive.m3u8", {
     output: "./archive.ts",
+    threads: 8,
+});
+
+downloader.on("chunk-downloaded", (chunk) => {
+    console.log(chunk);
+});
+
+await downloader.download();
+```
+
+下载直播时使用 `createLiveDownloader`，需要结束下载时调用 `stop()`：
+
+```TypeScript
+import { createLiveDownloader } from "minyami";
+
+const downloader = createLiveDownloader("https://example.com/live.m3u8", {
+    output: "./live.ts",
+});
+
+setTimeout(() => downloader.stop(), 60_000);
+await downloader.download();
+```
+
+可以使用 `streamSelector` 从 master playlist 中选择轨道。返回某个选项中的轨道，或返回 `undefined` 取消下载：
+
+```TypeScript
+const downloader = createArchiveDownloader("https://example.com/master.m3u8", {
     streamSelector: (catalog) =>
         catalog.options.find((option) =>
             option.tracks.some((track) => track.type === "video" && track.height === 720)
@@ -75,64 +120,30 @@ const downloader = createArchiveDownloader("https://example.com/master.m3u8", {
 await downloader.download();
 ```
 
-选择器收到协议无关的 `StreamCatalog`。其中 option 表示 Manifest 推导出的兼容轨道集合；选择器应返回
-同一个 option 中一个或多个原始 track 对象、其 Promise，或返回 `undefined` 正常取消。返回 option 的
-子集可以只下载指定语言或只下载音频。公共 track 不包含 HLS URL 等协议字段，因此同一选择 API 未来
-也可用于 MPEG-DASH。archive、live 和 `HLSSourceOptions` 都支持此选项；未传入时默认选择最高带宽
-option 中的全部轨道。
-
-共享下载器支持 source 在 `prepare()` 阶段声明多条 track，之后每个 `SourceBatch` 通过 `trackId` 归属到
-其中一条 track。所有 track 共用调度器，但分别维护临时目录、轨内顺序、进度和输出归并。单轨沿用指定
-输出名；多轨使用 `<文件名>.<trackId><扩展名>`。顶层快照的 `sourcePath` 始终是原始入口地址，实际
-media playlist 地址和最终输出文件位于各 track 快照中。
-
-```TypeScript
-const source = {
-    sourcePath: "custom://presentation",
-    continuous: false,
-    async prepare() {
-        return {
-            tracks: [
-                {
-                    id: "video",
-                    mediaTrack: { id: "presentation/video", type: "video" },
-                    sourcePath: "https://example.com/video.m3u8",
-                },
-                {
-                    id: "audio",
-                    mediaTrack: { id: "presentation/audio/en", type: "audio", language: "en" },
-                    sourcePath: "https://example.com/audio.m3u8",
-                },
-            ],
-        };
-    },
-    async *discover() {
-        yield { trackId: "video", items: [videoItem], totalItemCount: 1 };
-        yield { trackId: "audio", items: [audioItem], totalItemCount: 1 };
-    },
-};
-```
-
-`SourceTrack.id` 是临时目录和输出后缀使用的执行标识，因此必须是由字母、数字、`_`、`-` 组成的
-1–64 位安全且唯一的名称。`SourceTrack.mediaTrack` 则是 selector 接收到的同一个逻辑描述对象，
-其中的不透明 id 不受文件名规则限制。HLS 外置音轨会成为独立下载轨，内嵌音频则保留在原始物理轨中，
-不会产生重复输出。snapshot 模式会为每条选中轨道产出 batch，follow 模式会并发刷新所有选中播放列表。
-如需混流独立音视频轨道，请安装 `mkvmerge` 或 `ffmpeg`，将其加入 `PATH`，然后按正常方式指定输出文件基名下载。
+未设置 `streamSelector` 时，库会选择最高带宽选项中的全部轨道。
 
 ## 常见问题
 
-Q: 下载时需要保持视频窗口打开吗？
+### 下载时需要保持浏览器窗口打开吗？
 
-A: 不需要。
+不需要。
 
-Q: 如何设置代理？
+### 如何设置代理？
 
-A: 可以使用`--proxy`参数设置代理，详见上方用法。目前支持`HTTP/HTTPS/SOCKS5`代理。您也可以使用环境变量设置代理，默认读取`HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY`。
+使用 `--proxy`，或设置 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 环境变量。在 Windows 上，Minyami 也可以读取系统代理设置。使用 `--no-proxy` 可忽略这些代理配置。
 
-Q: 如何设置临时文件目录？
+### 如何修改临时文件目录？
 
-A: 默认情况下，Minyami 会在当前工作目录下创建 `minyami_<时间戳>_<随机值>` 临时目录。可以使用 `--temp-dir` 指定其他父目录。
+使用 `--temp-dir <路径>`。默认情况下，Minyami 会在当前工作目录中创建 `minyami_<时间戳>_<随机值>` 目录。
 
-Q: 如何设置多个 HTTP Header？
+### 如何添加多个 HTTP 请求头？
 
-A: 通过设置多个`-H`或`--headers`，例如`minyami -d xxxx -H "Cookie: xxxx" --headers "User-Agent: yyy"`。
+重复使用 `-H` 或 `--headers`：
+
+```shell
+minyami -d "https://example.com/video.m3u8" -H "Cookie: ..." --headers "User-Agent: ..."
+```
+
+## 许可证
+
+GPLv3。© 2018-2025 Eridanus Sora，MeowSound Idols 成员。
