@@ -1,4 +1,3 @@
-import { buildFullUrl } from "../../../../utils/common";
 import { SiteAdapterOptions, SiteAdapterResult } from "./types";
 
 export function adaptAbema({ key, playlist }: SiteAdapterOptions): SiteAdapterResult {
@@ -6,13 +5,14 @@ export function adaptAbema({ key, playlist }: SiteAdapterOptions): SiteAdapterRe
         throw new Error("To download AbemaTV, you need to set a key manually");
     }
     const encryptionKeys: Record<string, string> = {};
-    for (const keyUrl of playlist.encryptKeys) {
-        encryptionKeys[buildFullUrl(playlist.playlistUrl, keyUrl)] = key;
+    for (const keyUrl of playlist.encryptionKeyUrls) {
+        encryptionKeys[keyUrl] = key;
     }
     return {
         encryptionKeys,
-        keyResolver: async ({ keyUrls, playlistUrl }) =>
-            Object.fromEntries(keyUrls.map((keyUrl) => [buildFullUrl(playlistUrl, keyUrl), key])),
-        chunks: playlist.chunks.filter((chunk) => !chunk.url.includes("/tspgsl/") && !chunk.url.includes("/tsad/")),
+        keyResolver: async ({ keyUrls }) => Object.fromEntries(keyUrls.map((keyUrl) => [keyUrl, key])),
+        segments: playlist.segments.filter(
+            (segment) => !segment.url.includes("/tspgsl/") && !segment.url.includes("/tsad/")
+        ),
     };
 }

@@ -1,18 +1,17 @@
 import * as fs from "fs";
 import logger from "../../../utils/log";
 import { DownloadHttpClient } from "../../download/http_client";
-import HLSParser, { MasterPlaylist, MediaPlaylist } from "./parser";
+import { HLSPlaylist, parseHLSPlaylist } from "./parser";
 
 export interface LoadPlaylistOptions {
     retries?: number;
     timeout?: number;
-    initPrimaryKey?: number;
 }
 
 export class PlaylistLoader {
     constructor(private readonly http: DownloadHttpClient) {}
 
-    async load(sourcePath: string, options: LoadPlaylistOptions = {}): Promise<MasterPlaylist | MediaPlaylist> {
+    async load(sourcePath: string, options: LoadPlaylistOptions = {}): Promise<HLSPlaylist> {
         const retries = options.retries === undefined ? 1 : options.retries;
         const timeout = options.timeout || 60000;
 
@@ -21,10 +20,9 @@ export class PlaylistLoader {
                 throw new Error(`File '${sourcePath}' not found.`);
             }
             logger.info("Loading HLS playlist.");
-            return new HLSParser({
+            return parseHLSPlaylist({
                 content: fs.readFileSync(sourcePath).toString(),
-                initPrimaryKey: options.initPrimaryKey,
-            }).parse();
+            });
         }
 
         logger.info("Start fetching HLS playlist.");
@@ -34,11 +32,10 @@ export class PlaylistLoader {
                 const response = await this.http.get<string>(sourcePath, { timeout });
                 logger.info("HLS playlist fetched.");
                 const responseUrl = response.request?.res?.responseUrl || sourcePath;
-                return new HLSParser({
+                return parseHLSPlaylist({
                     content: response.data,
                     playlistUrl: responseUrl,
-                    initPrimaryKey: options.initPrimaryKey,
-                }).parse();
+                });
             } catch (error) {
                 const e = error as any;
                 const reason =

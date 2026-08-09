@@ -8,8 +8,8 @@ import { adaptYoutube } from "./adapters/youtube";
 export async function prepareSite(options: SiteAdapterOptions): Promise<SiteAdapterResult> {
     const { playlist, sourcePath, mode } = options;
 
-    if (playlist.encryptKeys.length > 0) {
-        const firstKey = playlist.encryptKeys[0];
+    if (playlist.encryptionKeyUrls.length > 0) {
+        const firstKey = playlist.encryptionKeyUrls[0];
         if (firstKey.startsWith("abematv-license")) {
             logger.info("Site confirmed: AbemaTV.");
             return adaptAbema(options);

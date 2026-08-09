@@ -1,7 +1,6 @@
 import logger from "../../../utils/log";
-import { buildFullUrl } from "../../../utils/common";
 import { SiteAdapterMode, SiteAdapterResult } from "./adapters/types";
-import { isInitialChunk, isNormalChunk, HLSChunk, MasterPlaylist, MediaPlaylist } from "./parser";
+import { HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
 import { PlaylistLoader } from "./playlist_loader";
 import { prepareSite } from "./site_adapter";
 import {
@@ -31,10 +30,10 @@ export class HLSSource implements DownloadSource {
     readonly continuous: boolean;
     sourcePath: string;
 
-    private readonly initialChunkUrls = new Set<string>();
+    private readonly initialSegmentUrls = new Set<string>();
     private readonly sequenceIds = new Set<number>();
     private loader?: PlaylistLoader;
-    private playlist?: MediaPlaylist;
+    private playlist?: HLSMediaPlaylist;
     private sitePlan: SiteAdapterResult = {};
     private timeout = 60000;
     private prepared = false;
@@ -67,8 +66,8 @@ export class HLSSource implements DownloadSource {
             retries: context.retries,
             http: context.http,
         });
-        if (this.sitePlan.chunks) {
-            this.playlist.chunks = this.sitePlan.chunks;
+        if (this.sitePlan.segments) {
+            this.playlist = { ...this.playlist, segments: this.sitePlan.segments };
         }
         if (this.sitePlan.encryptionKeys) {
             context.keys.setMany(this.sitePlan.encryptionKeys);
@@ -91,7 +90,7 @@ export class HLSSource implements DownloadSource {
 
         if (!this.continuous) {
             // A snapshot source has a final total and deliberately yields exactly once, even when empty.
-            const items = sliceItems(this.toItems(this.playlist.chunks), this.options.slice);
+            const items = sliceItems(this.toItems(this.playlist.segments), this.options.slice);
             this.discoveredItemCount = items.length;
             yield { items, totalItemCount: items.length };
             return;
@@ -99,9 +98,9 @@ export class HLSSource implements DownloadSource {
 
         while (!signal.aborted) {
             // Treat each playlist as a snapshot and emit only identities not seen in earlier snapshots.
-            const streamEnded = this.playlist.isEnd;
-            const chunks = this.takeNewChunks(this.playlist.chunks);
-            const items = this.toItems(chunks);
+            const streamEnded = this.playlist.hasEndList;
+            const segments = this.takeNewSegments(this.playlist.segments);
+            const items = this.toItems(segments);
             this.discoveredItemCount += items.length;
             logger.debug(`Get ${items.length} new chunk(s).`);
             if (items.length > 0) {
@@ -120,7 +119,7 @@ export class HLSSource implements DownloadSource {
             }
 
             try {
-                this.playlist = await this.loadMediaPlaylist(this.sourcePath, context, this.discoveredItemCount);
+                this.playlist = await this.loadMediaPlaylist(this.sourcePath, context);
                 await this.checkKeys(context);
             } catch (error) {
                 // Initial discovery failures are fatal; after useful work, an unavailable manifest ends a live source.
@@ -142,7 +141,7 @@ export class HLSSource implements DownloadSource {
     }
 
     private get safeChunkLength(): number {
-        const chunkLength = this.playlist?.getChunkLength();
+        const chunkLength = this.playlist?.averageSegmentDuration;
         return Number.isFinite(chunkLength) && chunkLength > 0 ? chunkLength : 5;
     }
 
@@ -151,24 +150,19 @@ export class HLSSource implements DownloadSource {
     }
 
     private updateFollowTimeouts(): void {
-        this.timeout = Math.min(Math.max(20000, this.playlist.chunks.length * this.safeChunkLength * 1000), 60000);
+        this.timeout = Math.min(Math.max(20000, this.playlist.segments.length * this.safeChunkLength * 1000), 60000);
     }
 
-    private async loadMediaPlaylist(
-        sourcePath: string,
-        context: DownloadSourceContext,
-        initPrimaryKey?: number
-    ): Promise<MediaPlaylist> {
+    private async loadMediaPlaylist(sourcePath: string, context: DownloadSourceContext): Promise<HLSMediaPlaylist> {
         const loaded = await this.loader.load(sourcePath, {
             retries: context.retries,
             timeout: this.timeout,
-            initPrimaryKey,
         });
-        if (!(loaded instanceof MasterPlaylist)) {
+        if (loaded.kind === HLSPlaylistKind.Media) {
             return loaded;
         }
 
-        const bestStream = [...loaded.streams].sort((a, b) => b.bandwidth - a.bandwidth)[0];
+        const bestStream = [...loaded.variants].sort((a, b) => b.bandwidth - a.bandwidth)[0];
         if (!bestStream) {
             throw new Error("Master playlist does not contain any streams.");
         }
@@ -179,21 +173,18 @@ export class HLSSource implements DownloadSource {
         const mediaPlaylist = await this.loader.load(bestStream.url, {
             retries: context.retries,
             timeout: this.timeout,
-            initPrimaryKey,
         });
-        if (mediaPlaylist instanceof MasterPlaylist) {
+        if (mediaPlaylist.kind === HLSPlaylistKind.Master) {
             throw new Error("Selected HLS stream points to another master playlist.");
         }
         return mediaPlaylist;
     }
 
     private async checkKeys(context: DownloadSourceContext): Promise<void> {
-        if (!this.playlist || this.playlist.encryptKeys.length === 0) {
+        if (!this.playlist || this.playlist.encryptionKeyUrls.length === 0) {
             return;
         }
-        const missingKeys = this.playlist.encryptKeys.filter(
-            (key) => !context.keys.has(buildFullUrl(this.playlist.playlistUrl, key))
-        );
+        const missingKeys = this.playlist.encryptionKeyUrls.filter((keyUrl) => !context.keys.has(keyUrl));
         if (missingKeys.length === 0) {
             return;
         }
@@ -203,59 +194,61 @@ export class HLSSource implements DownloadSource {
         const resolved = await this.sitePlan.keyResolver({
             keyUrls: missingKeys,
             explicitKeys: context.explicitKey ? context.explicitKey.split(",") : [],
-            playlistUrl: this.playlist.playlistUrl,
         });
         context.keys.setMany(resolved);
     }
 
-    private takeNewChunks(chunks: HLSChunk[]): HLSChunk[] {
-        return chunks.filter((chunk) => {
-            if (isNormalChunk(chunk)) {
+    private takeNewSegments(segments: readonly HLSSegment[]): HLSSegment[] {
+        return segments.filter((segment) => {
+            if (segment.kind === HLSSegmentKind.Media) {
                 // Media sequence is stable across sliding live windows and is the canonical segment identity.
-                if (this.sequenceIds.has(chunk.sequenceId)) {
+                if (this.sequenceIds.has(segment.sequenceId)) {
                     return false;
                 }
-                this.sequenceIds.add(chunk.sequenceId);
+                this.sequenceIds.add(segment.sequenceId);
                 return true;
             }
             // Initialization segments have no media sequence, so their resolved URL is their identity.
-            if (this.initialChunkUrls.has(chunk.url)) {
+            if (this.initialSegmentUrls.has(segment.url)) {
                 return false;
             }
-            this.initialChunkUrls.add(chunk.url);
+            this.initialSegmentUrls.add(segment.url);
             return true;
         });
     }
 
-    private toItems(chunks: HLSChunk[]): DownloadItem[] {
-        return chunks.map((chunk) => {
-            const encryption = this.toEncryption(chunk);
-            if (isInitialChunk(chunk)) {
+    private toItems(segments: readonly HLSSegment[]): DownloadItem[] {
+        return segments.map((segment) => {
+            const encryption = this.toEncryption(segment);
+            if (segment.kind === HLSSegmentKind.Initialization) {
                 return {
-                    url: chunk.url,
+                    url: segment.url,
                     kind: "init",
                     ...(encryption ? { encryption } : {}),
                 };
             }
             return {
-                url: chunk.url,
+                url: segment.url,
                 kind: "media",
-                duration: chunk.length,
+                duration: segment.duration,
                 ...(encryption ? { encryption } : {}),
             };
         });
     }
 
-    private toEncryption(chunk: HLSChunk): DownloadEncryption | undefined {
-        if (!chunk.isEncrypted) {
+    private toEncryption(segment: HLSSegment): DownloadEncryption | undefined {
+        if (!segment.encryption) {
             return undefined;
         }
         return {
             scheme: "aes-128-cbc",
-            // Resolve now: the playlist URL can change on a later refresh while this item is still queued.
-            keyId: buildFullUrl(this.playlist.playlistUrl, chunk.key),
+            // Key URLs are resolved while parsing so later playlist refreshes cannot change queued identities.
+            keyId: segment.encryption.keyUrl,
             // HLS derives an omitted media IV from its sequence; executors should not know that protocol rule.
-            iv: isInitialChunk(chunk) ? chunk.iv : chunk.iv || chunk.sequenceId.toString(16),
+            iv:
+                segment.kind === HLSSegmentKind.Initialization
+                    ? segment.encryption.iv
+                    : segment.encryption.iv || segment.sequenceId.toString(16),
         };
     }
 }

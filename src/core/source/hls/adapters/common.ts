@@ -1,15 +1,14 @@
 import logger from "../../../../utils/log";
-import { buildFullUrl } from "../../../../utils/common";
 import { SiteAdapterOptions, SiteAdapterResult } from "./types";
 
 class EncryptionKeyFetchError extends Error {}
 
 export async function adaptCommon({ http, retries }: SiteAdapterOptions): Promise<SiteAdapterResult> {
     return {
-        keyResolver: async ({ keyUrls, explicitKeys, playlistUrl }) => {
+        keyResolver: async ({ keyUrls, explicitKeys }) => {
             const resolved: Record<string, string> = {};
             for (let index = 0; index < keyUrls.length; index++) {
-                const url = buildFullUrl(playlistUrl, keyUrls[index]);
+                const url = keyUrls[index];
                 logger.info(`Downloading decrypt keys. (${index + 1} / ${keyUrls.length})`);
 
                 if (explicitKeys[index]) {
