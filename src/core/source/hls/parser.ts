@@ -5,6 +5,7 @@ import { getPlaylistLines } from "./playlist_syntax";
 
 export { HLSParseError, HLSPlaylistKind, HLSSegmentKind } from "./models";
 export type {
+    HLSAudioRendition,
     HLSInitializationEncryption,
     HLSInitializationSegment,
     HLSMasterPlaylist,

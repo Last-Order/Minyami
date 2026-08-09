@@ -12,23 +12,24 @@
 -   Changed `--slice` selection to use segment overlap with a half-open `[start, end)` range. A segment is selected when its end is after `start` and its start is before `end`. Unlike 5.x, a segment ending exactly at `start` and a segment starting exactly at `end` are excluded; boundary segments and resulting output duration may therefore differ from previous releases.
 -   Removed the `--chunk-naming-strategy` CLI option, the `DownloaderConfig.chunkNamingStrategy` API, and the `NamingStrategy` enum. General-purpose chunks now always use the mixed `sequence_upstream-name` format; source-specific internal naming remains available to site adapters.
 -   Replaced the HLS-shaped `DownloadItem.chunk` and `DownloadTask.chunk` fields with a protocol-neutral `DownloadItem`; runtime tasks now expose the immutable item through `DownloadTask.item`. Renamed source metadata fields from `chunkNamer`/`chunkTimeout` to `itemNamer`/`itemTimeout`.
+-   Changed `DownloadSource.prepare()` metadata to declare one or more discriminated video/audio tracks and made every `SourceBatch` identify one declared track. `DownloadTask` now exposes both a global discovery id and a track-local merge index; item namers receive both through `DownloadItemNamingContext`.
+-   Replaced snapshot `outputPath` with `outputBasePath`, flattened final `outputPaths`, and per-track snapshots. Top-level `sourcePath` now remains the original source entry point instead of changing to a selected HLS variant URL.
 -   Raised the minimum supported Node.js version to 22.
 -   Changed the default parent directory for `minyami_<timestamp>_<random>` temporary workspaces from the system temporary directory to the current working directory. The workspace and temporary-file naming strategies are unchanged.
 -   Removed the `--clean` CLI command. Temporary workspaces that cannot be deleted automatically must now be removed manually.
+-   Replaced `variantSelector`, `HLSVariantSelector`, and the public `HLSVariant` model with the protocol-neutral `streamSelector`, `StreamSelector`, and `MediaTrack` models. A selector now receives a `StreamCatalog` and returns a non-empty subset of canonical tracks from one compatible `StreamOption`, or `undefined` to cancel.
 
 ### Added
 
 -   Added a `DownloadSource` abstraction, a configurable `HLSSource`, and a shared `createDownloader` execution engine for custom task sources.
--   Added isolated per-download runtimes and a shared task scheduler for item execution, concurrency, retries, progress tracking, and output coordination.
--   Added configurable HLS master-playlist variant selectors for archive, live, and direct `HLSSource` consumers.
+-   Added public protocol-neutral `StreamCatalog`, `StreamOption`, `MediaTrack`, and `TrackSelection` models for archive, live, and direct source consumers.
+-   Added protocol-neutral multi-track scheduling with independent temporary directories, progress, dropped-item gaps, and output concentration for every declared track.
 
 ### Changed
 
--   Unified archive and live downloads on the same downloader lifecycle. Parser integrations now return declarative plans, while HLS sources translate parser chunks into protocol-neutral items and resolve duration, initialization, encryption-key, and IV semantics before scheduling.
--   Archive and live HLS sources now differ only in snapshot versus follow discovery mode.
--   CLI downloads of master playlists with multiple variants now open an interactive terminal selector; non-TTY CLI usage and library defaults select the highest-bandwidth variant.
+-   HLS master playlists now expose external `EXT-X-MEDIA` audio renditions to stream selectors and download selected renditions as independent track outputs. URI-less embedded audio remains in the primary output.
+-   CLI downloads of master playlists with multiple compatible options now open an interactive terminal selector. Non-TTY CLI usage and library defaults select every track in the highest-bandwidth option.
 -   HTTP headers, cookies, and proxy configuration are isolated per downloader instance.
--   Builds now clean `dist` before compiling so removed modules cannot remain in release artifacts.
 
 ### Fixed
 

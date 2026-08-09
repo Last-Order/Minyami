@@ -1,49 +1,36 @@
 import logger from "../../../utils/log";
-import { SiteAdapterMode, SiteAdapterResult } from "./adapters/types";
-import { HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
+import { mergeAsyncIterables } from "../merge_async_iterables";
+import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } from "../stream_selection";
+import { selectDefaultStream } from "../stream_selector";
+import { DownloadSource, DownloadSourceContext, SourceBatch, SourceMetadata } from "../types";
+import { HLSMediaPlaylist, HLSPlaylistKind } from "./parser";
 import { PlaylistLoader } from "./playlist_loader";
-import { prepareSite } from "./site_adapter";
-import { HLSVariantSelector, selectHLSVariantInteractively } from "./variant_selector";
-import {
-    DownloadEncryption,
-    DownloadItem,
-    DownloadSource,
-    DownloadSourceContext,
-    SourceBatch,
-    SourceMetadata,
-} from "../types";
+import { HLSMediaPlaylistCursor, HLSMediaPlaylistCursorMode, HLSSlice } from "./media_playlist_cursor";
+import { createHLSStreamCatalogPlan, HLSStreamCatalogPlan } from "./stream_catalog";
 
-export type HLSSourceMode = "snapshot" | "follow";
+export type HLSSourceMode = HLSMediaPlaylistCursorMode;
 
 export interface HLSSourceOptions {
     mode: HLSSourceMode;
-    variantSelector?: HLSVariantSelector;
-    slice?: {
-        start: number;
-        end: number;
-    };
+    streamSelector?: StreamSelector;
+    slice?: HLSSlice;
 }
 
-/**
- * HLS-specific discovery. Snapshot and follow modes share parsing/key logic;
- * only the number and timing of yielded batches differ.
- */
+interface SelectedHLSMediaTrack {
+    readonly track: MediaTrack;
+    readonly sourcePath: string;
+    readonly initialPlaylist?: HLSMediaPlaylist;
+}
+
+/** Resolves HLS manifests into protocol-neutral selected tracks and per-playlist cursors. */
 export class HLSSource implements DownloadSource {
     readonly continuous: boolean;
-    sourcePath: string;
-
-    private readonly initialSegmentUrls = new Set<string>();
-    private readonly sequenceIds = new Set<number>();
     private loader?: PlaylistLoader;
-    private playlist?: HLSMediaPlaylist;
-    private sitePlan: SiteAdapterResult = {};
-    private timeout = 60000;
+    private cursors: readonly HLSMediaPlaylistCursor[] = [];
     private prepared = false;
     private cancelled = false;
-    private discoveredItemCount = 0;
 
-    constructor(sourcePath: string, private readonly options: HLSSourceOptions) {
-        this.sourcePath = sourcePath;
+    constructor(readonly sourcePath: string, private readonly options: HLSSourceOptions) {
         this.continuous = options.mode === "follow";
     }
 
@@ -56,39 +43,30 @@ export class HLSSource implements DownloadSource {
         }
         throwIfAborted(signal);
         this.loader = new PlaylistLoader(context.http);
-        this.playlist = await this.loadMediaPlaylist(this.sourcePath, context);
-        if (!this.playlist) {
+        const selectedTracks = await this.selectMediaTracks(context, signal);
+        if (!selectedTracks) {
             this.cancelled = true;
             this.prepared = true;
-            return { sourcePath: this.sourcePath, cancelled: true };
-        }
-        if (this.continuous) {
-            this.updateFollowTimeouts();
+            return { cancelled: true };
         }
 
-        this.sitePlan = await prepareSite({
-            mode: this.parserMode,
-            sourcePath: this.sourcePath,
-            playlist: this.playlist,
-            key: context.explicitKey,
-            retries: context.retries,
-            http: context.http,
-        });
-        if (this.sitePlan.segments) {
-            this.playlist = { ...this.playlist, segments: this.sitePlan.segments };
-        }
-        if (this.sitePlan.encryptionKeys) {
-            context.keys.setMany(this.sitePlan.encryptionKeys);
-        }
-        // Items may execute as soon as they are yielded, so all known keys must be ready first.
-        await this.checkKeys(context);
+        this.cursors = await Promise.all(
+            selectedTracks.map(async (selected) => {
+                const playlist =
+                    selected.initialPlaylist ?? (await this.loadSelectedMediaPlaylist(selected.sourcePath, context));
+                return new HLSMediaPlaylistCursor({
+                    track: selected.track,
+                    sourcePath: selected.sourcePath,
+                    mode: this.options.mode,
+                    initialPlaylist: playlist,
+                    loader: this.loader!,
+                    slice: this.options.slice,
+                });
+            })
+        );
+        const tracks = await Promise.all(this.cursors.map((cursor) => cursor.prepare(context, signal)));
         this.prepared = true;
-
-        return {
-            sourcePath: this.sourcePath,
-            itemNamer: this.sitePlan.itemNamer,
-            itemTimeout: this.continuous ? this.followItemTimeout : undefined,
-        };
+        return { tracks };
     }
 
     async *discover(context: DownloadSourceContext, signal: AbortSignal): AsyncIterable<SourceBatch> {
@@ -98,187 +76,82 @@ export class HLSSource implements DownloadSource {
         if (this.cancelled) {
             return;
         }
-        if (!this.playlist) {
-            throw new Error("HLS source has no prepared media playlist.");
+        if (this.cursors.length === 0) {
+            throw new Error("HLS source has no prepared media-playlist cursors.");
         }
 
-        if (!this.continuous) {
-            // A snapshot source has a final total and deliberately yields exactly once, even when empty.
-            const items = sliceItems(this.toItems(this.playlist.segments), this.options.slice);
-            this.discoveredItemCount = items.length;
-            yield { items, totalItemCount: items.length };
-            return;
-        }
-
-        while (!signal.aborted) {
-            // Treat each playlist as a snapshot and emit only identities not seen in earlier snapshots.
-            const streamEnded = this.playlist.hasEndList;
-            const segments = this.takeNewSegments(this.playlist.segments);
-            const items = this.toItems(segments);
-            this.discoveredItemCount += items.length;
-            logger.debug(`Get ${items.length} new chunk(s).`);
-            if (items.length > 0) {
-                yield { items };
-            }
-
-            if (streamEnded) {
-                logger.info("Stream ended. Waiting for current tasks finished.");
-                return;
-            }
-
-            logger.debug("Cool down... Wait for next check");
-            // Waiting inside the source keeps polling policy out of the shared downloader.
-            if (!(await waitForNextCheck(Math.min(5000, this.safeChunkLength * 1000), signal))) {
-                return;
-            }
-
-            try {
-                this.playlist = await this.loadMediaPlaylist(this.sourcePath, context);
-                await this.checkKeys(context);
-            } catch (error) {
-                // Initial discovery failures are fatal; after useful work, an unavailable manifest ends a live source.
-                if (this.discoveredItemCount === 0) {
-                    throw error;
-                }
-                const status = (error as any)?.response?.status;
-                if (status >= 400 && status <= 599) {
-                    logger.info("HLS playlist is no longer available. Stop downloading.");
-                    return;
-                }
-                logger.warning("Unable to refresh M3U8 file. Keep the current playlist and retry later.");
-            }
+        const discoveryAbort = new AbortController();
+        const onAbort = () => discoveryAbort.abort();
+        signal.addEventListener("abort", onAbort, { once: true });
+        try {
+            const discoveries = this.cursors.map((cursor) => cursor.discover(context, discoveryAbort.signal));
+            yield* mergeAsyncIterables(discoveries, () => discoveryAbort.abort());
+        } finally {
+            discoveryAbort.abort();
+            signal.removeEventListener("abort", onAbort);
         }
     }
 
-    private get parserMode(): SiteAdapterMode {
-        return this.continuous ? "live" : "archive";
+    private async selectMediaTracks(
+        context: DownloadSourceContext,
+        signal: AbortSignal
+    ): Promise<readonly SelectedHLSMediaTrack[] | undefined> {
+        const loaded = await this.loader!.load(this.sourcePath, {
+            retries: context.retries,
+            timeout: 60000,
+        });
+        throwIfAborted(signal);
+        if (loaded.kind === HLSPlaylistKind.Media) {
+            return [
+                {
+                    track: { id: "main", type: "video" },
+                    sourcePath: this.sourcePath,
+                    initialPlaylist: loaded,
+                },
+            ];
+        }
+        if (loaded.variants.length === 0) {
+            throw new Error("Master playlist does not contain any stream options.");
+        }
+
+        const plan = createHLSStreamCatalogPlan(loaded);
+        const selection = await this.selectTracks(plan);
+        throwIfAborted(signal);
+        if (!selection) {
+            return undefined;
+        }
+
+        logger.info(`Master playlist input detected. Selected ${selection.length} media track(s).`);
+        logger.debug(`Selected tracks: ${selection.map((track) => track.id).join(", ")}`);
+        return selection.map((track) => {
+            const mediaPlan = plan.mediaTracks.get(track);
+            if (!mediaPlan) {
+                throw new Error(`Missing HLS media plan for selected track ${track.id}.`);
+            }
+            return { track, sourcePath: mediaPlan.sourcePath };
+        });
     }
 
-    private get safeChunkLength(): number {
-        const chunkLength = this.playlist?.averageSegmentDuration;
-        return Number.isFinite(chunkLength) && chunkLength > 0 ? chunkLength : 5;
+    private async selectTracks(plan: HLSStreamCatalogPlan): Promise<TrackSelection | undefined> {
+        const selection = await (this.options.streamSelector ?? selectDefaultStream)(plan.catalog);
+        if (!selection) {
+            return undefined;
+        }
+        return validateTrackSelection(plan.catalog, selection);
     }
 
-    private get followItemTimeout(): number {
-        return Math.min(this.safeChunkLength * 1000 * 20, 60000);
-    }
-
-    private updateFollowTimeouts(): void {
-        this.timeout = Math.min(Math.max(20000, this.playlist.segments.length * this.safeChunkLength * 1000), 60000);
-    }
-
-    private async loadMediaPlaylist(
+    private async loadSelectedMediaPlaylist(
         sourcePath: string,
         context: DownloadSourceContext
-    ): Promise<HLSMediaPlaylist | undefined> {
-        const loaded = await this.loader.load(sourcePath, {
+    ): Promise<HLSMediaPlaylist> {
+        const playlist = await this.loader!.load(sourcePath, {
             retries: context.retries,
-            timeout: this.timeout,
+            timeout: 60000,
         });
-        if (loaded.kind === HLSPlaylistKind.Media) {
-            return loaded;
+        if (playlist.kind === HLSPlaylistKind.Master) {
+            throw new Error(`Selected HLS track ${sourcePath} points to another master playlist.`);
         }
-
-        if (loaded.variants.length === 0) {
-            throw new Error("Master playlist does not contain any streams.");
-        }
-
-        // A single rendition needs no user decision; selectors only arbitrate real choices.
-        const selectedStream =
-            loaded.variants.length === 1
-                ? loaded.variants[0]
-                : await (this.options.variantSelector ?? selectHLSVariantInteractively)(loaded.variants);
-        if (!selectedStream) {
-            return undefined;
-        }
-        // Requiring the exact offered object prevents selectors from injecting an unparsed URL or metadata.
-        if (!loaded.variants.includes(selectedStream)) {
-            throw new Error("HLS variant selector returned a stream that was not offered by the master playlist.");
-        }
-        logger.info("Master playlist input detected. Selected an HLS stream.");
-        logger.debug(`Selected stream: ${selectedStream.url}; Bandwidth: ${selectedStream.bandwidth}`);
-        // Follow refreshes must target the selected media playlist, not the master playlist.
-        this.sourcePath = selectedStream.url;
-        const mediaPlaylist = await this.loader.load(selectedStream.url, {
-            retries: context.retries,
-            timeout: this.timeout,
-        });
-        if (mediaPlaylist.kind === HLSPlaylistKind.Master) {
-            throw new Error("Selected HLS stream points to another master playlist.");
-        }
-        return mediaPlaylist;
-    }
-
-    private async checkKeys(context: DownloadSourceContext): Promise<void> {
-        if (!this.playlist || this.playlist.encryptionKeyUrls.length === 0) {
-            return;
-        }
-        const missingKeys = this.playlist.encryptionKeyUrls.filter((keyUrl) => !context.keys.has(keyUrl));
-        if (missingKeys.length === 0) {
-            return;
-        }
-        if (!this.sitePlan.keyResolver) {
-            throw new Error("No encryption key resolver is available for this playlist.");
-        }
-        const resolved = await this.sitePlan.keyResolver({
-            keyUrls: missingKeys,
-            explicitKeys: context.explicitKey ? context.explicitKey.split(",") : [],
-        });
-        context.keys.setMany(resolved);
-    }
-
-    private takeNewSegments(segments: readonly HLSSegment[]): HLSSegment[] {
-        return segments.filter((segment) => {
-            if (segment.kind === HLSSegmentKind.Media) {
-                // Media sequence is stable across sliding live windows and is the canonical segment identity.
-                if (this.sequenceIds.has(segment.sequenceId)) {
-                    return false;
-                }
-                this.sequenceIds.add(segment.sequenceId);
-                return true;
-            }
-            // Initialization segments have no media sequence, so their resolved URL is their identity.
-            if (this.initialSegmentUrls.has(segment.url)) {
-                return false;
-            }
-            this.initialSegmentUrls.add(segment.url);
-            return true;
-        });
-    }
-
-    private toItems(segments: readonly HLSSegment[]): DownloadItem[] {
-        return segments.map((segment) => {
-            const encryption = this.toEncryption(segment);
-            if (segment.kind === HLSSegmentKind.Initialization) {
-                return {
-                    url: segment.url,
-                    kind: "init",
-                    ...(encryption ? { encryption } : {}),
-                };
-            }
-            return {
-                url: segment.url,
-                kind: "media",
-                duration: segment.duration,
-                ...(encryption ? { encryption } : {}),
-            };
-        });
-    }
-
-    private toEncryption(segment: HLSSegment): DownloadEncryption | undefined {
-        if (!segment.encryption) {
-            return undefined;
-        }
-        return {
-            scheme: "aes-128-cbc",
-            // Key URLs are resolved while parsing so later playlist refreshes cannot change queued identities.
-            keyId: segment.encryption.keyUrl,
-            // HLS derives an omitted media IV from its sequence; executors should not know that protocol rule.
-            iv:
-                segment.kind === HLSSegmentKind.Initialization
-                    ? segment.encryption.iv
-                    : segment.encryption.iv || segment.sequenceId.toString(16),
-        };
+        return playlist;
     }
 }
 
@@ -286,57 +159,8 @@ export function createHLSSource(sourcePath: string, options: HLSSourceOptions): 
     return new HLSSource(sourcePath, options);
 }
 
-export type { HLSVariantSelector } from "./variant_selector";
-
-function sliceItems(items: DownloadItem[], slice?: HLSSourceOptions["slice"]): DownloadItem[] {
-    if (!slice) {
-        return items;
-    }
-
-    const selected: DownloadItem[] = [];
-    let currentTime = 0;
-    for (const item of items) {
-        if (currentTime >= slice.end) {
-            break;
-        }
-        if (item.kind === "init") {
-            // A selected fragmented-MP4 range is unusable without its initialization segment.
-            selected.push(item);
-            continue;
-        }
-        const itemStart = currentTime;
-        const itemEnd = currentTime + item.duration;
-        currentTime = itemEnd;
-        if (itemEnd > slice.start && itemStart < slice.end) {
-            selected.push(item);
-        }
-    }
-    return selected;
-}
-
 function throwIfAborted(signal: AbortSignal): void {
     if (signal.aborted) {
         throw new Error("Source preparation was aborted.");
     }
-}
-
-function waitForNextCheck(milliseconds: number, signal: AbortSignal): Promise<boolean> {
-    if (signal.aborted) {
-        return Promise.resolve(false);
-    }
-    return new Promise((resolve) => {
-        const eventSignal = signal as AbortSignal & {
-            addEventListener(type: "abort", listener: () => void, options?: { once?: boolean }): void;
-            removeEventListener(type: "abort", listener: () => void): void;
-        };
-        const onAbort = () => {
-            clearTimeout(timer);
-            resolve(false);
-        };
-        const timer = setTimeout(() => {
-            eventSignal.removeEventListener("abort", onAbort);
-            resolve(true);
-        }, milliseconds);
-        eventSignal.addEventListener("abort", onAbort, { once: true });
-    });
 }

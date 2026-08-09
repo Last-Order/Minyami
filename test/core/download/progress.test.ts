@@ -6,11 +6,12 @@ describe("ProgressTracker", () => {
     test("tracks completed work and media duration independently", () => {
         const progress = new ProgressTracker();
         progress.start(1_000);
+        progress.registerTracks(["main"]);
         progress.recordSuccessful(createTask(0, { url: "https://example.com/init.mp4", kind: "init" }));
         progress.recordSuccessful(
             createTask(1, { url: "https://example.com/segment.m4s", kind: "media", duration: 2 })
         );
-        progress.recordDropped();
+        progress.recordDropped(createTask(2, { url: "https://example.com/dropped.ts", kind: "media", duration: 3 }));
         jest.spyOn(Date, "now").mockReturnValue(5_000);
 
         expect(progress.snapshot).toEqual({
@@ -29,6 +30,8 @@ describe("ProgressTracker", () => {
 function createTask(id: number, item: DownloadTask["item"]): DownloadTask {
     return {
         id,
+        trackId: "main",
+        trackIndex: id,
         item,
         filename: `${id}.ts`,
         retryCount: 0,

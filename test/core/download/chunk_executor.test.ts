@@ -36,6 +36,8 @@ describe("ChunkExecutor encryption lifecycle", () => {
                 );
                 const task: DownloadTask = {
                     id: 0,
+                    trackId: "main",
+                    trackIndex: 0,
                     filename: "000000_chunk.ts",
                     retryCount: 0,
                     item: {

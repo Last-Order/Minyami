@@ -98,7 +98,10 @@ import { createArchiveDownloader, createLiveDownloader } from "minyami";
 const archive = createArchiveDownloader("https://example.com/archive.m3u8", {
     output: "./archive.ts",
     threads: 8,
-    variantSelector: (variants) => variants.find((variant) => variant.resolution?.height === 720),
+    streamSelector: (catalog) =>
+        catalog.options.find((option) =>
+            option.tracks.some((track) => track.type === "video" && track.height === 720)
+        )?.tracks,
 });
 
 archive.on("chunk-downloaded", (chunk) => {
@@ -113,13 +116,16 @@ setTimeout(() => live.stop(), 60_000);
 await live.download();
 ```
 
-`variantSelector` receives the master playlist variants in playlist order and may return one of those exact objects,
-a promise for one, or `undefined` to cancel normally. It is available on archive downloads, live downloads, and
-`HLSSourceOptions`. Library calls select the highest-bandwidth stream when the option is omitted.
+`streamSelector` receives a protocol-neutral `StreamCatalog`. Its options describe compatible track sets derived from
+the manifest; the selector returns a non-empty array containing exact track objects from one option, a promise for
+one, or `undefined` to cancel normally. Returning a subset can select particular audio languages or produce an
+audio-only download. The same API can represent HLS now and MPEG-DASH later without exposing playlist URLs or
+protocol identifiers. It is available on archive downloads, live downloads, and `HLSSourceOptions`. Library calls
+select every track in the highest-bandwidth option when the selector is omitted.
 
-The same execution engine can also consume a source directly. An HLS source in `snapshot` mode yields one batch;
-`follow` mode refreshes the playlist and yields newly discovered chunks until the stream ends or the controller is
-stopped.
+The same execution engine can also consume a source directly. An HLS source in `snapshot` mode yields one batch per
+selected physical track; `follow` mode refreshes all selected playlists concurrently and yields newly discovered
+chunks until every track ends or the controller is stopped.
 
 ```TypeScript
 import { createDownloader, createHLSSource } from "minyami";
@@ -132,8 +138,35 @@ const downloader = createDownloader(
 await downloader.download();
 ```
 
-Custom implementations of `DownloadSource` may yield any number of `SourceBatch` values. Sources produce immutable
-`DownloadItem` values; the downloader owns task ids, filenames, retries, scheduling, progress, and output merging.
+Custom implementations of `DownloadSource` declare their tracks during `prepare()` and may then yield any number of
+single-track `SourceBatch` values. Sources produce immutable `DownloadItem` values; the downloader owns global task
+ids, track-local merge indices, filenames, retries, scheduling, progress, and output merging.
+
+```TypeScript
+const source = {
+    sourcePath: "custom://presentation",
+    continuous: false,
+    async prepare() {
+        return {
+            tracks: [
+                { id: "video", type: "video", sourcePath: "https://example.com/video.m3u8" },
+                { id: "audio", type: "audio", language: "en", sourcePath: "https://example.com/audio.m3u8" },
+            ],
+        };
+    },
+    async *discover() {
+        yield { trackId: "video", items: [videoItem], totalItemCount: 1 };
+        yield { trackId: "audio", items: [audioItem], totalItemCount: 1 };
+    },
+};
+```
+
+Every source track is discriminated by `type: "video" | "audio"`; track ids must be unique safe identifiers containing
+1–64 letters, numbers, `_`, or `-`. All tracks share one task scheduler but have isolated temporary directories,
+ordering, progress, and output concentration. A single track uses the requested output path; multiple tracks use
+`<basename>.<trackId><ext>`. Snapshot `sourcePath` is always the original entry point, while each track snapshot
+reports its actual upstream path and final outputs. The retained media metadata is also the input boundary for a
+future muxing stage.
 
 `DownloadItem` is protocol-neutral. A custom source describes initialization and timed media resources directly;
 protocol-specific parser objects must not escape into the downloader:
@@ -168,12 +201,16 @@ Snapshots report successful, dropped, and completed work separately:
 -   `droppedChunkCount`: chunks abandoned after reaching the configured retry limit.
 -   `successfulDuration`: total media duration in seconds from successfully processed media chunks; initialization segments and dropped chunks do not add duration.
 
+Top-level progress is aggregated across all tracks. Each track snapshot exposes the same counters for that track;
+therefore multi-track top-level `successfulDuration` is media-processing throughput, not presentation duration.
+
 Completion percentage and ETA use `completedChunkCount`. Download speed and the successful-duration ratio use only
 successful chunks.
 
 ### Event: `chunk-downloaded`
 
 -   `taskName` `<string>` The filename of the chunk that was just downloaded.
+-   `trackId` `<string>` The track that owns the chunk.
 -   `completedChunkCount` `<number>` Successful plus dropped chunks.
 -   `successfulChunkCount` `<number>` Successfully processed chunks.
 -   `droppedChunkCount` `<number>` Chunks dropped after reaching the retry limit.
@@ -187,6 +224,8 @@ The `'chunk-downloaded'` event is emitted only after a chunk is downloaded and p
 ### Event: `chunk-error`
 
 -   `error: Error`
+-   `taskName: string`
+-   `trackId: string`
 
 The `'chunk-error'` event is emitted when failed to download or decrypt media chunks.
 

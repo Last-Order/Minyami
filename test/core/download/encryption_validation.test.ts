@@ -16,10 +16,11 @@ describe("download encryption validation", () => {
                 continuous: false,
                 async prepare(context) {
                     context.keys.set("test:key", key);
-                    return { sourcePath: this.sourcePath };
+                    return { tracks: [{ id: "main", type: "video", sourcePath: this.sourcePath }] };
                 },
                 async *discover() {
                     yield {
+                        trackId: "main",
                         items: [
                             {
                                 url: "http://127.0.0.1/unused.ts",

@@ -1,9 +1,15 @@
 import { EventEmitter } from "events";
 import * as path from "path";
 import logger from "../../utils/log";
-import { deleteEmptyDirectory } from "../../utils/system";
 import { DownloadTask, DownloaderConfig } from "../downloader";
-import { DownloadItem, DownloadSource, DownloadSourceContext, SourceBatch } from "../source/types";
+import {
+    DownloadItem,
+    DownloadSource,
+    DownloadSourceContext,
+    DownloadTrackId,
+    SourceBatch,
+    SourceTrack,
+} from "../source/types";
 import {
     ChunkDownloadedInfo,
     DownloadEvent,
@@ -27,6 +33,12 @@ interface DownloaderState {
     verboseTimer?: NodeJS.Timeout;
     sigintHandler?: () => void;
     sigintCount: number;
+    tracks: Map<DownloadTrackId, DownloaderTrackState>;
+}
+
+interface DownloaderTrackState {
+    nextTaskIndex: number;
+    declaredTotalItemCount?: number;
 }
 
 interface DownloaderContext {
@@ -58,7 +70,6 @@ export interface DownloadController {
  */
 export function createDownloader(source: DownloadSource, config: DownloaderConfig = {}): DownloadController {
     const runtime = new DownloadRuntime(config);
-    runtime.sourcePath = source.sourcePath;
     const context: DownloaderContext = {
         source,
         runtime,
@@ -78,6 +89,7 @@ export function createDownloader(source: DownloadSource, config: DownloaderConfi
             isStarted: false,
             hardStopped: false,
             sigintCount: 0,
+            tracks: new Map(),
         },
         abortController: new AbortController(),
     };
@@ -113,17 +125,11 @@ async function runDownloader(context: DownloaderContext): Promise<void> {
         await runtime.allocateWorkspace();
         installSigintHandler(context);
         const metadata = await source.prepare(sourceContext, abortController.signal);
-        runtime.sourcePath = metadata.sourcePath;
-        if (metadata.cancelled) {
+        if (!("tracks" in metadata)) {
             finishCancelledDownload(context);
             return;
         }
-        if (metadata.itemNamer) {
-            runtime.setItemNamer(metadata.itemNamer);
-        }
-        if (metadata.itemTimeout) {
-            runtime.itemTimeout = metadata.itemTimeout;
-        }
+        configureSourceTracks(context, metadata.tracks);
         events.emit("parsed");
 
         state.scheduler = createScheduler(context);
@@ -165,7 +171,7 @@ function finishCancelledDownload(context: DownloaderContext): void {
     state.isDownloaded = true;
     state.status = "finished";
     try {
-        deleteEmptyDirectory(runtime.tempPath);
+        runtime.cleanupEmptyWorkspace();
     } catch {
         logger.warning(`Failed to delete empty temporary directory [${runtime.tempPath}].`);
     }
@@ -185,20 +191,33 @@ function createScheduler(context: DownloaderContext): TaskScheduler<DownloadTask
 
 function addSourceBatch(context: DownloaderContext, batch: SourceBatch): void {
     const { runtime, state } = context;
+    const track = state.tracks.get(batch.trackId);
+    if (!track) {
+        throw new Error(`Source yielded a batch for unknown track: ${batch.trackId}`);
+    }
+    const nextTaskIndex = track.nextTaskIndex + batch.items.length;
+    validateTrackTotal(batch.trackId, nextTaskIndex, track.declaredTotalItemCount, batch.totalItemCount);
+    if (batch.totalItemCount !== undefined) {
+        track.declaredTotalItemCount = batch.totalItemCount;
+    }
+    const firstTrackIndex = track.nextTaskIndex;
     // Runtime fields are assigned here so sources remain reusable and independent from retry/output policy.
-    const tasks = batch.items.map((item): DownloadTask => {
+    const tasks = batch.items.map((item, itemIndex): DownloadTask => {
         validateDownloadItem(context, item);
-        // Discovery order is also merge order; ids must stay monotonic across every yielded batch.
+        // Global ids preserve source discovery order; merge order is independent within each track.
         const id = state.nextTaskId++;
+        const trackIndex = firstTrackIndex + itemIndex;
         return {
             id,
+            trackId: batch.trackId,
+            trackIndex,
             item,
-            filename: runtime.nameItem(item, id),
+            filename: runtime.nameItem(item, id, batch.trackId, trackIndex),
             retryCount: 0,
         };
     });
-    // Finite sources may publish their final total; otherwise the total means "discovered so far".
-    state.totalChunkCount = batch.totalItemCount ?? state.nextTaskId;
+    track.nextTaskIndex = nextTaskIndex;
+    state.totalChunkCount = getTotalChunkCount(state);
     if (tasks.length > 0) {
         state.scheduler.add(tasks);
     }
@@ -224,6 +243,7 @@ async function onTaskSuccess(context: DownloaderContext, task: DownloadTask, res
     const progress = runtime.progress;
     const chunkInfo: ChunkDownloadedInfo = {
         taskName: task.filename,
+        trackId: task.trackId,
         completedChunkCount: progress.completedChunkCount,
         successfulChunkCount: progress.successfulChunkCount,
         droppedChunkCount: progress.droppedChunkCount,
@@ -250,7 +270,7 @@ async function onTaskSuccess(context: DownloaderContext, task: DownloadTask, res
 
 function onTaskError(context: DownloaderContext, task: DownloadTask, error: unknown): boolean {
     const { runtime, events } = context;
-    events.emit("chunk-error", error, task.filename);
+    events.emit("chunk-error", error, task.filename, task.trackId);
     if (runtime.recordTaskFailure(task) === "drop") {
         logger.warning(`Processing ${task.filename} failed, max retries exceed, drop.`);
         return false;
@@ -282,12 +302,14 @@ async function finishDownload(context: DownloaderContext): Promise<void> {
 
     state.status = "merging";
     logger.info("Merging chunks...");
-    const outputPaths = await runtime.finishOutput(state.nextTaskId);
+    const outputPaths = await runtime.finishOutput(
+        new Map([...state.tracks].map(([trackId, track]) => [trackId, track.nextTaskIndex]))
+    );
     if (!runtime.config.keepTemporaryFiles) {
         logger.info("End of merging.");
         logger.info("Starting cleaning temporary files.");
         try {
-            await deleteEmptyDirectory(runtime.tempPath);
+            runtime.cleanupEmptyWorkspace();
         } catch {
             logger.warning("Fail to delete temporary files, please delete them manually.");
         }
@@ -329,12 +351,24 @@ function hardStopDownloader(context: DownloaderContext): void {
 }
 
 function getDownloadSnapshot(context: DownloaderContext): SourceDownloadSnapshot {
-    const { runtime, state } = context;
+    const { runtime, source, state } = context;
     return {
         status: state.status,
-        sourcePath: runtime.sourcePath,
+        sourcePath: source.sourcePath,
         tempPath: runtime.tempPath,
-        outputPath: runtime.outputPath,
+        outputBasePath: runtime.outputBasePath,
+        outputPaths: runtime.getOutputPaths(),
+        tracks: runtime.getTrackSnapshots().map((track) => {
+            const trackState = state.tracks.get(track.id);
+            if (!trackState) {
+                throw new Error(`Missing downloader state for track ${track.id}.`);
+            }
+            return {
+                ...track,
+                totalChunkCount: getTrackTotalChunkCount(trackState),
+                ...runtime.progress.getTrackSnapshot(track.id),
+            };
+        }),
         startedAt: runtime.progress.startedAt,
         completedChunkCount: runtime.progress.completedChunkCount,
         successfulChunkCount: runtime.progress.successfulChunkCount,
@@ -346,6 +380,56 @@ function getDownloadSnapshot(context: DownloaderContext): SourceDownloadSnapshot
         totalChunkCount: state.totalChunkCount,
         isEnd: state.sourceEnded,
     };
+}
+
+const TRACK_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+
+function configureSourceTracks(context: DownloaderContext, tracks: readonly SourceTrack[]): void {
+    if (tracks.length === 0) {
+        throw new Error("A prepared source must declare at least one track.");
+    }
+    const ids = new Set<string>();
+    for (const track of tracks) {
+        if (!TRACK_ID_PATTERN.test(track.id)) {
+            throw new Error(`Invalid download track id: ${track.id}`);
+        }
+        // Track ids become directory and output suffixes, so uniqueness must hold on case-insensitive filesystems.
+        const filesystemIdentity = track.id.toLowerCase();
+        if (ids.has(filesystemIdentity)) {
+            throw new Error(`Duplicate download track id: ${track.id}`);
+        }
+        ids.add(filesystemIdentity);
+        context.state.tracks.set(track.id, { nextTaskIndex: 0 });
+    }
+    context.runtime.configureTracks(tracks);
+}
+
+function validateTrackTotal(
+    trackId: DownloadTrackId,
+    discoveredItemCount: number,
+    declaredTotalItemCount?: number,
+    batchTotalItemCount?: number
+): void {
+    if (batchTotalItemCount !== undefined) {
+        if (!Number.isSafeInteger(batchTotalItemCount) || batchTotalItemCount < discoveredItemCount) {
+            throw new Error(`Invalid total item count for track ${trackId}: ${batchTotalItemCount}`);
+        }
+        if (declaredTotalItemCount !== undefined && declaredTotalItemCount !== batchTotalItemCount) {
+            throw new Error(`Conflicting total item count for track ${trackId}.`);
+        }
+        return;
+    }
+    if (declaredTotalItemCount !== undefined && discoveredItemCount > declaredTotalItemCount) {
+        throw new Error(`Track ${trackId} yielded more items than its declared total.`);
+    }
+}
+
+function getTrackTotalChunkCount(track: DownloaderTrackState): number {
+    return track.declaredTotalItemCount ?? track.nextTaskIndex;
+}
+
+function getTotalChunkCount(state: DownloaderState): number {
+    return [...state.tracks.values()].reduce((total, track) => total + getTrackTotalChunkCount(track), 0);
 }
 
 function startVerboseLogging(context: DownloaderContext): void {

@@ -2,11 +2,12 @@ import { timeStringToSeconds } from "../utils/time";
 import { DownloaderConfig } from "./downloader";
 import { DownloadEvent, DownloadEventListener, DownloadSnapshot } from "./download/controller";
 import { createDownloader } from "./download/downloader";
-import { createHLSSource, HLSSourceOptions, HLSVariantSelector } from "./source/hls";
+import { createHLSSource, HLSSourceOptions } from "./source/hls";
+import { StreamSelector } from "./source/stream_selection";
 
 export interface ArchiveDownloaderConfig extends DownloaderConfig {
     slice?: string;
-    variantSelector?: HLSVariantSelector;
+    streamSelector?: StreamSelector;
 }
 
 export interface ArchiveDownloadSnapshot extends DownloadSnapshot {
@@ -25,8 +26,8 @@ export function createArchiveDownloader(
     sourcePath: string,
     config: ArchiveDownloaderConfig = {}
 ): ArchiveDownloadController {
-    const { slice, variantSelector, ...downloaderConfig } = config;
-    const sourceOptions: HLSSourceOptions = { mode: "snapshot", variantSelector };
+    const { slice, streamSelector, ...downloaderConfig } = config;
+    const sourceOptions: HLSSourceOptions = { mode: "snapshot", streamSelector };
     if (slice) {
         const [start, end] = slice.split("-");
         sourceOptions.slice = {

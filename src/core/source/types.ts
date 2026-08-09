@@ -1,7 +1,10 @@
 import { DownloadHttpClient } from "../download/http_client";
 import { KeyStore } from "../download/key_store";
+import { MediaTrack } from "./stream_selection";
 
 export type DownloadItemKind = "init" | "media";
+
+export type DownloadTrackId = string;
 
 export interface Aes128CbcEncryption {
     readonly scheme: "aes-128-cbc";
@@ -33,21 +36,49 @@ export interface MediaDownloadItem extends BaseDownloadItem {
  */
 export type DownloadItem = InitialDownloadItem | MediaDownloadItem;
 
-export type DownloadItemNamer = (item: DownloadItem, id: number) => string;
+export interface DownloadItemNamingContext {
+    /** Monotonically increasing across every item yielded by the source. */
+    readonly taskId: number;
+    readonly trackId: DownloadTrackId;
+    /** Monotonically increasing only within the item's declared track. */
+    readonly trackIndex: number;
+}
+
+export type DownloadItemNamer = (item: DownloadItem, context: DownloadItemNamingContext) => string;
 
 export interface SourceBatch {
+    /** Every item in a batch belongs to one previously declared track. */
+    readonly trackId: DownloadTrackId;
     readonly items: readonly DownloadItem[];
-    /** Present when the source knows the final number of items. */
-    totalItemCount?: number;
+    /** Present when the source knows this track's final number of items. */
+    readonly totalItemCount?: number;
 }
 
-export interface SourceMetadata {
-    sourcePath: string;
-    itemNamer?: DownloadItemNamer;
-    itemTimeout?: number;
-    /** A source may end preparation without treating a user cancellation as a failure. */
-    cancelled?: boolean;
-}
+/**
+ * Current sources deliberately keep a 1:1 relationship between a logical MediaTrack,
+ * one physical download track, and its concentrated output. Cases where one logical
+ * track spans multiple physical tracks are uncommon in the formats we currently
+ * support, so introducing separate logical/physical identities is deferred. If a
+ * future protocol (for example, a multi-period presentation) needs a 1:N mapping,
+ * split MediaTrack metadata from SourceTrack execution identity at this boundary.
+ */
+export type SourceTrack = MediaTrack & {
+    /** Actual upstream location for this track, which may differ from the source entry point. */
+    readonly sourcePath: string;
+    readonly itemNamer?: DownloadItemNamer;
+    readonly itemTimeout?: number;
+};
+
+export type SourceMetadata =
+    | {
+          /** A source may end preparation without treating a user cancellation as a failure. */
+          readonly cancelled: true;
+      }
+    | {
+          readonly cancelled?: false;
+          /** Track order is stable and also determines output/snapshot order. */
+          readonly tracks: readonly SourceTrack[];
+      };
 
 export interface DownloadSourceContext {
     /** Shared dependencies let discovery and execution use one isolated HTTP/key session. */

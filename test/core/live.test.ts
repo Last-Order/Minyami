@@ -124,16 +124,19 @@ describe("createLiveDownloader", () => {
                 const downloader = createLiveDownloader(playlistUrl, {
                     output,
                     tempDir: directory,
-                    variantSelector: (variants) => {
+                    streamSelector: (catalog) => {
                         selectorCalls++;
-                        return variants[1];
+                        return catalog.options[1].tracks;
                     },
                 });
 
                 await downloader.download();
 
                 expect(selectorCalls).toBe(1);
-                expect(downloader.getSnapshot().sourcePath).toBe(highPlaylistUrl);
+                expect(downloader.getSnapshot()).toMatchObject({
+                    sourcePath: playlistUrl,
+                    tracks: [{ id: "video-2", sourcePath: highPlaylistUrl }],
+                });
                 expect(requests.get("/master.m3u8")).toBe(1);
                 expect(requests.get("/high.m3u8")).toBe(1);
                 expect(fs.readFileSync(output)).toEqual(masterVariantChunks.high);

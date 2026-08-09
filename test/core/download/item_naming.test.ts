@@ -9,7 +9,7 @@ describe("mixedItemNamer", () => {
                 kind: "media",
                 duration: 1,
             },
-            7
+            { taskId: 12, trackId: "video", trackIndex: 7 }
         );
 
         expect(filename).toBe("000007_segment-42.ts");

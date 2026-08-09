@@ -1,4 +1,4 @@
-import { DownloadItem } from "./source/types";
+import { DownloadItem, DownloadTrackId } from "./source/types";
 
 export interface DownloaderConfig {
     threads?: number;
@@ -18,7 +18,11 @@ export interface DownloaderConfig {
 }
 
 export interface DownloadTask {
+    /** Global discovery order shared by every track. */
     readonly id: number;
+    readonly trackId: DownloadTrackId;
+    /** Merge order within this task's track. */
+    readonly trackIndex: number;
     readonly filename: string;
     readonly item: DownloadItem;
     retryCount: number;

@@ -22,11 +22,24 @@ export interface HLSVariant {
     readonly codecs?: string;
     readonly frameRate?: number;
     readonly resolution?: { readonly width: number; readonly height: number };
+    readonly audioGroupId?: string;
+}
+
+export interface HLSAudioRendition {
+    readonly groupId: string;
+    readonly name: string;
+    readonly url?: string;
+    readonly language?: string;
+    readonly characteristics?: string;
+    readonly channels?: number;
+    readonly isDefault: boolean;
+    readonly autoSelect: boolean;
 }
 
 export interface HLSMasterPlaylist {
     readonly kind: HLSPlaylistKind.Master;
     readonly variants: readonly HLSVariant[];
+    readonly audioRenditions: readonly HLSAudioRendition[];
 }
 
 export interface HLSMediaEncryption {

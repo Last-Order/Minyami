@@ -65,23 +65,26 @@ describe("createArchiveDownloader", () => {
         });
     });
 
-    test("passes master variants to an async selector in playlist order", async () => {
+    test("passes normalized stream options to an async selector in manifest order", async () => {
         await withMasterPlaylistServer(async ({ playlistUrl, lowPlaylistUrl }) => {
             await withTempDirectory("minyami-archive-variant-", async (directory) => {
                 const output = path.join(directory, "selected.ts");
                 const downloader = createArchiveDownloader(playlistUrl, {
                     output,
                     tempDir: directory,
-                    variantSelector: async (variants) => {
-                        expect(variants.map((variant) => variant.bandwidth)).toEqual([800000, 2400000]);
-                        expect(variants[0].url).toBe(lowPlaylistUrl);
-                        return variants[0];
+                    streamSelector: async (catalog) => {
+                        expect(catalog.options.map((option) => option.bandwidth)).toEqual([800000, 2400000]);
+                        expect(catalog.tracks.every((track) => !("url" in track))).toBe(true);
+                        return catalog.options[0].tracks;
                     },
                 });
 
                 await downloader.download();
 
-                expect(downloader.getSnapshot().sourcePath).toBe(lowPlaylistUrl);
+                expect(downloader.getSnapshot()).toMatchObject({
+                    sourcePath: playlistUrl,
+                    tracks: [{ id: "video-1", sourcePath: lowPlaylistUrl }],
+                });
                 expect(fs.readFileSync(output)).toEqual(masterVariantChunks.low);
             });
         });

@@ -17,10 +17,11 @@ describe("createDownloader", () => {
                     sourcePath: "custom://media",
                     continuous: false,
                     async prepare() {
-                        return { sourcePath: this.sourcePath };
+                        return { tracks: [{ id: "main", type: "video", sourcePath: this.sourcePath }] };
                     },
                     async *discover() {
                         yield {
+                            trackId: "main",
                             items: [
                                 { url: new URL("/0.ts", playlistUrl).href, kind: "init" },
                                 { url: new URL("/1.ts", playlistUrl).href, kind: "media", duration: 1 },
@@ -77,10 +78,11 @@ describe("createDownloader", () => {
                     continuous: false,
                     async prepare(context) {
                         context.keys.set(keyId, key.toString("hex"));
-                        return { sourcePath: this.sourcePath };
+                        return { tracks: [{ id: "main", type: "video", sourcePath: this.sourcePath }] };
                     },
                     async *discover() {
                         yield {
+                            trackId: "main",
                             items: [
                                 {
                                     url: `${baseUrl}/encrypted.ts`,
@@ -132,10 +134,11 @@ describe("createDownloader", () => {
                     sourcePath: "custom://gapped-media",
                     continuous: false,
                     async prepare() {
-                        return { sourcePath: this.sourcePath };
+                        return { tracks: [{ id: "main", type: "video", sourcePath: this.sourcePath }] };
                     },
                     async *discover() {
                         yield {
+                            trackId: "main",
                             items: [
                                 { url: `${baseUrl}/first.ts`, kind: "media", duration: 1 },
                                 { url: `${baseUrl}/failed.ts`, kind: "media", duration: 1 },
@@ -178,7 +181,7 @@ describe("createDownloader", () => {
                     throw new Error("source preparation failed");
                 },
                 async *discover() {
-                    yield { items: [] };
+                    yield { trackId: "main", items: [] };
                 },
             };
             const downloader = createDownloader(source, { tempDir: directory });
@@ -201,7 +204,7 @@ describe("createDownloader", () => {
                 sourcePath: "custom://cancelled",
                 continuous: false,
                 async prepare() {
-                    return { sourcePath: this.sourcePath, cancelled: true };
+                    return { cancelled: true };
                 },
                 async *discover() {
                     throw new Error("Cancelled sources must not start discovery.");

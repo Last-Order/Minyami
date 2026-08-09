@@ -55,28 +55,61 @@ Help:
      --verbose, debug             调试输出
 ```
 
-当 CLI 收到包含多个流的 master playlist 时，Minyami 会显示交互式菜单，并按带宽从高到低列出可用的
-分辨率、帧率和编码。如果标准输入或输出没有连接到 TTY，Minyami 会输出警告并回退到最高带宽流，避免
-脚本阻塞。master playlist 只有一个流时不会询问。
+当 CLI 收到包含多个流选项的 master playlist 时，Minyami 会显示交互式菜单，并按带宽从高到低列出
+视频规格和关联音轨。如果标准输入或输出没有连接到 TTY，Minyami 会输出警告并回退到最高带宽选项，
+避免脚本阻塞。只有一个选项时不会询问。
 
 ## 作为库使用
 
-可以通过 `variantSelector` 自定义 master playlist 的流选择：
+可以通过 `streamSelector` 自定义 master playlist 的轨道选择：
 
 ```TypeScript
 import { createArchiveDownloader } from "minyami";
 
 const downloader = createArchiveDownloader("https://example.com/master.m3u8", {
     output: "./archive.ts",
-    variantSelector: (variants) => variants.find((variant) => variant.resolution?.height === 720),
+    streamSelector: (catalog) =>
+        catalog.options.find((option) =>
+            option.tracks.some((track) => track.type === "video" && track.height === 720)
+        )?.tracks,
 });
 
 await downloader.download();
 ```
 
-选择器会按 playlist 原始顺序收到候选流，并可返回其中同一个候选对象、该对象的 Promise，或返回
-`undefined` 正常取消下载。archive、live 和 `HLSSourceOptions` 都支持此选项；库调用未传入时默认选择
-最高带宽流。
+选择器收到协议无关的 `StreamCatalog`。其中 option 表示 Manifest 推导出的兼容轨道集合；选择器应返回
+同一个 option 中一个或多个原始 track 对象、其 Promise，或返回 `undefined` 正常取消。返回 option 的
+子集可以只下载指定语言或只下载音频。公共 track 不包含 HLS URL 等协议字段，因此同一选择 API 未来
+也可用于 MPEG-DASH。archive、live 和 `HLSSourceOptions` 都支持此选项；未传入时默认选择最高带宽
+option 中的全部轨道。
+
+共享下载器支持 source 在 `prepare()` 阶段声明多条 track，之后每个 `SourceBatch` 通过 `trackId` 归属到
+其中一条 track。所有 track 共用调度器，但分别维护临时目录、轨内顺序、进度和输出归并。单轨沿用指定
+输出名；多轨使用 `<文件名>.<trackId><扩展名>`。顶层快照的 `sourcePath` 始终是原始入口地址，实际
+media playlist 地址和最终输出文件位于各 track 快照中。
+
+```TypeScript
+const source = {
+    sourcePath: "custom://presentation",
+    continuous: false,
+    async prepare() {
+        return {
+            tracks: [
+                { id: "video", type: "video", sourcePath: "https://example.com/video.m3u8" },
+                { id: "audio", type: "audio", language: "en", sourcePath: "https://example.com/audio.m3u8" },
+            ],
+        };
+    },
+    async *discover() {
+        yield { trackId: "video", items: [videoItem], totalItemCount: 1 };
+        yield { trackId: "audio", items: [audioItem], totalItemCount: 1 };
+    },
+};
+```
+
+每条 source track 都通过 `type: "video" | "audio"` 判别媒体类型。HLS 外置音轨会成为独立下载轨，
+内嵌音频则保留在原始物理轨中，不会产生重复输出。snapshot 模式会为每条选中轨道产出 batch，follow
+模式会并发刷新所有选中播放列表。该轨道数组和媒体元数据也会作为后续自动混流功能的输入边界。
 
 ## 常见问题
 
