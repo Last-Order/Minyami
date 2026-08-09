@@ -1,8 +1,13 @@
 import { timeStringToSeconds } from "../utils/time";
-import { ArchiveDownloaderConfig } from "./downloader";
+import { DownloaderConfig } from "./downloader";
 import { DownloadEvent, DownloadEventListener, DownloadSnapshot } from "./download/controller";
 import { createDownloader } from "./download/downloader";
-import { createHLSSource, HLSSourceOptions } from "./source/hls";
+import { createHLSSource, HLSSourceOptions, HLSVariantSelector } from "./source/hls";
+
+export interface ArchiveDownloaderConfig extends DownloaderConfig {
+    slice?: string;
+    variantSelector?: HLSVariantSelector;
+}
 
 export interface ArchiveDownloadSnapshot extends DownloadSnapshot {
     totalChunkCount: number;
@@ -20,16 +25,17 @@ export function createArchiveDownloader(
     sourcePath: string,
     config: ArchiveDownloaderConfig = {}
 ): ArchiveDownloadController {
-    const sourceOptions: HLSSourceOptions = { mode: "snapshot" };
-    if (config.slice) {
-        const [start, end] = config.slice.split("-");
+    const { slice, variantSelector, ...downloaderConfig } = config;
+    const sourceOptions: HLSSourceOptions = { mode: "snapshot", variantSelector };
+    if (slice) {
+        const [start, end] = slice.split("-");
         sourceOptions.slice = {
             start: timeStringToSeconds(start),
             end: timeStringToSeconds(end),
         };
     }
     // Keep the legacy public controller while delegating all execution to the shared source-driven lifecycle.
-    const downloader = createDownloader(createHLSSource(sourcePath, sourceOptions), config);
+    const downloader = createDownloader(createHLSSource(sourcePath, sourceOptions), downloaderConfig);
     const controller: ArchiveDownloadController = {
         download: () => downloader.download(),
         getSnapshot: () => {

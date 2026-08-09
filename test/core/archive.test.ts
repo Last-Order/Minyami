@@ -4,7 +4,7 @@ import { describe, expect, test } from "@jest/globals";
 import { createArchiveDownloader } from "../../src/core/archive";
 import { ChunkDownloadedInfo } from "../../src/core/download/controller";
 import { withTempDirectory } from "../helpers/filesystem";
-import { withMediaServer } from "../helpers/http";
+import { masterVariantChunks, withMasterPlaylistServer, withMediaServer } from "../helpers/http";
 
 describe("createArchiveDownloader", () => {
     test("downloads a finite HLS playlist and reports completed work", async () => {
@@ -61,6 +61,28 @@ describe("createArchiveDownloader", () => {
                     completedChunkCount: 1,
                 });
                 expect(fs.readFileSync(output)).toEqual(Buffer.from("second-chunk"));
+            });
+        });
+    });
+
+    test("passes master variants to an async selector in playlist order", async () => {
+        await withMasterPlaylistServer(async ({ playlistUrl, lowPlaylistUrl }) => {
+            await withTempDirectory("minyami-archive-variant-", async (directory) => {
+                const output = path.join(directory, "selected.ts");
+                const downloader = createArchiveDownloader(playlistUrl, {
+                    output,
+                    tempDir: directory,
+                    variantSelector: async (variants) => {
+                        expect(variants.map((variant) => variant.bandwidth)).toEqual([800000, 2400000]);
+                        expect(variants[0].url).toBe(lowPlaylistUrl);
+                        return variants[0];
+                    },
+                });
+
+                await downloader.download();
+
+                expect(downloader.getSnapshot().sourcePath).toBe(lowPlaylistUrl);
+                expect(fs.readFileSync(output)).toEqual(masterVariantChunks.low);
             });
         });
     });

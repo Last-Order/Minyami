@@ -15,6 +15,7 @@
                 "cli-progress": "^3.10.0",
                 "erii": "^2.0.6",
                 "https-proxy-agent": "^7.0.4",
+                "prompts": "^2.4.2",
                 "socks-proxy-agent": "^8.0.2",
                 "winreg": "^1.2.5"
             },
@@ -5418,6 +5419,15 @@
                 "node": ">=6"
             }
         },
+        "node_modules/kleur": {
+            "version": "3.0.3",
+            "resolved": "https://registry.npmjs.org/kleur/-/kleur-3.0.3.tgz",
+            "integrity": "sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==",
+            "license": "MIT",
+            "engines": {
+                "node": ">=6"
+            }
+        },
         "node_modules/leven": {
             "version": "3.1.0",
             "resolved": "https://registry.npmjs.org/leven/-/leven-3.1.0.tgz",
@@ -6146,6 +6156,19 @@
                 "url": "https://github.com/chalk/ansi-styles?sponsor=1"
             }
         },
+        "node_modules/prompts": {
+            "version": "2.4.2",
+            "resolved": "https://registry.npmjs.org/prompts/-/prompts-2.4.2.tgz",
+            "integrity": "sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==",
+            "license": "MIT",
+            "dependencies": {
+                "kleur": "^3.0.3",
+                "sisteransi": "^1.0.5"
+            },
+            "engines": {
+                "node": ">= 6"
+            }
+        },
         "node_modules/proxy-from-env": {
             "version": "1.1.0",
             "resolved": "https://registry.npmjs.org/proxy-from-env/-/proxy-from-env-1.1.0.tgz",
@@ -6293,6 +6316,12 @@
             "resolved": "https://registry.npmjs.org/signal-exit/-/signal-exit-3.0.5.tgz",
             "integrity": "sha512-KWcOiKeQj6ZyXx7zq4YxSMgHRlod4czeBQZrPb8OKcohcqAXShm7E20kEMle9WBt26hFcAf0qLOcp5zmY7kOqQ==",
             "dev": true
+        },
+        "node_modules/sisteransi": {
+            "version": "1.0.5",
+            "resolved": "https://registry.npmjs.org/sisteransi/-/sisteransi-1.0.5.tgz",
+            "integrity": "sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==",
+            "license": "MIT"
         },
         "node_modules/slash": {
             "version": "3.0.0",
@@ -10886,6 +10915,11 @@
             "integrity": "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==",
             "dev": true
         },
+        "kleur": {
+            "version": "3.0.3",
+            "resolved": "https://registry.npmjs.org/kleur/-/kleur-3.0.3.tgz",
+            "integrity": "sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w=="
+        },
         "leven": {
             "version": "3.1.0",
             "resolved": "https://registry.npmjs.org/leven/-/leven-3.1.0.tgz",
@@ -11409,6 +11443,15 @@
                 }
             }
         },
+        "prompts": {
+            "version": "2.4.2",
+            "resolved": "https://registry.npmjs.org/prompts/-/prompts-2.4.2.tgz",
+            "integrity": "sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==",
+            "requires": {
+                "kleur": "^3.0.3",
+                "sisteransi": "^1.0.5"
+            }
+        },
         "proxy-from-env": {
             "version": "1.1.0",
             "resolved": "https://registry.npmjs.org/proxy-from-env/-/proxy-from-env-1.1.0.tgz",
@@ -11512,6 +11555,11 @@
             "resolved": "https://registry.npmjs.org/signal-exit/-/signal-exit-3.0.5.tgz",
             "integrity": "sha512-KWcOiKeQj6ZyXx7zq4YxSMgHRlod4czeBQZrPb8OKcohcqAXShm7E20kEMle9WBt26hFcAf0qLOcp5zmY7kOqQ==",
             "dev": true
+        },
+        "sisteransi": {
+            "version": "1.0.5",
+            "resolved": "https://registry.npmjs.org/sisteransi/-/sisteransi-1.0.5.tgz",
+            "integrity": "sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg=="
         },
         "slash": {
             "version": "3.0.0",

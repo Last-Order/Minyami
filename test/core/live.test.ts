@@ -5,7 +5,7 @@ import { AddressInfo } from "net";
 import { describe, expect, test } from "@jest/globals";
 import { createLiveDownloader } from "../../src/core/live";
 import { withTempDirectory } from "../helpers/filesystem";
-import { close, listen } from "../helpers/http";
+import { close, listen, masterVariantChunks, withMasterPlaylistServer } from "../helpers/http";
 
 describe("createLiveDownloader", () => {
     test("discovers new segments across playlist refreshes and downloads each once", async () => {
@@ -114,5 +114,30 @@ describe("createLiveDownloader", () => {
         } finally {
             await close(server);
         }
+    });
+
+    test("passes a master playlist selector through the live wrapper only once", async () => {
+        await withMasterPlaylistServer(async ({ playlistUrl, highPlaylistUrl, requests }) => {
+            await withTempDirectory("minyami-live-variant-", async (directory) => {
+                const output = path.join(directory, "selected.ts");
+                let selectorCalls = 0;
+                const downloader = createLiveDownloader(playlistUrl, {
+                    output,
+                    tempDir: directory,
+                    variantSelector: (variants) => {
+                        selectorCalls++;
+                        return variants[1];
+                    },
+                });
+
+                await downloader.download();
+
+                expect(selectorCalls).toBe(1);
+                expect(downloader.getSnapshot().sourcePath).toBe(highPlaylistUrl);
+                expect(requests.get("/master.m3u8")).toBe(1);
+                expect(requests.get("/high.m3u8")).toBe(1);
+                expect(fs.readFileSync(output)).toEqual(masterVariantChunks.high);
+            });
+        });
     });
 });

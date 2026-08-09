@@ -17,12 +17,6 @@ export interface DownloaderConfig {
     cliMode?: boolean;
 }
 
-export interface ArchiveDownloaderConfig extends DownloaderConfig {
-    slice?: string;
-}
-
-export interface LiveDownloaderConfig extends DownloaderConfig {}
-
 export interface DownloadTask {
     readonly id: number;
     readonly filename: string;

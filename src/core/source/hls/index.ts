@@ -3,6 +3,7 @@ import { SiteAdapterMode, SiteAdapterResult } from "./adapters/types";
 import { HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
 import { PlaylistLoader } from "./playlist_loader";
 import { prepareSite } from "./site_adapter";
+import { HLSVariantSelector, selectHLSVariantInteractively } from "./variant_selector";
 import {
     DownloadEncryption,
     DownloadItem,
@@ -16,6 +17,7 @@ export type HLSSourceMode = "snapshot" | "follow";
 
 export interface HLSSourceOptions {
     mode: HLSSourceMode;
+    variantSelector?: HLSVariantSelector;
     slice?: {
         start: number;
         end: number;
@@ -37,6 +39,7 @@ export class HLSSource implements DownloadSource {
     private sitePlan: SiteAdapterResult = {};
     private timeout = 60000;
     private prepared = false;
+    private cancelled = false;
     private discoveredItemCount = 0;
 
     constructor(sourcePath: string, private readonly options: HLSSourceOptions) {
@@ -54,6 +57,11 @@ export class HLSSource implements DownloadSource {
         throwIfAborted(signal);
         this.loader = new PlaylistLoader(context.http);
         this.playlist = await this.loadMediaPlaylist(this.sourcePath, context);
+        if (!this.playlist) {
+            this.cancelled = true;
+            this.prepared = true;
+            return { sourcePath: this.sourcePath, cancelled: true };
+        }
         if (this.continuous) {
             this.updateFollowTimeouts();
         }
@@ -84,8 +92,14 @@ export class HLSSource implements DownloadSource {
     }
 
     async *discover(context: DownloadSourceContext, signal: AbortSignal): AsyncIterable<SourceBatch> {
-        if (!this.prepared || !this.playlist) {
+        if (!this.prepared) {
             throw new Error("HLS source must be prepared before discovering items.");
+        }
+        if (this.cancelled) {
+            return;
+        }
+        if (!this.playlist) {
+            throw new Error("HLS source has no prepared media playlist.");
         }
 
         if (!this.continuous) {
@@ -153,7 +167,10 @@ export class HLSSource implements DownloadSource {
         this.timeout = Math.min(Math.max(20000, this.playlist.segments.length * this.safeChunkLength * 1000), 60000);
     }
 
-    private async loadMediaPlaylist(sourcePath: string, context: DownloadSourceContext): Promise<HLSMediaPlaylist> {
+    private async loadMediaPlaylist(
+        sourcePath: string,
+        context: DownloadSourceContext
+    ): Promise<HLSMediaPlaylist | undefined> {
         const loaded = await this.loader.load(sourcePath, {
             retries: context.retries,
             timeout: this.timeout,
@@ -162,15 +179,27 @@ export class HLSSource implements DownloadSource {
             return loaded;
         }
 
-        const bestStream = [...loaded.variants].sort((a, b) => b.bandwidth - a.bandwidth)[0];
-        if (!bestStream) {
+        if (loaded.variants.length === 0) {
             throw new Error("Master playlist does not contain any streams.");
         }
-        logger.info("Master playlist input detected. Auto selecting best quality streams.");
-        logger.debug(`Best stream: ${bestStream.url}; Bandwidth: ${bestStream.bandwidth}`);
+
+        // A single rendition needs no user decision; selectors only arbitrate real choices.
+        const selectedStream =
+            loaded.variants.length === 1
+                ? loaded.variants[0]
+                : await (this.options.variantSelector ?? selectHLSVariantInteractively)(loaded.variants);
+        if (!selectedStream) {
+            return undefined;
+        }
+        // Requiring the exact offered object prevents selectors from injecting an unparsed URL or metadata.
+        if (!loaded.variants.includes(selectedStream)) {
+            throw new Error("HLS variant selector returned a stream that was not offered by the master playlist.");
+        }
+        logger.info("Master playlist input detected. Selected an HLS stream.");
+        logger.debug(`Selected stream: ${selectedStream.url}; Bandwidth: ${selectedStream.bandwidth}`);
         // Follow refreshes must target the selected media playlist, not the master playlist.
-        this.sourcePath = bestStream.url;
-        const mediaPlaylist = await this.loader.load(bestStream.url, {
+        this.sourcePath = selectedStream.url;
+        const mediaPlaylist = await this.loader.load(selectedStream.url, {
             retries: context.retries,
             timeout: this.timeout,
         });
@@ -256,6 +285,8 @@ export class HLSSource implements DownloadSource {
 export function createHLSSource(sourcePath: string, options: HLSSourceOptions): HLSSource {
     return new HLSSource(sourcePath, options);
 }
+
+export type { HLSVariantSelector } from "./variant_selector";
 
 function sliceItems(items: DownloadItem[], slice?: HLSSourceOptions["slice"]): DownloadItem[] {
     if (!slice) {

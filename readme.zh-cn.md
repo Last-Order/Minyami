@@ -55,6 +55,29 @@ Help:
      --verbose, debug             调试输出
 ```
 
+当 CLI 收到包含多个流的 master playlist 时，Minyami 会显示交互式菜单，并按带宽从高到低列出可用的
+分辨率、帧率和编码。如果标准输入或输出没有连接到 TTY，Minyami 会输出警告并回退到最高带宽流，避免
+脚本阻塞。master playlist 只有一个流时不会询问。
+
+## 作为库使用
+
+可以通过 `variantSelector` 自定义 master playlist 的流选择：
+
+```TypeScript
+import { createArchiveDownloader } from "minyami";
+
+const downloader = createArchiveDownloader("https://example.com/master.m3u8", {
+    output: "./archive.ts",
+    variantSelector: (variants) => variants.find((variant) => variant.resolution?.height === 720),
+});
+
+await downloader.download();
+```
+
+选择器会按 playlist 原始顺序收到候选流，并可返回其中同一个候选对象、该对象的 Promise，或返回
+`undefined` 正常取消下载。archive、live 和 `HLSSourceOptions` 都支持此选项；库调用未传入时默认选择
+最高带宽流。
+
 ## 常见问题
 
 Q: 下载时需要保持视频窗口打开吗？

@@ -3,9 +3,11 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import { AddressInfo } from "net";
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 import { createDownloader } from "../../../../src/core/download/downloader";
 import { createHLSSource } from "../../../../src/core/source/hls";
+import { HLSMediaPlaylist, HLSPlaylistKind, HLSVariant } from "../../../../src/core/source/hls/parser";
+import { PlaylistLoader } from "../../../../src/core/source/hls/playlist_loader";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
 
@@ -104,4 +106,121 @@ describe("HLSSource", () => {
             await close(server);
         }
     });
+
+    test("selects a single master variant without invoking the selector", async () => {
+        const variant = createVariant("https://media.example/only.m3u8", 1000000);
+        jest.spyOn(PlaylistLoader.prototype, "load")
+            .mockResolvedValueOnce({ kind: HLSPlaylistKind.Master, variants: [variant] })
+            .mockResolvedValueOnce(emptyMediaPlaylist());
+        const variantSelector = jest.fn(() => variant);
+
+        await withTempDirectory("minyami-single-variant-", async (directory) => {
+            const downloader = createDownloader(
+                createHLSSource("https://media.example/master.m3u8", { mode: "snapshot", variantSelector }),
+                { tempDir: directory }
+            );
+
+            await downloader.download();
+
+            expect(variantSelector).not.toHaveBeenCalled();
+            expect(downloader.getSnapshot().sourcePath).toBe(variant.url);
+        });
+    });
+
+    test("rejects a variant selector result outside the offered candidates", async () => {
+        const variants = [
+            createVariant("https://media.example/low.m3u8", 800000),
+            createVariant("https://media.example/high.m3u8", 2400000),
+        ];
+        jest.spyOn(PlaylistLoader.prototype, "load").mockResolvedValueOnce({
+            kind: HLSPlaylistKind.Master,
+            variants,
+        });
+
+        await withTempDirectory("minyami-invalid-variant-", async (directory) => {
+            const downloader = createDownloader(
+                createHLSSource("https://media.example/master.m3u8", {
+                    mode: "snapshot",
+                    variantSelector: () => ({ ...variants[0] }),
+                }),
+                { tempDir: directory }
+            );
+
+            await expect(downloader.download()).rejects.toThrow(
+                "HLS variant selector returned a stream that was not offered by the master playlist."
+            );
+            expect(downloader.getSnapshot().status).toBe("failed");
+        });
+    });
+
+    test("treats an undefined variant selection as normal cancellation", async () => {
+        const variants = [
+            createVariant("https://media.example/low.m3u8", 800000),
+            createVariant("https://media.example/high.m3u8", 2400000),
+        ];
+        jest.spyOn(PlaylistLoader.prototype, "load").mockResolvedValueOnce({
+            kind: HLSPlaylistKind.Master,
+            variants,
+        });
+
+        await withTempDirectory("minyami-cancelled-variant-", async (directory) => {
+            const output = path.join(directory, "cancelled.ts");
+            const downloader = createDownloader(
+                createHLSSource("https://media.example/master.m3u8", {
+                    mode: "snapshot",
+                    variantSelector: () => undefined,
+                }),
+                { output, tempDir: directory }
+            );
+
+            await expect(downloader.download()).resolves.toBeUndefined();
+
+            expect(downloader.getSnapshot()).toMatchObject({ status: "finished", isEnd: true, totalChunkCount: 0 });
+            expect(fs.existsSync(output)).toBe(false);
+            expect(fs.readdirSync(directory)).toEqual([]);
+        });
+    });
+
+    test("rejects an empty master playlist and a selected nested master playlist", async () => {
+        const loader = jest.spyOn(PlaylistLoader.prototype, "load");
+        loader.mockResolvedValueOnce({ kind: HLSPlaylistKind.Master, variants: [] });
+
+        await withTempDirectory("minyami-empty-master-", async (directory) => {
+            const downloader = createDownloader(
+                createHLSSource("https://media.example/empty.m3u8", { mode: "snapshot" }),
+                { tempDir: directory }
+            );
+            await expect(downloader.download()).rejects.toThrow("Master playlist does not contain any streams.");
+        });
+
+        const variant = createVariant("https://media.example/nested.m3u8", 1000000);
+        loader
+            .mockResolvedValueOnce({ kind: HLSPlaylistKind.Master, variants: [variant] })
+            .mockResolvedValueOnce({ kind: HLSPlaylistKind.Master, variants: [variant] });
+
+        await withTempDirectory("minyami-nested-master-", async (directory) => {
+            const downloader = createDownloader(
+                createHLSSource("https://media.example/master.m3u8", { mode: "snapshot" }),
+                { tempDir: directory }
+            );
+            await expect(downloader.download()).rejects.toThrow(
+                "Selected HLS stream points to another master playlist."
+            );
+        });
+    });
 });
+
+function createVariant(url: string, bandwidth: number): HLSVariant {
+    return { url, bandwidth };
+}
+
+function emptyMediaPlaylist(): HLSMediaPlaylist {
+    return {
+        kind: HLSPlaylistKind.Media,
+        segments: [],
+        encryptionKeyUrls: [],
+        hasEndList: true,
+        totalDuration: 0,
+        averageSegmentDuration: 0,
+    };
+}

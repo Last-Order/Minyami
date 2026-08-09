@@ -114,6 +114,10 @@ async function runDownloader(context: DownloaderContext): Promise<void> {
         installSigintHandler(context);
         const metadata = await source.prepare(sourceContext, abortController.signal);
         runtime.sourcePath = metadata.sourcePath;
+        if (metadata.cancelled) {
+            finishCancelledDownload(context);
+            return;
+        }
         if (metadata.itemNamer) {
             runtime.setItemNamer(metadata.itemNamer);
         }
@@ -152,6 +156,20 @@ async function runDownloader(context: DownloaderContext): Promise<void> {
     } finally {
         removeSigintHandler(state);
     }
+}
+
+function finishCancelledDownload(context: DownloaderContext): void {
+    const { runtime, state, events } = context;
+    // Preparation cancellation has no queued work to drain and is a successful terminal state.
+    state.sourceEnded = true;
+    state.isDownloaded = true;
+    state.status = "finished";
+    try {
+        deleteEmptyDirectory(runtime.tempPath);
+    } catch {
+        logger.warning(`Failed to delete empty temporary directory [${runtime.tempPath}].`);
+    }
+    events.emit("finished");
 }
 
 function createScheduler(context: DownloaderContext): TaskScheduler<DownloadTask, ExecutedChunk> {

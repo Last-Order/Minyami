@@ -20,11 +20,13 @@
 
 -   Added a `DownloadSource` abstraction, a configurable `HLSSource`, and a shared `createDownloader` execution engine for custom task sources.
 -   Added isolated per-download runtimes and a shared task scheduler for item execution, concurrency, retries, progress tracking, and output coordination.
+-   Added configurable HLS master-playlist variant selectors for archive, live, and direct `HLSSource` consumers.
 
 ### Changed
 
 -   Unified archive and live downloads on the same downloader lifecycle. Parser integrations now return declarative plans, while HLS sources translate parser chunks into protocol-neutral items and resolve duration, initialization, encryption-key, and IV semantics before scheduling.
 -   Archive and live HLS sources now differ only in snapshot versus follow discovery mode.
+-   CLI downloads of master playlists with multiple variants now open an interactive terminal selector; non-TTY CLI usage and library defaults select the highest-bandwidth variant.
 -   HTTP headers, cookies, and proxy configuration are isolated per downloader instance.
 -   Builds now clean `dist` before compiling so removed modules cannot remain in release artifacts.
 

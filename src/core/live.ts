@@ -1,7 +1,11 @@
-import { LiveDownloaderConfig } from "./downloader";
+import { DownloaderConfig } from "./downloader";
 import { DownloadEvent, DownloadEventListener, DownloadSnapshot } from "./download/controller";
 import { createDownloader } from "./download/downloader";
-import { createHLSSource } from "./source/hls";
+import { createHLSSource, HLSVariantSelector } from "./source/hls";
+
+export interface LiveDownloaderConfig extends DownloaderConfig {
+    variantSelector?: HLSVariantSelector;
+}
 
 export interface LiveDownloadSnapshot extends DownloadSnapshot {
     totalChunkCount: number;
@@ -18,8 +22,12 @@ export interface LiveDownloadController {
 }
 
 export function createLiveDownloader(sourcePath: string, config: LiveDownloaderConfig = {}): LiveDownloadController {
+    const { variantSelector, ...downloaderConfig } = config;
     // Live behavior is a follow-mode source, not a separate scheduler or output implementation.
-    const downloader = createDownloader(createHLSSource(sourcePath, { mode: "follow" }), config);
+    const downloader = createDownloader(
+        createHLSSource(sourcePath, { mode: "follow", variantSelector }),
+        downloaderConfig
+    );
     const controller: LiveDownloadController = {
         download: () => downloader.download(),
         stop: () => downloader.stop(),

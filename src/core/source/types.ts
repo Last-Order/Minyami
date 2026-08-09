@@ -45,6 +45,8 @@ export interface SourceMetadata {
     sourcePath: string;
     itemNamer?: DownloadItemNamer;
     itemTimeout?: number;
+    /** A source may end preparation without treating a user cancellation as a failure. */
+    cancelled?: boolean;
 }
 
 export interface DownloadSourceContext {

@@ -64,6 +64,11 @@ Options:
      --verbose, debug              Debug output
 ```
 
+When the CLI receives a master playlist containing multiple streams, Minyami opens an interactive menu. Streams are
+shown from highest to lowest bandwidth with their available resolution, frame rate, and codecs. If standard
+input or output is not attached to a TTY, Minyami warns and selects the highest-bandwidth stream so scripts do not
+block. A master playlist with only one stream continues without prompting.
+
 ## FAQ
 
 Q: Should I keep the browser open when downloading?
@@ -93,6 +98,7 @@ import { createArchiveDownloader, createLiveDownloader } from "minyami";
 const archive = createArchiveDownloader("https://example.com/archive.m3u8", {
     output: "./archive.ts",
     threads: 8,
+    variantSelector: (variants) => variants.find((variant) => variant.resolution?.height === 720),
 });
 
 archive.on("chunk-downloaded", (chunk) => {
@@ -106,6 +112,10 @@ const live = createLiveDownloader("https://example.com/live.m3u8");
 setTimeout(() => live.stop(), 60_000);
 await live.download();
 ```
+
+`variantSelector` receives the master playlist variants in playlist order and may return one of those exact objects,
+a promise for one, or `undefined` to cancel normally. It is available on archive downloads, live downloads, and
+`HLSSourceOptions`. Library calls select the highest-bandwidth stream when the option is omitted.
 
 The same execution engine can also consume a source directly. An HLS source in `snapshot` mode yields one batch;
 `follow` mode refreshes the playlist and yields newly discovered chunks until the stream ends or the controller is

@@ -4,6 +4,7 @@ import * as path from "path";
 import Erii from "erii";
 import { createArchiveDownloader } from "./core/archive";
 import { createLiveDownloader } from "./core/live";
+import { selectHLSVariantInteractively } from "./core/source/hls/variant_selector";
 import { exec, readConfigFile } from "./utils/system";
 import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
@@ -74,7 +75,11 @@ Erii.bind(
                 options[key] = fileOptions[key];
             }
         }
-        const finalOptions = Object.assign(options, { cliMode: true, logger });
+        const finalOptions = Object.assign(options, {
+            cliMode: true,
+            logger,
+            variantSelector: selectHLSVariantInteractively,
+        });
         if (options.live) {
             const downloader = createLiveDownloader(path, finalOptions);
             downloader.on("finished", () => {

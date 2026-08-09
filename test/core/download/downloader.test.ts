@@ -193,4 +193,37 @@ describe("createDownloader", () => {
             expect(downloader.getSnapshot().status).toBe("failed");
         });
     });
+
+    test("finishes preparation cancellation without publishing download or error events", async () => {
+        await withTempDirectory("minyami-cancelled-source-", async (directory) => {
+            const output = path.join(directory, "cancelled.ts");
+            const source: DownloadSource = {
+                sourcePath: "custom://cancelled",
+                continuous: false,
+                async prepare() {
+                    return { sourcePath: this.sourcePath, cancelled: true };
+                },
+                async *discover() {
+                    throw new Error("Cancelled sources must not start discovery.");
+                },
+            };
+            const downloader = createDownloader(source, { output, tempDir: directory });
+            const events: string[] = [];
+            for (const event of ["parsed", "downloaded", "critical-error", "finished"] as const) {
+                downloader.on(event, () => events.push(event));
+            }
+
+            await expect(downloader.download()).resolves.toBeUndefined();
+
+            expect(events).toEqual(["finished"]);
+            expect(downloader.getSnapshot()).toMatchObject({
+                status: "finished",
+                isEnd: true,
+                totalChunkCount: 0,
+                completedChunkCount: 0,
+            });
+            expect(fs.existsSync(output)).toBe(false);
+            expect(fs.readdirSync(directory)).toEqual([]);
+        });
+    });
 });
