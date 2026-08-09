@@ -7,6 +7,8 @@ import { DownloadTask, DownloaderConfig } from "../downloader";
 import { DownloadItem, DownloadItemNamer } from "../source/types";
 import { ChunkExecutor, ChunkResult } from "./chunk_executor";
 import { normalizeDownloaderConfig, NormalizedDownloaderConfig } from "./config";
+import { Aes128CbcHandler } from "./encryption/aes_128_cbc";
+import { EncryptionHandlerRegistry } from "./encryption/registry";
 import { DownloadHttpClient } from "./http_client";
 import { mixedItemNamer } from "./item_naming";
 import { KeyStore } from "./key_store";
@@ -20,6 +22,7 @@ export class DownloadRuntime {
     readonly config: NormalizedDownloaderConfig;
     readonly http: DownloadHttpClient;
     readonly keys = new KeyStore();
+    readonly encryptionHandlers = new EncryptionHandlerRegistry([new Aes128CbcHandler()]);
     readonly progress = new ProgressTracker();
     readonly taskStatusRecord: TaskStatus[] = [];
     readonly chunkExecutor: ChunkExecutor;
@@ -38,7 +41,7 @@ export class DownloadRuntime {
         this.tempPath = this.config.tempPath;
         this.outputPath = this.config.outputPath;
         this.http = new DownloadHttpClient(this.config);
-        this.chunkExecutor = new ChunkExecutor(this.http, this.keys);
+        this.chunkExecutor = new ChunkExecutor(this.http, this.keys, this.encryptionHandlers);
     }
 
     async allocateWorkspace(): Promise<void> {

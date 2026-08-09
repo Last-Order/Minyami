@@ -1,7 +1,8 @@
+import * as fs from "fs";
 import * as path from "path";
 import logger from "../../utils/log";
-import { decrypt } from "../../utils/media";
 import { DownloadTask } from "../downloader";
+import { EncryptionHandlerRegistry } from "./encryption/registry";
 import { DownloadHttpClient } from "./http_client";
 import { KeyStore } from "./key_store";
 
@@ -16,7 +17,11 @@ export interface ChunkResult {
 }
 
 export class ChunkExecutor {
-    constructor(private readonly http: DownloadHttpClient, private readonly keys: KeyStore) {}
+    constructor(
+        private readonly http: DownloadHttpClient,
+        private readonly keys: KeyStore,
+        private readonly encryptionHandlers: EncryptionHandlerRegistry
+    ) {}
 
     async execute(task: DownloadTask, options: ExecuteChunkOptions): Promise<ChunkResult> {
         const { item } = task;
@@ -33,13 +38,27 @@ export class ChunkExecutor {
                 return { outputPath: downloadedPath };
             }
 
-            // Sources resolve protocol-specific key identities and IV defaults before an item reaches execution.
+            const handler = this.encryptionHandlers.require(item.encryption.scheme);
             const key = this.keys.get(item.encryption.keyId);
             if (!key) {
                 throw new Error(`Missing encryption key for ${item.encryption.keyId}`);
             }
             const decryptedPath = downloadedPath + ".decrypt";
-            await decrypt(downloadedPath, decryptedPath, key, item.encryption.iv, options.keepEncryptedChunks);
+            await handler.decrypt({
+                inputPath: downloadedPath,
+                outputPath: decryptedPath,
+                encryption: item.encryption,
+                key,
+            });
+            if (!options.keepEncryptedChunks) {
+                try {
+                    // Cleanup policy stays outside handlers so algorithms only own the file transformation.
+                    await fs.promises.unlink(downloadedPath);
+                } catch (error) {
+                    logger.warning(`Unable to delete encrypted chunk ${task.filename}.`);
+                    logger.debug(error);
+                }
+            }
             logger.debug(`Decrypting ${task.filename} succeed`);
             return { outputPath: decryptedPath };
         } catch (error) {

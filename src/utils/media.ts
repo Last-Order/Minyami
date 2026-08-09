@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import { URL } from "url";
-import * as crypto from "crypto";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import { exec } from "./system";
 import { getAvailableOutputPath } from "./common";
@@ -136,41 +135,5 @@ export async function requestRaw(url: string, options: AxiosRequestConfig = {}):
             Host: new URL(url).host,
         },
         ...options,
-    });
-}
-/**
- * 解密文件
- * @param input
- * @param output
- * @param key in hex
- * @param iv in hex
- */
-export function decrypt(input: string, output: string, key: string, iv: string, keepEncryptedChunks = false) {
-    return new Promise<void>((resolve) => {
-        const algorithm = "aes-128-cbc";
-        if (key.length !== 32) {
-            throw new Error(`Key [${key}] length [${key.length}] or form invalid.`);
-        }
-        if (iv.length > 32) {
-            throw new Error(`IV [${iv}] length [${iv.length}] or form invalid.`);
-        }
-        if (iv.length % 2 == 1) {
-            iv = "0" + iv;
-        }
-        const keyBuffer = Buffer.alloc(16);
-        const ivBuffer = Buffer.alloc(16);
-        keyBuffer.write(key, "hex");
-        ivBuffer.write(iv, 16 - iv.length / 2, "hex");
-
-        const decipher = crypto.createDecipheriv(algorithm, keyBuffer, ivBuffer);
-        const i = fs.createReadStream(input);
-        const tempOutput = output + ".t";
-        const o = fs.createWriteStream(tempOutput);
-        const pipe = i.pipe(decipher).pipe(o);
-        pipe.on("close", () => {
-            !keepEncryptedChunks && fs.unlinkSync(input);
-            fs.renameSync(tempOutput, output);
-            resolve();
-        });
     });
 }

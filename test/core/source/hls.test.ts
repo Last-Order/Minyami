@@ -59,4 +59,49 @@ describe("HLSSource", () => {
             await close(server);
         }
     });
+
+    test("derives an omitted media IV from the media sequence", async () => {
+        const key = Buffer.from("0123456789abcdef");
+        const iv = Buffer.alloc(16);
+        iv[15] = 7;
+        const expected = Buffer.from("implicit HLS IV payload");
+        const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
+        const encrypted = Buffer.concat([cipher.update(expected), cipher.final()]);
+        const server = http.createServer((request, response) => {
+            if (request.url === "/key") {
+                response.end(key);
+                return;
+            }
+            if (request.url === "/7.ts") {
+                response.end(encrypted);
+                return;
+            }
+            const address = server.address() as AddressInfo;
+            response.end(
+                [
+                    "#EXTM3U",
+                    "#EXT-X-MEDIA-SEQUENCE:7",
+                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key"`,
+                    "#EXTINF:1,",
+                    `http://127.0.0.1:${address.port}/7.ts`,
+                    "#EXT-X-ENDLIST",
+                ].join("\n")
+            );
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-implicit-hls-iv-", async (directory) => {
+                const output = path.join(directory, "encrypted.ts");
+                const source = createHLSSource(`${baseUrl}/playlist.m3u8`, { mode: "snapshot" });
+                const downloader = createDownloader(source, { output, tempDir: directory });
+
+                await downloader.download();
+
+                expect(fs.readFileSync(output)).toEqual(expected);
+            });
+        } finally {
+            await close(server);
+        }
+    });
 });

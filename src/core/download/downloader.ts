@@ -193,16 +193,13 @@ function validateDownloadItem(context: DownloaderContext, item: DownloadItem): v
     if (!item.encryption) {
         return;
     }
-    // Reject a broken source contract before downloading the same unusable item on every retry.
-    if (item.encryption.scheme !== "aes-128-cbc") {
-        throw new Error(`Unsupported encryption scheme: ${item.encryption.scheme}`);
-    }
-    if (!item.encryption.iv) {
-        throw new Error(`Missing encryption IV for ${item.url}`);
-    }
-    if (!context.runtime.keys.has(item.encryption.keyId)) {
+    const handler = context.runtime.encryptionHandlers.require(item.encryption.scheme);
+    const key = context.runtime.keys.get(item.encryption.keyId);
+    if (!key) {
         throw new Error(`Encryption key is not registered: ${item.encryption.keyId}`);
     }
+    // Algorithm-specific validation happens before a broken item can consume download retries.
+    handler.validate(item.encryption, key);
 }
 
 async function onTaskSuccess(context: DownloaderContext, task: DownloadTask, result: ExecutedChunk): Promise<void> {
