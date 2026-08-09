@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 import Erii from "erii";
 import { createArchiveDownloader } from "./core/archive";
 import { createLiveDownloader } from "./core/live";
-import { exec, forceDeleteDirectory, readConfigFile } from "./utils/system";
+import { exec, readConfigFile } from "./utils/system";
 import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
 import ProxyAgentHelper from "./utils/agent";
@@ -98,27 +97,6 @@ Erii.bind(
     }
 );
 
-Erii.bind(
-    {
-        name: ["clean"],
-        description: "Clean cache files",
-    },
-    (ctx, options) => {
-        if (options.verbose) {
-            logger.enableDebugMode();
-        }
-        const fileOptions = readConfigFile();
-        if (Object.keys(fileOptions).length > 0) {
-            logger.debug(`Read config file: ${JSON.stringify(fileOptions)}`);
-        }
-        for (const file of fs.readdirSync(path.resolve(fileOptions.tempDir || os.tmpdir()))) {
-            if (file.startsWith("minyami_")) {
-                forceDeleteDirectory(path.resolve(os.tmpdir(), `./${file}`));
-            }
-        }
-    }
-);
-
 Erii.addOption({
     name: ["verbose", "debug"],
     description: "Debug output",
@@ -182,7 +160,7 @@ Erii.addOption({
     description: "Temporary file path",
     argument: {
         name: "path",
-        description: "(Optional) Temporary file path, defaults to env.TEMP",
+        description: "(Optional) Temporary file path, defaults to the current working directory",
     },
 });
 

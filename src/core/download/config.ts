@@ -1,4 +1,3 @@
-import * as os from "os";
 import * as path from "path";
 import logger from "../../utils/log";
 import { DownloaderConfig } from "../downloader";
@@ -64,7 +63,7 @@ export function normalizeDownloaderConfig(config: DownloaderConfig = {}): Normal
     return {
         threads: config.threads || 5,
         outputPath,
-        tempPath: path.resolve(config.tempDir || os.tmpdir()),
+        tempPath: path.resolve(config.tempDir || "."),
         key: config.key,
         verbose: !!config.verbose,
         retries: config.retries || 5,

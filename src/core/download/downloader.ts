@@ -271,9 +271,7 @@ async function finishDownload(context: DownloaderContext): Promise<void> {
         try {
             await deleteEmptyDirectory(runtime.tempPath);
         } catch {
-            logger.warning(
-                'Fail to delete temporary files, please delete manually or execute "minyami --clean" later.'
-            );
+            logger.warning("Fail to delete temporary files, please delete them manually.");
         }
     }
     logOutputPaths(outputPaths);

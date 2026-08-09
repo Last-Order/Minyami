@@ -28,14 +28,6 @@ export const deleteEmptyDirectory = (directoryPath: string) => {
     }
 };
 
-export const forceDeleteDirectory = (directoryPath: string) => {
-    const fileList = fs.readdirSync(directoryPath);
-    for (const filename of fileList) {
-        fs.unlinkSync(path.resolve(directoryPath, filename));
-    }
-    fs.rmdirSync(directoryPath);
-};
-
 export const initMinyamiDirectory = () => {
     const minyamiPath = path.resolve(os.homedir(), "./.minyami/");
     if (!fs.existsSync(minyamiPath)) {

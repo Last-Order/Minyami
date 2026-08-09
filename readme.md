@@ -40,7 +40,7 @@ Help:
          --output, o <path>        Output path
              <path>                (Optional) Output file path, defaults to ./output.mkv
          --temp-dir <path>         Temporary file path
-             <path>                (Optional) Temporary file path, defaults to env.TEMP
+             <path>                (Optional) Temporary file path, defaults to the current working directory
          --key <key>               Set key manually (Internal use)
              <key>                 (Optional) Key for decrypt video.
          --cookies <cookies>       Cookies used to download
@@ -58,8 +58,6 @@ Help:
          --no-merge                Do not merge m3u8 chunks.
          --keep, k                 Keep temporary files.
          --keep-encrypted-chunks   Do not delete encrypted chunks after decryption.
-     --clean                       Clean cache files
-
 Options:
 
      Options                       Description
@@ -78,7 +76,7 @@ A: You can use `--proxy` to set proxy server for Minyami. HTTP/SOCKS5 proxy are 
 
 Q: How to set temporary file location?
 
-A: You can use `--temp-dir` to set the directory of temporary files.
+A: By default, Minyami creates its `minyami_<timestamp>_<random>` temporary directory in the current working directory. You can use `--temp-dir` to select a different parent directory.
 
 Q: How to set multiple HTTP headers?
 

@@ -32,6 +32,8 @@ Help:
              <limit>               (可选) 重试次数的限制
          --output, o <path>        输出限制
              <path>                (可选) 输出文件路径，默认为 ./output.mkv
+         --temp-dir <path>         临时文件路径
+             <path>                (可选) 临时文件路径，默认为当前工作目录
          --key <key>               手动设置 Key
              <key>                 (可选) 视频解密 Key.
          --cookies <cookies>       (可选) 视频下载 Cookies
@@ -47,8 +49,6 @@ Help:
              <range>               设置时间范围，格式为 [<hh:mm:ss>-<hh:mm:ss> format] 例如 --slice "45:00-53:00"
          --nomerge, keep           不合并视频分块。
          --keep-encrypted-chunks   不删除解密前分块。与--keep一起使用。
-     --clean                       清除缓存文件
-
 选项:
 
      选项名                       描述
@@ -67,7 +67,7 @@ A: 可以使用`--proxy`参数设置代理，详见上方用法。目前支持`H
 
 Q: 如何设置临时文件目录？
 
-A: 通过环境变量可以设置临时文件目录。详见 [Issue #80](https://github.com/Last-Order/Minyami/issues/80#issuecomment-869132412)。
+A: 默认情况下，Minyami 会在当前工作目录下创建 `minyami_<时间戳>_<随机值>` 临时目录。可以使用 `--temp-dir` 指定其他父目录。
 
 Q: 如何设置多个 HTTP Header？
 
