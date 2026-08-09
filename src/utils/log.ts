@@ -18,7 +18,9 @@ class ConsoleLogger {
         if (error !== undefined) {
             this.isDebugMode && console.debug(error);
         }
-        console.info(chalk.red(`[MINYAMI][ERROR] ${message}`));
+        // Fatal errors must retain a concise cause outside debug mode; only the stack trace is debug-only.
+        const reason = error?.message ? ` ${error.message}` : "";
+        console.info(chalk.red(`[MINYAMI][ERROR] ${message}${reason}`));
     }
 
     enableDebugMode() {
