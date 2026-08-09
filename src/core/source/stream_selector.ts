@@ -7,33 +7,142 @@ interface StreamOptionChoice {
     readonly value: StreamOption;
 }
 
+interface VideoChoiceValue {
+    readonly option: StreamOption;
+    readonly track: VideoTrack;
+}
+
+interface VideoChoice {
+    readonly title: string;
+    readonly value: VideoChoiceValue;
+}
+
+interface AudioChoice {
+    readonly title: string;
+    readonly value: AudioTrack | null;
+}
+
+const TRACK_DETAIL_SEPARATOR = " · ";
+
 export function selectDefaultStream(catalog: StreamCatalog): TrackSelection | undefined {
     return createStreamOptionChoices(catalog)[0]?.value.tracks;
 }
 
-/** Selects one protocol-compatible option while keeping API selection output track-based. */
+/** Selects tracks in protocol-compatible stages while keeping API selection output track-based. */
 export async function selectStreamInteractively(catalog: StreamCatalog): Promise<TrackSelection | undefined> {
-    const choices = createStreamOptionChoices(catalog);
-    if (choices.length === 0) {
+    const defaultSelection = selectDefaultStream(catalog);
+    if (!defaultSelection) {
         return undefined;
     }
-    if (choices.length === 1) {
-        return choices[0].value.tracks;
+
+    const videoChoices = createVideoChoices(catalog);
+    if (videoChoices.length === 0 && catalog.options.length === 1) {
+        return defaultSelection;
+    }
+    if (videoChoices.length === 1 && createAudioChoices(videoChoices[0].value.option).length === 1) {
+        return [videoChoices[0].value.track];
     }
 
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
         logger.warning("Interactive stream selection is unavailable. Selecting the highest-bandwidth option.");
+        return defaultSelection;
+    }
+
+    if (videoChoices.length === 0) {
+        return selectAudioOnlyOption(catalog);
+    }
+
+    const selectedVideo = await selectVideo(videoChoices);
+    if (!selectedVideo) {
+        return undefined;
+    }
+
+    const audioChoices = createAudioChoices(selectedVideo.option);
+    if (audioChoices.length === 1) {
+        return [selectedVideo.track];
+    }
+
+    const response = await prompts({
+        type: "select",
+        name: "audio",
+        message: "Select an audio track",
+        choices: audioChoices,
+        initial: initialAudioChoice(audioChoices),
+    });
+    const selectedAudio = response.audio as AudioTrack | null | undefined;
+    if (selectedAudio === undefined) {
+        return undefined;
+    }
+
+    // The second prompt is derived from the selected option so it cannot cross a manifest compatibility boundary.
+    return selectedAudio === null ? [selectedVideo.track] : [selectedVideo.track, selectedAudio];
+}
+
+async function selectVideo(choices: readonly VideoChoice[]): Promise<VideoChoiceValue | undefined> {
+    if (choices.length === 1) {
+        return choices[0].value;
+    }
+
+    const response = await prompts({
+        type: "select",
+        name: "video",
+        message: "Select a video track",
+        choices,
+        initial: 0,
+    });
+    return response.video as VideoChoiceValue | undefined;
+}
+
+async function selectAudioOnlyOption(catalog: StreamCatalog): Promise<TrackSelection | undefined> {
+    const choices = createStreamOptionChoices(catalog);
+    if (choices.length === 1) {
         return choices[0].value.tracks;
     }
 
     const response = await prompts({
         type: "select",
         name: "option",
-        message: "Select a stream option",
+        message: "Select an audio track",
         choices,
         initial: 0,
     });
     return (response.option as StreamOption | undefined)?.tracks;
+}
+
+function createVideoChoices(catalog: StreamCatalog): VideoChoice[] {
+    return catalog.options
+        .flatMap((option) =>
+            option.tracks
+                .filter((track): track is VideoTrack => track.type === "video")
+                .map((track) => ({ option, track }))
+        )
+        .sort((a, b) => effectiveBandwidth(b.option) - effectiveBandwidth(a.option))
+        .map((value) => ({
+            title: formatVideoChoice(value),
+            value,
+        }));
+}
+
+function createAudioChoices(option: StreamOption): AudioChoice[] {
+    return [
+        ...option.tracks
+            .filter((track): track is AudioTrack => track.type === "audio")
+            .map((track) => ({ title: formatAudioTrack(track), value: track })),
+        { title: "None", value: null },
+    ];
+}
+
+function initialAudioChoice(choices: readonly AudioChoice[]): number {
+    const defaultIndex = choices.findIndex((choice) => choice.value?.isDefault);
+    return defaultIndex >= 0 ? defaultIndex : 0;
+}
+
+function formatVideoChoice(choice: VideoChoiceValue): string {
+    const details = [`video: ${formatVideoTrack(choice.track)}`];
+    if (choice.option.bandwidth !== undefined) {
+        details.push(formatBandwidth(choice.option.bandwidth));
+    }
+    return details.join(TRACK_DETAIL_SEPARATOR);
 }
 
 function createStreamOptionChoices(catalog: StreamCatalog): StreamOptionChoice[] {
@@ -75,12 +184,22 @@ function formatVideoTrack(track: VideoTrack): string {
     if (track.codecs?.length) {
         details.push(track.codecs.join(","));
     }
-    return details.join(" ");
+    return details.join(TRACK_DETAIL_SEPARATOR);
 }
 
 function formatAudioTrack(track: AudioTrack): string {
     const label = track.name || track.language || track.id;
-    return track.language && track.language !== label ? `${label} (${track.language})` : label;
+    const details = [track.language && track.language !== label ? `${label} (${track.language})` : label];
+    if (track.channels !== undefined) {
+        details.push(`${track.channels} ch`);
+    }
+    if (track.codecs?.length) {
+        details.push(track.codecs.join(","));
+    }
+    if (track.bandwidth !== undefined) {
+        details.push(`${(track.bandwidth / 1_000).toFixed(0)} kbps`);
+    }
+    return details.join(TRACK_DETAIL_SEPARATOR);
 }
 
 function effectiveBandwidth(option: StreamOption): number {
