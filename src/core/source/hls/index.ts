@@ -1,4 +1,5 @@
 import logger from "../../../utils/log";
+import { MPEG_TS_CONTAINER } from "../../media_container";
 import { mergeAsyncIterables } from "../merge_async_iterables";
 import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } from "../stream_selection";
 import { selectDefaultStream } from "../stream_selector";
@@ -68,7 +69,7 @@ export class HLSSource implements DownloadSource {
         );
         const tracks = await Promise.all(this.cursors.map((cursor) => cursor.prepare(context, signal)));
         this.prepared = true;
-        return { tracks };
+        return { container: MPEG_TS_CONTAINER, tracks };
     }
 
     async *discover(context: DownloadSourceContext, signal: AbortSignal): AsyncIterable<SourceBatch> {

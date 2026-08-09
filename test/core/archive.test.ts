@@ -10,9 +10,10 @@ describe("createArchiveDownloader", () => {
     test("downloads a finite HLS playlist and reports completed work", async () => {
         await withMediaServer(async (playlistUrl, expectedOutput) => {
             await withTempDirectory("minyami-archive-", async (directory) => {
+                const requestedOutput = path.join(directory, "archive.mkv");
                 const output = path.join(directory, "archive.ts");
                 const downloader = createArchiveDownloader(playlistUrl, {
-                    output,
+                    output: requestedOutput,
                     tempDir: directory,
                     threads: 2,
                 });
@@ -25,6 +26,8 @@ describe("createArchiveDownloader", () => {
 
                 expect(downloader.getSnapshot()).toMatchObject({
                     status: "finished",
+                    outputBasePath: path.join(directory, "archive"),
+                    outputPaths: [output],
                     totalChunkCount: 2,
                     completedChunkCount: 2,
                     successfulChunkCount: 2,

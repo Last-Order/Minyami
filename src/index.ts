@@ -5,7 +5,7 @@ import Erii from "erii";
 import { createArchiveDownloader } from "./core/archive";
 import { createLiveDownloader } from "./core/live";
 import { selectStreamInteractively } from "./core/source/stream_selector";
-import { exec, readConfigFile } from "./utils/system";
+import { readConfigFile } from "./utils/system";
 import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
 import ProxyAgentHelper from "./utils/agent";
@@ -132,24 +132,11 @@ Erii.addOption({
 Erii.addOption({
     name: ["output", "o"],
     command: "download",
-    description: "Output path",
+    description: "Output basename",
     argument: {
         name: "path",
-        description: "(Optional) Output file path, defaults to ./output.mkv",
+        description: "(Optional) Output basename, defaults to ./output",
         validate: (outputPath: string, validateLogger) => {
-            if (!outputPath.endsWith(".mkv") && !outputPath.endsWith(".ts")) {
-                validateLogger("Output filename must ends with .mkv or .ts.");
-                return false;
-            }
-            if (outputPath.endsWith("mkv")) {
-                exec("mkvmerge --version")
-                    .then(() => {
-                        //
-                    })
-                    .catch((e) => {
-                        logger.error("Missing dependence: mkvmerge");
-                    });
-            }
             if (path.basename(outputPath).match(/[\*\:|\?<>]/)) {
                 validateLogger("Filename should't contain :, |, <, >.");
                 return false;
@@ -203,19 +190,6 @@ Erii.addOption({
     name: ["live"],
     command: "download",
     description: "Download live",
-});
-
-Erii.addOption({
-    name: ["format"],
-    command: "download",
-    description: "(Optional) Set output format. default: ts",
-    argument: {
-        name: "format_name",
-        description: "Format name. ts or mkv.",
-        validate: (formatString: string) => {
-            return ["mkv", "ts"].includes(formatString);
-        },
-    },
 });
 
 Erii.addOption({

@@ -1,22 +1,24 @@
 import * as path from "path";
 import logger from "../../utils/log";
 import { DownloaderConfig } from "../downloader";
+import { normalizeOutputBasePath } from "../media_container";
+import { createDefaultMuxers, Muxer } from "../muxer";
 
 export interface NormalizedDownloaderConfig {
     threads: number;
-    outputPath: string;
+    outputBasePath: string;
     tempPath: string;
     key?: string;
     verbose: boolean;
     retries: number;
     proxy: string;
-    format: string;
     cookies?: string;
     headers: Record<string, string>;
     noMerge: boolean;
     cliMode: boolean;
     keepTemporaryFiles: boolean;
     keepEncryptedChunks: boolean;
+    muxers: readonly Muxer[];
 }
 
 function parseHeaders(headers?: string | string[]): Record<string, string> {
@@ -38,14 +40,6 @@ function parseHeaders(headers?: string | string[]): Record<string, string> {
 }
 
 export function normalizeDownloaderConfig(config: DownloaderConfig = {}): NormalizedDownloaderConfig {
-    const format = config.format || "ts";
-    let outputPath = config.output || "./output.ts";
-
-    if (format === "ts" && outputPath.endsWith(".mkv")) {
-        logger.warning("Output file name ends with .mkv is not supported in direct muxing mode, auto changing to .ts.");
-        outputPath += ".ts";
-    }
-
     if (config.noMerge) {
         logger.warning("Chunks will not be merged.");
         logger.warning("Temporary files will not be deleted automatically.");
@@ -62,18 +56,18 @@ export function normalizeDownloaderConfig(config: DownloaderConfig = {}): Normal
 
     return {
         threads: config.threads || 5,
-        outputPath,
+        outputBasePath: normalizeOutputBasePath(config.output),
         tempPath: path.resolve(config.tempDir || "."),
         key: config.key,
         verbose: !!config.verbose,
         retries: config.retries || 5,
         proxy: config.proxy || "",
-        format,
         cookies: config.cookies,
         headers: parseHeaders(config.headers),
         noMerge: !!config.noMerge,
         cliMode: !!config.cliMode,
         keepTemporaryFiles: !!config.keep,
         keepEncryptedChunks: !!config.keepEncryptedChunks,
+        muxers: config.muxers === undefined ? createDefaultMuxers() : [...config.muxers],
     };
 }

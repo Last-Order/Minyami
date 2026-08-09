@@ -22,4 +22,22 @@ describe("download configuration", () => {
             expect(path.basename(runtime.tempPath)).toMatch(/^minyami_\d+_[0-9a-f]{8}$/);
         });
     });
+
+    test.each(["ts", "mkv", "mp4", "webm", "mov", "avi", "m2ts"])(
+        "removes a recognized .%s video extension from the output basename",
+        (extension) => {
+            expect(normalizeDownloaderConfig({ output: `./episode.final.${extension}` }).outputBasePath).toBe(
+                path.join(".", "episode.final")
+            );
+        }
+    );
+
+    test("preserves unknown suffixes and defaults to an extensionless basename", () => {
+        expect(normalizeDownloaderConfig({ output: "./episode.release" }).outputBasePath).toBe("./episode.release");
+        expect(normalizeDownloaderConfig().outputBasePath).toBe("./output");
+    });
+
+    test("matches recognized video extensions case-insensitively", () => {
+        expect(normalizeDownloaderConfig({ output: "./episode.MP4" }).outputBasePath).toBe("episode");
+    });
 });

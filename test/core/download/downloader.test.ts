@@ -4,6 +4,7 @@ import * as http from "http";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
 import { createDownloader } from "../../../src/core/download/downloader";
+import { MPEG_TS_CONTAINER } from "../../../src/core/media_container";
 import { DownloadSource } from "../../../src/core/source/types";
 import { close, listen, withMediaServer } from "../../helpers/http";
 import { withTempDirectory } from "../../helpers/filesystem";
@@ -18,6 +19,7 @@ describe("createDownloader", () => {
                     continuous: false,
                     async prepare() {
                         return {
+                            container: MPEG_TS_CONTAINER,
                             tracks: [
                                 {
                                     id: "main",
@@ -87,6 +89,7 @@ describe("createDownloader", () => {
                     async prepare(context) {
                         context.keys.set(keyId, key.toString("hex"));
                         return {
+                            container: MPEG_TS_CONTAINER,
                             tracks: [
                                 {
                                     id: "main",
@@ -151,6 +154,7 @@ describe("createDownloader", () => {
                     continuous: false,
                     async prepare() {
                         return {
+                            container: MPEG_TS_CONTAINER,
                             tracks: [
                                 {
                                     id: "main",

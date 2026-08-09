@@ -1,4 +1,5 @@
 import { DownloadItem, DownloadTrackId } from "./source/types";
+import { Muxer } from "./muxer";
 
 export interface DownloaderConfig {
     threads?: number;
@@ -10,11 +11,12 @@ export interface DownloaderConfig {
     headers?: string | string[];
     retries?: number;
     proxy?: string;
-    format?: string;
     noMerge?: boolean;
     keep?: boolean;
     keepEncryptedChunks?: boolean;
     cliMode?: boolean;
+    /** Ordered muxer candidates; omit for mkvmerge then ffmpeg, or pass [] to disable cross-track muxing. */
+    muxers?: readonly Muxer[];
 }
 
 export interface DownloadTask {

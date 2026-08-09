@@ -2,6 +2,7 @@ import { EventEmitter } from "events";
 import * as path from "path";
 import logger from "../../utils/log";
 import { DownloadTask, DownloaderConfig } from "../downloader";
+import { MediaContainer } from "../media_container";
 import {
     DownloadItem,
     DownloadSource,
@@ -129,7 +130,7 @@ async function runDownloader(context: DownloaderContext): Promise<void> {
             finishCancelledDownload(context);
             return;
         }
-        configureSourceTracks(context, metadata.tracks);
+        configureSourceTracks(context, metadata.tracks, metadata.container);
         events.emit("parsed");
 
         state.scheduler = createScheduler(context);
@@ -302,9 +303,7 @@ async function finishDownload(context: DownloaderContext): Promise<void> {
 
     state.status = "merging";
     logger.info("Merging chunks...");
-    const artifacts = await runtime.finishOutput(
-        new Map([...state.tracks].map(([trackId, track]) => [trackId, track.nextTaskIndex]))
-    );
+    await runtime.finishOutput(new Map([...state.tracks].map(([trackId, track]) => [trackId, track.nextTaskIndex])));
     if (!runtime.config.keepTemporaryFiles) {
         logger.info("End of merging.");
         logger.info("Starting cleaning temporary files.");
@@ -314,7 +313,7 @@ async function finishDownload(context: DownloaderContext): Promise<void> {
             logger.warning("Fail to delete temporary files, please delete them manually.");
         }
     }
-    logOutputPaths(artifacts.flatMap((artifact) => artifact.outputPaths));
+    logOutputPaths(runtime.getOutputPaths());
     state.status = "finished";
     events.emit("finished");
 }
@@ -385,7 +384,11 @@ function getDownloadSnapshot(context: DownloaderContext): SourceDownloadSnapshot
 
 const TRACK_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 
-function configureSourceTracks(context: DownloaderContext, tracks: readonly SourceTrack[]): void {
+function configureSourceTracks(
+    context: DownloaderContext,
+    tracks: readonly SourceTrack[],
+    container: MediaContainer
+): void {
     if (tracks.length === 0) {
         throw new Error("A prepared source must declare at least one track.");
     }
@@ -402,7 +405,7 @@ function configureSourceTracks(context: DownloaderContext, tracks: readonly Sour
         ids.add(filesystemIdentity);
         context.state.tracks.set(track.id, { nextTaskIndex: 0 });
     }
-    context.runtime.configureTracks(tracks);
+    context.runtime.configureTracks(tracks, container);
 }
 
 function validateTrackTotal(

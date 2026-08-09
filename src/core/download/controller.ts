@@ -31,7 +31,7 @@ export interface DownloadTrackSnapshot {
     mediaTrack: MediaTrack;
     sourcePath: string;
     plannedOutputPath: string;
-    /** Final paths are published only after this track has finished merging. */
+    /** Retained merged paths; cleared when a successful cross-track mux consumes them. */
     outputPaths: readonly string[];
     totalChunkCount: number;
     completedChunkCount: number;
@@ -40,7 +40,7 @@ export interface DownloadTrackSnapshot {
     successfulDuration: number;
 }
 
-/** A concentrated physical track ready for passthrough or a future cross-track muxer. */
+/** A concentrated physical track retained after output finalization. */
 export interface TrackArtifact {
     trackId: DownloadTrackId;
     mediaTrack: MediaTrack;
@@ -53,10 +53,11 @@ export interface DownloadSnapshot {
     /** Original source entry point; selected media-playlist URLs live on track snapshots. */
     sourcePath: string;
     tempPath: string;
+    /** Configured output basename after a recognized video extension is removed. */
     outputBasePath: string;
     /** Final paths flattened in declared track order and then split-output order. */
     outputPaths: readonly string[];
-    /** Completed per-track artifacts carrying the same logical media metadata. */
+    /** Per-track artifacts that remain on disk after optional muxing and cleanup. */
     artifacts: readonly TrackArtifact[];
     tracks: readonly DownloadTrackSnapshot[];
     startedAt: number;

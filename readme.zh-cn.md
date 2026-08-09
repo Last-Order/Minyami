@@ -1,7 +1,7 @@
 # 读读窝
 
 ## 依赖
-* mkvmerge (可选，mkv 格式输出需要)
+* mkvmerge 或 ffmpeg（可选；如需混流独立音视频轨道，请安装任意一个并加入 `PATH`）
 
 ! Minyami 要求使用 Node.js 22 或更高版本，推荐选用活跃 LTS 版本。
 
@@ -30,8 +30,8 @@ Help:
              <limit>               (可选) 并发数量的限制，默认为5
          --retries <limit>         重试次数
              <limit>               (可选) 重试次数的限制
-         --output, o <path>        输出限制
-             <path>                (可选) 输出文件路径，默认为 ./output.mkv
+         --output, o <path>        输出文件基名
+             <path>                (可选) 输出文件基名，默认为 ./output
          --temp-dir <path>         临时文件路径
              <path>                (可选) 临时文件路径，默认为当前工作目录
          --key <key>               手动设置 Key
@@ -41,8 +41,6 @@ Help:
          --headers, H <headers>    手动设定 HTTP Header
              <headers>             自定义 HTTP Header，例如："User-Agent: X-UA"
          --live                    直播下载模式
-         --format <format_name>    (可选) 输出格式，默认为 ts
-             <format_name>         格式名称，ts 或 mkv
          --proxy <proxy-server>    为 Minyami 设置代理
              <proxy-server>        代理地址，格式为 [protocol://<host>:<port>] 例如 --proxy "http://127.0.0.1:1080"
          --slice <range>           下载部分内容
@@ -119,8 +117,7 @@ const source = {
 1–64 位安全且唯一的名称。`SourceTrack.mediaTrack` 则是 selector 接收到的同一个逻辑描述对象，
 其中的不透明 id 不受文件名规则限制。HLS 外置音轨会成为独立下载轨，内嵌音频则保留在原始物理轨中，
 不会产生重复输出。snapshot 模式会为每条选中轨道产出 batch，follow 模式会并发刷新所有选中播放列表。
-track snapshot 和已完成 artifact 都会保留同一个 `MediaTrack` 及其实际上游地址和输出文件，作为后续自动
-混流功能的输入边界。
+如需混流独立音视频轨道，请安装 `mkvmerge` 或 `ffmpeg`，将其加入 `PATH`，然后按正常方式指定输出文件基名下载。
 
 ## 常见问题
 

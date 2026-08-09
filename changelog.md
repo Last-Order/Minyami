@@ -16,6 +16,8 @@ Breaking changes are measured from v5.5.1. Intermediate APIs used only during 6.
 -   Raised the minimum supported Node.js version to 22.
 -   Changed the default parent directory for `minyami_<timestamp>_<random>` temporary workspaces from the system temporary directory to the current working directory. The workspace and temporary-file naming strategies are unchanged.
 -   Removed the `--clean` CLI command. Temporary workspaces that cannot be deleted automatically must now be removed manually.
+-   Removed the `--format` CLI option and `DownloaderConfig.format`. `--output` / `DownloaderConfig.output` is now an output basename: a recognized video extension is discarded, and the actual output extension is selected from the source or muxer container.
+-   Custom `DownloadSource` preparation metadata must now declare its protocol-neutral `MediaContainer`. Custom `Muxer` implementations must likewise declare their `outputContainer`.
 
 ### Added
 
@@ -23,6 +25,7 @@ Breaking changes are measured from v5.5.1. Intermediate APIs used only during 6.
 -   Added the protocol-neutral `streamSelector`, `StreamCatalog`, `StreamOption`, `MediaTrack`, and `TrackSelection` APIs. A selector returns one or more canonical video/audio tracks from a compatible stream option, or `undefined` to cancel.
 -   Added multi-track downloading with independent temporary directories, ordering, progress, dropped-item gaps, and output concentration for each physical track.
 -   Added controller snapshots with per-track state and metadata-preserving `TrackArtifact` outputs. Logical `MediaTrack` identities remain separate from filesystem-safe execution track ids.
+-   Added the extensible `Muxer` interface and built-in `mkvmerge` and FFmpeg implementations. Multi-track audio/video downloads automatically use the first available candidate from the configured muxer list.
 
 ### Changed
 
@@ -30,3 +33,4 @@ Breaking changes are measured from v5.5.1. Intermediate APIs used only during 6.
 -   CLI downloads of master playlists with multiple compatible options now open an interactive terminal selector. Non-TTY CLI usage and library defaults select every track in the highest-bandwidth option.
 -   HTTP headers, cookies, and proxy configuration are isolated per downloader instance.
 -   Non-debug error logs now include the underlying error message when available.
+-   HLS tracks retained without cross-track muxing use the `.ts` container. `mkvmerge` produces `.mkv`, while FFmpeg produces `.mp4` with `faststart`; successful muxing removes the intermediate per-track files.

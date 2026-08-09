@@ -197,6 +197,7 @@ describe("HLSSource", () => {
                     output,
                     tempDir: directory,
                     threads: 3,
+                    muxers: [],
                 });
 
                 await downloader.download();

@@ -2,8 +2,11 @@ import { randomBytes } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { getAvailableOutputPath } from "../../utils/common";
+import logger from "../../utils/log";
 import FileConcentrator from "../file_concentrator";
 import { DownloadTask, DownloaderConfig } from "../downloader";
+import { createContainerOutputPath, MediaContainer } from "../media_container";
+import { MuxInput, selectAvailableMuxer } from "../muxer";
 import { MediaTrack } from "../source/stream_selection";
 import { DownloadItem, DownloadTrackId, SourceTrack } from "../source/types";
 import { TrackArtifact } from "./controller";
@@ -49,11 +52,13 @@ export class DownloadRuntime {
 
     private readonly tracks = new Map<DownloadTrackId, RuntimeTrack>();
     private tracksConfigured = false;
+    private sourceContainer?: MediaContainer;
+    private muxedOutputPath?: string;
 
     constructor(config: DownloaderConfig = {}) {
         this.config = normalizeDownloaderConfig(config);
         this.tempPath = this.config.tempPath;
-        this.outputBasePath = this.config.outputPath;
+        this.outputBasePath = this.config.outputBasePath;
         this.http = new DownloadHttpClient(this.config);
         this.chunkExecutor = new ChunkExecutor(this.http, this.keys, this.encryptionHandlers);
     }
@@ -64,11 +69,12 @@ export class DownloadRuntime {
         fs.mkdirSync(this.tempPath);
     }
 
-    configureTracks(metadata: readonly SourceTrack[]): void {
+    configureTracks(metadata: readonly SourceTrack[], container: MediaContainer): void {
         if (this.tracksConfigured) {
             throw new Error("Download tracks have already been configured.");
         }
         this.tracksConfigured = true;
+        this.sourceContainer = container;
         this.progress.registerTracks(metadata.map((track) => track.id));
 
         for (const track of metadata) {
@@ -162,6 +168,9 @@ export class DownloadRuntime {
         if (errors.length > 0) {
             throw errors[0];
         }
+        // Cross-track muxing starts only after every concentrator has closed its immutable inputs.
+        const artifacts = this.getTrackArtifacts();
+        await this.muxTrackArtifacts(artifacts);
         return this.getTrackArtifacts();
     }
 
@@ -193,6 +202,9 @@ export class DownloadRuntime {
     }
 
     getOutputPaths(): string[] {
+        if (this.muxedOutputPath) {
+            return [this.muxedOutputPath];
+        }
         return this.getTrackArtifacts().flatMap((artifact) => artifact.outputPaths);
     }
 
@@ -208,11 +220,69 @@ export class DownloadRuntime {
     }
 
     private createTrackOutputPath(trackId: DownloadTrackId, trackCount: number): string {
-        if (trackCount === 1) {
-            return this.outputBasePath;
+        if (!this.sourceContainer) {
+            throw new Error("Download source container has not been configured.");
         }
-        const parsed = path.parse(this.outputBasePath);
-        return path.join(parsed.dir, `${parsed.name}.${trackId}${parsed.ext}`);
+        return createContainerOutputPath(
+            this.outputBasePath,
+            this.sourceContainer,
+            trackCount === 1 ? undefined : trackId
+        );
+    }
+
+    private async muxTrackArtifacts(artifacts: readonly TrackArtifact[]): Promise<void> {
+        const hasVideo = artifacts.some((artifact) => artifact.mediaTrack.type === "video");
+        const hasAudio = artifacts.some((artifact) => artifact.mediaTrack.type === "audio");
+        if (!hasVideo || !hasAudio) {
+            return;
+        }
+        if (artifacts.some((artifact) => artifact.outputPaths.length !== 1)) {
+            // Split runs do not carry enough timing information to pair cross-track gaps safely.
+            logger.warning("Skip muxing because at least one track was split into multiple output files.");
+            return;
+        }
+
+        const muxer = await selectAvailableMuxer(this.config.muxers);
+        if (!muxer) {
+            logger.warning("No available muxer was found. Keep the independently merged track files.");
+            return;
+        }
+
+        const inputs: MuxInput[] = artifacts.map((artifact) => ({
+            trackId: artifact.trackId,
+            mediaTrack: artifact.mediaTrack,
+            inputPath: artifact.outputPaths[0],
+        }));
+        const outputPath = getAvailableOutputPath(
+            createContainerOutputPath(this.outputBasePath, muxer.outputContainer)
+        );
+        logger.info(`Muxing audio and video tracks with ${muxer.name}...`);
+        try {
+            await muxer.mux({ inputs, outputPath });
+            if (!fs.existsSync(outputPath)) {
+                throw new Error(`Muxer ${muxer.name} did not create the requested output file: ${outputPath}`);
+            }
+        } catch (error) {
+            // A failed container must not be published; per-track artifacts remain recoverable.
+            await fs.promises.unlink(outputPath).catch(() => undefined);
+            throw error;
+        }
+        this.muxedOutputPath = outputPath;
+        await this.deleteMuxInputs(inputs);
+    }
+
+    private async deleteMuxInputs(inputs: readonly MuxInput[]): Promise<void> {
+        for (const input of inputs) {
+            try {
+                await fs.promises.unlink(input.inputPath);
+                const track = this.requireTrack(input.trackId);
+                // Snapshots expose only paths that still exist after successful mux cleanup.
+                track.outputPaths = track.outputPaths.filter((outputPath) => outputPath !== input.inputPath);
+            } catch {
+                // Cleanup failure does not invalidate the already verified muxed container.
+                logger.warning(`Failed to delete merged track file [${path.resolve(input.inputPath)}].`);
+            }
+        }
     }
 
     private requireTrack(trackId: DownloadTrackId): RuntimeTrack {

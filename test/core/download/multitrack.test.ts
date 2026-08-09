@@ -3,6 +3,7 @@ import * as http from "http";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
 import { createDownloader } from "../../../src/core/download/downloader";
+import { MPEG_TS_CONTAINER } from "../../../src/core/media_container";
 import { DownloadItemNamingContext, DownloadSource, SourceTrack } from "../../../src/core/source/types";
 import { close, listen } from "../../helpers/http";
 import { withTempDirectory } from "../../helpers/filesystem";
@@ -44,7 +45,7 @@ describe("multi-track downloads", () => {
                     sourcePath: "custom://presentation",
                     continuous: false,
                     async prepare() {
-                        return { tracks };
+                        return { container: MPEG_TS_CONTAINER, tracks };
                     },
                     async *discover() {
                         yield {
@@ -66,7 +67,12 @@ describe("multi-track downloads", () => {
                         };
                     },
                 };
-                const downloader = createDownloader(source, { output, tempDir: directory, threads: 4 });
+                const downloader = createDownloader(source, {
+                    output,
+                    tempDir: directory,
+                    threads: 4,
+                    muxers: [],
+                });
                 const downloadedTrackIds: string[] = [];
                 downloader.on("chunk-downloaded", (info) => downloadedTrackIds.push(info.trackId));
 
@@ -86,7 +92,7 @@ describe("multi-track downloads", () => {
                 const snapshot = downloader.getSnapshot();
                 expect(snapshot).toMatchObject({
                     sourcePath: "custom://presentation",
-                    outputBasePath: output,
+                    outputBasePath: path.join(directory, "media"),
                     outputPaths: [videoOutput, audioOutput],
                     artifacts: [
                         {
@@ -160,6 +166,7 @@ describe("multi-track downloads", () => {
                     tempDir: directory,
                     retries: 1,
                     threads: 5,
+                    muxers: [],
                 });
                 const errorTrackIds: string[] = [];
                 downloader.on("chunk-error", (_error, _taskName, trackId) => errorTrackIds.push(trackId));
@@ -252,6 +259,7 @@ describe("multi-track downloads", () => {
                 continuous: false,
                 async prepare() {
                     return {
+                        container: MPEG_TS_CONTAINER,
                         tracks: [
                             {
                                 ...createTrack("main"),
@@ -298,7 +306,7 @@ describe("multi-track downloads", () => {
                 sourcePath: "custom://invalid-tracks",
                 continuous: false,
                 async prepare() {
-                    return { tracks };
+                    return { container: MPEG_TS_CONTAINER, tracks };
                 },
                 async *discover() {
                     throw new Error("Invalid tracks must fail before discovery.");
@@ -340,7 +348,7 @@ describe("multi-track downloads", () => {
                 sourcePath: "custom://invalid-batch",
                 continuous: false,
                 async prepare() {
-                    return { tracks: [createTrack("main")] };
+                    return { container: MPEG_TS_CONTAINER, tracks: [createTrack("main")] };
                 },
                 async *discover() {
                     for (const batch of batches) {
@@ -374,6 +382,7 @@ function createTwoTrackSource(
         continuous: false,
         async prepare() {
             return {
+                container: MPEG_TS_CONTAINER,
                 tracks: [
                     { ...createTrack("video"), itemNamer },
                     { ...createTrack("audio", "audio"), itemNamer },

@@ -1,5 +1,6 @@
 import { DownloadHttpClient } from "../download/http_client";
 import { KeyStore } from "../download/key_store";
+import { MediaContainer } from "../media_container";
 import { MediaTrack } from "./stream_selection";
 
 export type DownloadItemKind = "init" | "media";
@@ -72,6 +73,8 @@ export type SourceMetadata =
       }
     | {
           readonly cancelled?: false;
+          /** Container used when concentrated tracks are retained without cross-track muxing. */
+          readonly container: MediaContainer;
           /** Track order is stable and also determines output/snapshot order. */
           readonly tracks: readonly SourceTrack[];
       };

@@ -8,7 +8,7 @@
 
 ## Dependencies
 
--   mkvmerge (optional, mkv output required)
+-   mkvmerge or ffmpeg (optional; install either one and add it to `PATH` to mux separate audio/video tracks)
 
 ! Minyami requires Node.js 22 or newer. An active LTS release is recommended.
 
@@ -37,8 +37,8 @@ Help:
              <limit>               (Optional) Limit of threads, defaults to 5
          --retries <limit>         Retry limit
              <limit>               (Optional) Limit of retry times
-         --output, o <path>        Output path
-             <path>                (Optional) Output file path, defaults to ./output.mkv
+         --output, o <path>        Output basename
+             <path>                (Optional) Output basename, defaults to ./output
          --temp-dir <path>         Temporary file path
              <path>                (Optional) Temporary file path, defaults to the current working directory
          --key <key>               Set key manually (Internal use)
@@ -48,8 +48,6 @@ Help:
          --headers, H <headers>    HTTP Header used to download
              <headers>             Custom header. eg. "User-Agent: xxxxx". This option will override --cookies.
          --live                    Download live
-         --format <format_name>    (Optional) Set output format. default: ts
-             <format_name>         Format name. ts or mkv.
          --proxy <proxy-server>    Use the specified HTTP/HTTPS/SOCKS5 proxy
              <proxy-server>        Set proxy in [protocol://<host>:<port>] format. eg. --proxy "http://127.0.0.1:1080".
          --no-proxy                Disable reading proxy configuration from system environment variables or system settings.
@@ -173,9 +171,8 @@ const source = {
 identifier containing 1–64 letters, numbers, `_`, or `-`. `SourceTrack.mediaTrack` is the same logical
 descriptor exposed to selectors; its opaque id has no filesystem naming restriction. All tracks share one task
 scheduler but have isolated temporary directories, ordering, progress, and output concentration. A single track uses
-the requested output path; multiple tracks use `<basename>.<trackId><ext>`. Track snapshots and completed artifacts
-retain that same `MediaTrack` object together with their actual upstream path and final outputs, forming the input
-boundary for a future muxing stage.
+the requested output basename. To mux separate audio and video tracks, install either `mkvmerge` or `ffmpeg`, add it
+to `PATH`, and use the normal download command with the desired output basename.
 
 `DownloadItem` is protocol-neutral. A custom source describes initialization and timed media resources directly;
 protocol-specific parser objects must not escape into the downloader:
