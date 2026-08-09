@@ -114,6 +114,61 @@ describe("createDownloader", () => {
         }
     });
 
+    test("splits merged output when a discovered item is dropped", async () => {
+        const server = http.createServer((request, response) => {
+            if (request.url === "/failed.ts") {
+                response.statusCode = 500;
+                response.end("failed");
+                return;
+            }
+            response.end(request.url === "/first.ts" ? "first" : "second");
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-custom-source-gap-", async (directory) => {
+                const output = path.join(directory, "gapped.ts");
+                const source: DownloadSource = {
+                    sourcePath: "custom://gapped-media",
+                    continuous: false,
+                    async prepare() {
+                        return { sourcePath: this.sourcePath };
+                    },
+                    async *discover() {
+                        yield {
+                            items: [
+                                { url: `${baseUrl}/first.ts`, kind: "media", duration: 1 },
+                                { url: `${baseUrl}/failed.ts`, kind: "media", duration: 1 },
+                                { url: `${baseUrl}/second.ts`, kind: "media", duration: 1 },
+                            ],
+                            totalItemCount: 3,
+                        };
+                    },
+                };
+                const downloader = createDownloader(source, {
+                    output,
+                    tempDir: directory,
+                    retries: 1,
+                    threads: 3,
+                });
+
+                await downloader.download();
+
+                const firstOutput = path.join(directory, "gapped_0.ts");
+                const secondOutput = path.join(directory, "gapped_1.ts");
+                expect(downloader.getSnapshot()).toMatchObject({
+                    completedChunkCount: 3,
+                    successfulChunkCount: 2,
+                    droppedChunkCount: 1,
+                });
+                expect(fs.readFileSync(firstOutput, "utf8")).toBe("first");
+                expect(fs.readFileSync(secondOutput, "utf8")).toBe("second");
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test("publishes the failed lifecycle when source preparation fails", async () => {
         await withTempDirectory("minyami-failure-", async (directory) => {
             const source: DownloadSource = {

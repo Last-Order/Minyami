@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { randomBytes } from "crypto";
 import { getAvailableOutputPath } from "../../utils/common";
-import FileConcentrator, { TaskStatus } from "../file_concentrator";
+import FileConcentrator from "../file_concentrator";
 import { DownloadTask, DownloaderConfig } from "../downloader";
 import { DownloadItem, DownloadItemNamer } from "../source/types";
 import { ChunkExecutor, ChunkResult } from "./chunk_executor";
@@ -24,7 +24,6 @@ export class DownloadRuntime {
     readonly keys = new KeyStore();
     readonly encryptionHandlers = new EncryptionHandlerRegistry([new Aes128CbcHandler()]);
     readonly progress = new ProgressTracker();
-    readonly taskStatusRecord: TaskStatus[] = [];
     readonly chunkExecutor: ChunkExecutor;
 
     sourcePath = "";
@@ -77,8 +76,7 @@ export class DownloadRuntime {
         if (this.config.noMerge) {
             return;
         }
-        this.fileConcentrator.addTasks([{ filePath: outputPath, index: task.id }]);
-        this.taskStatusRecord[task.id] = TaskStatus.DONE;
+        this.fileConcentrator.markTaskReady({ filePath: outputPath, index: task.id });
     }
 
     recordTaskFailure(task: DownloadTask): "retry" | "drop" {
@@ -86,17 +84,23 @@ export class DownloadRuntime {
         if (task.retryCount < this.config.retries) {
             return "retry";
         }
-        this.taskStatusRecord[task.id] = TaskStatus.DROPPED;
+        if (!this.config.noMerge) {
+            this.fileConcentrator.markTaskDropped(task.id);
+        }
         this.progress.recordDropped();
         return "drop";
     }
 
-    async finishOutput(): Promise<string[]> {
+    async finishOutput(expectedTaskCount: number): Promise<string[]> {
         if (this.config.noMerge) {
             return [];
         }
-        await this.fileConcentrator.waitAllFilesWritten();
+        await this.fileConcentrator.waitAllFilesWritten(expectedTaskCount);
         return this.fileConcentrator.getOutputFilePaths();
+    }
+
+    abortOutput(): void {
+        this.fileConcentrator?.abort();
     }
 
     private validateTemporaryBasePath(): void {
@@ -112,7 +116,6 @@ export class DownloadRuntime {
         this.outputPath = getAvailableOutputPath(this.outputPath);
         this.fileConcentrator = new FileConcentrator({
             outputPath: this.outputPath,
-            taskStatusRecord: this.taskStatusRecord,
             deleteAfterWritten: !this.config.keepTemporaryFiles,
         });
         this.outputPrepared = true;

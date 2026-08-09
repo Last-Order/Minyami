@@ -3,7 +3,6 @@ import * as path from "path";
 import logger from "../../utils/log";
 import { deleteEmptyDirectory } from "../../utils/system";
 import { DownloadTask, DownloaderConfig } from "../downloader";
-import { TaskStatus } from "../file_concentrator";
 import { DownloadItem, DownloadSource, DownloadSourceContext, SourceBatch } from "../source/types";
 import {
     ChunkDownloadedInfo,
@@ -143,6 +142,7 @@ async function runDownloader(context: DownloaderContext): Promise<void> {
         await finishDownload(context);
     } catch (error) {
         state.scheduler?.abort();
+        runtime.abortOutput();
         await state.schedulerCompletion?.catch(() => undefined);
         if (state.hardStopped) {
             return;
@@ -179,9 +179,6 @@ function addSourceBatch(context: DownloaderContext, batch: SourceBatch): void {
             retryCount: 0,
         };
     });
-    for (const task of tasks) {
-        runtime.taskStatusRecord[task.id] = TaskStatus.PENDING;
-    }
     // Finite sources may publish their final total; otherwise the total means "discovered so far".
     state.totalChunkCount = batch.totalItemCount ?? state.nextTaskId;
     if (tasks.length > 0) {
@@ -267,7 +264,7 @@ async function finishDownload(context: DownloaderContext): Promise<void> {
 
     state.status = "merging";
     logger.info("Merging chunks...");
-    const outputPaths = await runtime.finishOutput();
+    const outputPaths = await runtime.finishOutput(state.nextTaskId);
     if (!runtime.config.keepTemporaryFiles) {
         logger.info("End of merging.");
         logger.info("Starting cleaning temporary files.");
@@ -306,6 +303,7 @@ function hardStopDownloader(context: DownloaderContext): void {
     abortController.abort();
     // The second SIGINT is explicitly destructive to queued work and therefore bypasses merge/finalization.
     state.scheduler?.abort();
+    runtime.abortOutput();
     if (!state.isDownloaded) {
         state.isDownloaded = true;
         state.status = "finished";
