@@ -17,9 +17,9 @@ export interface LiveDownloadController {
     off(event: DownloadEvent, listener: DownloadEventListener): LiveDownloadController;
 }
 
-export function createLiveDownloader(m3u8Path: string, config: LiveDownloaderConfig = {}): LiveDownloadController {
+export function createLiveDownloader(sourcePath: string, config: LiveDownloaderConfig = {}): LiveDownloadController {
     // Live behavior is a follow-mode source, not a separate scheduler or output implementation.
-    const downloader = createDownloader(createHLSSource(m3u8Path, { mode: "follow" }), config);
+    const downloader = createDownloader(createHLSSource(sourcePath, { mode: "follow" }), config);
     const controller: LiveDownloadController = {
         download: () => downloader.download(),
         stop: () => downloader.stop(),

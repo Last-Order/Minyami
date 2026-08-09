@@ -1,9 +1,9 @@
-import logger from "../../utils/log";
-import { buildFullUrl } from "../../utils/common";
-import { isInitialChunk, isNormalChunk, MasterPlaylist, M3U8Chunk, Playlist } from "../m3u8";
-import { ParserMode, ParserResult } from "../parsers/types";
-import { PlaylistLoader } from "./hls/playlist_loader";
-import { prepareSite } from "./hls/site_adapter";
+import logger from "../../../utils/log";
+import { buildFullUrl } from "../../../utils/common";
+import { SiteAdapterMode, SiteAdapterResult } from "./adapters/types";
+import { isInitialChunk, isNormalChunk, HLSChunk, MasterPlaylist, MediaPlaylist } from "./parser";
+import { PlaylistLoader } from "./playlist_loader";
+import { prepareSite } from "./site_adapter";
 import {
     DownloadEncryption,
     DownloadItem,
@@ -11,7 +11,7 @@ import {
     DownloadSourceContext,
     SourceBatch,
     SourceMetadata,
-} from "./types";
+} from "../types";
 
 export type HLSSourceMode = "snapshot" | "follow";
 
@@ -34,8 +34,8 @@ export class HLSSource implements DownloadSource {
     private readonly initialChunkUrls = new Set<string>();
     private readonly sequenceIds = new Set<number>();
     private loader?: PlaylistLoader;
-    private playlist?: Playlist;
-    private sitePlan: ParserResult = {};
+    private playlist?: MediaPlaylist;
+    private sitePlan: SiteAdapterResult = {};
     private timeout = 60000;
     private prepared = false;
     private discoveredItemCount = 0;
@@ -50,7 +50,7 @@ export class HLSSource implements DownloadSource {
             throw new Error("This HLS source has already been prepared.");
         }
         if (!this.sourcePath) {
-            throw new Error("Missing M3U8 path.");
+            throw new Error("Missing HLS source path.");
         }
         throwIfAborted(signal);
         this.loader = new PlaylistLoader(context.http);
@@ -61,7 +61,7 @@ export class HLSSource implements DownloadSource {
 
         this.sitePlan = await prepareSite({
             mode: this.parserMode,
-            m3u8Path: this.sourcePath,
+            sourcePath: this.sourcePath,
             playlist: this.playlist,
             key: context.explicitKey,
             retries: context.retries,
@@ -129,7 +129,7 @@ export class HLSSource implements DownloadSource {
                 }
                 const status = (error as any)?.response?.status;
                 if (status >= 400 && status <= 599) {
-                    logger.info("M3U8 file is no longer available. Stop downloading.");
+                    logger.info("HLS playlist is no longer available. Stop downloading.");
                     return;
                 }
                 logger.warning("Unable to refresh M3U8 file. Keep the current playlist and retry later.");
@@ -137,7 +137,7 @@ export class HLSSource implements DownloadSource {
         }
     }
 
-    private get parserMode(): ParserMode {
+    private get parserMode(): SiteAdapterMode {
         return this.continuous ? "live" : "archive";
     }
 
@@ -158,7 +158,7 @@ export class HLSSource implements DownloadSource {
         sourcePath: string,
         context: DownloadSourceContext,
         initPrimaryKey?: number
-    ): Promise<Playlist> {
+    ): Promise<MediaPlaylist> {
         const loaded = await this.loader.load(sourcePath, {
             retries: context.retries,
             timeout: this.timeout,
@@ -192,7 +192,7 @@ export class HLSSource implements DownloadSource {
             return;
         }
         const missingKeys = this.playlist.encryptKeys.filter(
-            (key) => !context.keys.has(buildFullUrl(this.playlist.m3u8Url, key))
+            (key) => !context.keys.has(buildFullUrl(this.playlist.playlistUrl, key))
         );
         if (missingKeys.length === 0) {
             return;
@@ -203,12 +203,12 @@ export class HLSSource implements DownloadSource {
         const resolved = await this.sitePlan.keyResolver({
             keyUrls: missingKeys,
             explicitKeys: context.explicitKey ? context.explicitKey.split(",") : [],
-            playlistUrl: this.playlist.m3u8Url,
+            playlistUrl: this.playlist.playlistUrl,
         });
         context.keys.setMany(resolved);
     }
 
-    private takeNewChunks(chunks: M3U8Chunk[]): M3U8Chunk[] {
+    private takeNewChunks(chunks: HLSChunk[]): HLSChunk[] {
         return chunks.filter((chunk) => {
             if (isNormalChunk(chunk)) {
                 // Media sequence is stable across sliding live windows and is the canonical segment identity.
@@ -227,7 +227,7 @@ export class HLSSource implements DownloadSource {
         });
     }
 
-    private toItems(chunks: M3U8Chunk[]): DownloadItem[] {
+    private toItems(chunks: HLSChunk[]): DownloadItem[] {
         return chunks.map((chunk) => {
             const encryption = this.toEncryption(chunk);
             if (isInitialChunk(chunk)) {
@@ -246,14 +246,14 @@ export class HLSSource implements DownloadSource {
         });
     }
 
-    private toEncryption(chunk: M3U8Chunk): DownloadEncryption | undefined {
+    private toEncryption(chunk: HLSChunk): DownloadEncryption | undefined {
         if (!chunk.isEncrypted) {
             return undefined;
         }
         return {
             scheme: "aes-128-cbc",
             // Resolve now: the playlist URL can change on a later refresh while this item is still queued.
-            keyId: buildFullUrl(this.playlist.m3u8Url, chunk.key),
+            keyId: buildFullUrl(this.playlist.playlistUrl, chunk.key),
             // HLS derives an omitted media IV from its sequence; executors should not know that protocol rule.
             iv: isInitialChunk(chunk) ? chunk.iv : chunk.iv || chunk.sequenceId.toString(16),
         };

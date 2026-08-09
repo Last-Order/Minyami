@@ -1,13 +1,13 @@
-import { buildFullUrl } from "../../utils/common";
-import { ParserOptions, ParserResult } from "./types";
+import { buildFullUrl } from "../../../../utils/common";
+import { SiteAdapterOptions, SiteAdapterResult } from "./types";
 
-export function parseHibiki({ key, playlist }: ParserOptions): ParserResult {
+export function adaptHibiki({ key, playlist }: SiteAdapterOptions): SiteAdapterResult {
     if (!key) {
         throw new Error("To download Hibiki-Radio, you need to set a key manually");
     }
     const encryptionKeys: Record<string, string> = {};
     for (const keyUrl of playlist.encryptKeys) {
-        encryptionKeys[buildFullUrl(playlist.m3u8Url, keyUrl)] = key;
+        encryptionKeys[buildFullUrl(playlist.playlistUrl, keyUrl)] = key;
     }
     return {
         encryptionKeys,

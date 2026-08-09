@@ -1,37 +1,37 @@
 import logger from "../../../utils/log";
-import { parseAbema } from "../../parsers/abema";
-import { parseCommon } from "../../parsers/common";
-import { parseHibiki } from "../../parsers/hibiki";
-import { ParserOptions, ParserResult } from "../../parsers/types";
-import { parseYoutube } from "../../parsers/youtube";
+import { adaptAbema } from "./adapters/abema";
+import { adaptCommon } from "./adapters/common";
+import { adaptHibiki } from "./adapters/hibiki";
+import { SiteAdapterOptions, SiteAdapterResult } from "./adapters/types";
+import { adaptYoutube } from "./adapters/youtube";
 
-export async function prepareSite(options: ParserOptions): Promise<ParserResult> {
-    const { playlist, m3u8Path, mode } = options;
+export async function prepareSite(options: SiteAdapterOptions): Promise<SiteAdapterResult> {
+    const { playlist, sourcePath, mode } = options;
 
     if (playlist.encryptKeys.length > 0) {
         const firstKey = playlist.encryptKeys[0];
         if (firstKey.startsWith("abematv-license")) {
             logger.info("Site confirmed: AbemaTV.");
-            return parseAbema(options);
+            return adaptAbema(options);
         }
-        if (mode === "archive" && m3u8Path.includes("d22puzix29w08m")) {
+        if (mode === "archive" && sourcePath.includes("d22puzix29w08m")) {
             logger.info("Site confirmed: Hibiki-Radio.");
-            return parseHibiki(options);
+            return adaptHibiki(options);
         }
-        logger.warning("Site is not supported by Minyami Core. Try common parser.");
-        return parseCommon(options);
+        logger.warning("Site is not supported by Minyami Core. Use the common HLS adapter.");
+        return adaptCommon(options);
     }
 
-    if (m3u8Path.includes("googlevideo")) {
+    if (sourcePath.includes("googlevideo")) {
         logger.info("Site confirmed: YouTube.");
-        return parseYoutube(options);
+        return adaptYoutube(options);
     }
 
-    if (mode === "archive" && m3u8Path.includes("bcovlive")) {
+    if (mode === "archive" && sourcePath.includes("bcovlive")) {
         logger.info("Site confirmed: Stagecrowd.");
-        return parseCommon(options);
+        return adaptCommon(options);
     }
 
-    logger.warning("Site is not supported by Minyami Core. Try common parser.");
-    return parseCommon(options);
+    logger.warning("Site is not supported by Minyami Core. Use the common HLS adapter.");
+    return adaptCommon(options);
 }

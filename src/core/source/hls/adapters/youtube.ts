@@ -1,6 +1,6 @@
-import { ParserOptions, ParserResult } from "./types";
+import { SiteAdapterOptions, SiteAdapterResult } from "./types";
 
-export function parseYoutube(_options: ParserOptions): ParserResult {
+export function adaptYoutube(_options: SiteAdapterOptions): SiteAdapterResult {
     return {
         itemNamer: (item) => {
             const match = item.url.match(/\/(\d+?)\/goap/);

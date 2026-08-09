@@ -1,10 +1,10 @@
-import logger from "../../utils/log";
-import { buildFullUrl } from "../../utils/common";
-import { ParserOptions, ParserResult } from "./types";
+import logger from "../../../../utils/log";
+import { buildFullUrl } from "../../../../utils/common";
+import { SiteAdapterOptions, SiteAdapterResult } from "./types";
 
 class EncryptionKeyFetchError extends Error {}
 
-export async function parseCommon({ http, retries }: ParserOptions): Promise<ParserResult> {
+export async function adaptCommon({ http, retries }: SiteAdapterOptions): Promise<SiteAdapterResult> {
     return {
         keyResolver: async ({ keyUrls, explicitKeys, playlistUrl }) => {
             const resolved: Record<string, string> = {};

@@ -1,25 +1,25 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import M3U8, {
+import HLSParser, {
+    HLSParseError,
     isEncryptedChunk,
     isInitialChunk,
     isNormalChunk,
     MasterPlaylist,
-    M3U8ParseError,
-    Playlist,
-} from "../../src/core/m3u8";
-import logger from "../../src/utils/log";
+    MediaPlaylist,
+} from "../../../../src/core/source/hls/parser";
+import logger from "../../../../src/utils/log";
 
-describe("M3U8", () => {
+describe("HLSParser", () => {
     test("selects the master playlist parser", () => {
-        const parsed = new M3U8({
-            m3u8Content: [
+        const parsed = new HLSParser({
+            content: [
                 "#EXTM3U",
                 '#EXT-X-STREAM-INF:BANDWIDTH=1280000,CODECS="avc1.4d401f,mp4a.40.2",RESOLUTION=1280x720,FRAME-RATE=29.97',
                 "video/720p.m3u8",
                 "#EXT-X-STREAM-INF:BANDWIDTH=2560000",
                 "https://media.example/high.m3u8",
             ].join("\n"),
-            m3u8Url: "https://media.example/master/index.m3u8",
+            playlistUrl: "https://media.example/master/index.m3u8",
         }).parse();
 
         expect(parsed).toBeInstanceOf(MasterPlaylist);
@@ -39,11 +39,11 @@ describe("M3U8", () => {
     });
 
     test("selects the media playlist parser", () => {
-        const parsed = new M3U8({
-            m3u8Content: ["#EXTM3U", "#EXTINF:1,", "https://media.example/0.ts", "#EXT-X-ENDLIST"].join("\n"),
+        const parsed = new HLSParser({
+            content: ["#EXTM3U", "#EXTINF:1,", "https://media.example/0.ts", "#EXT-X-ENDLIST"].join("\n"),
         }).parse();
 
-        expect(parsed).toBeInstanceOf(Playlist);
+        expect(parsed).toBeInstanceOf(MediaPlaylist);
     });
 });
 
@@ -57,24 +57,22 @@ describe("MasterPlaylist", () => {
         {
             name: "a stream without a URI",
             content: "#EXT-X-STREAM-INF:BANDWIDTH=1280000\n",
-            expectedMessage: "Invalid M3U8 file.",
+            expectedMessage: "Invalid HLS playlist.",
         },
         {
             name: "a relative stream URI without a playlist URL",
             content: ["#EXT-X-STREAM-INF:BANDWIDTH=1280000", "720p.m3u8"].join("\n"),
-            expectedMessage: "Missing full url for M3U8.",
+            expectedMessage: "Missing base URL for HLS playlist.",
         },
     ])("rejects $name", ({ content, expectedMessage }) => {
-        expect(() => new MasterPlaylist({ m3u8Content: content, m3u8Url: "" })).toThrow(
-            new M3U8ParseError(expectedMessage)
-        );
+        expect(() => new MasterPlaylist({ content, playlistUrl: "" })).toThrow(new HLSParseError(expectedMessage));
     });
 });
 
-describe("Playlist", () => {
+describe("MediaPlaylist", () => {
     test("parses sequence, initialization, segment, end, and duration metadata", () => {
-        const playlist = new Playlist({
-            m3u8Content: [
+        const playlist = new MediaPlaylist({
+            content: [
                 "#EXTM3U",
                 "#EXT-X-MEDIA-SEQUENCE:41",
                 '#EXT-X-MAP:URI="init.mp4"',
@@ -87,7 +85,7 @@ describe("Playlist", () => {
                 "#EXTINF:10,ignored after end list",
                 "segments/43.m4s",
             ].join("\n"),
-            m3u8Url: "https://cdn.example/live/playlist.m3u8",
+            playlistUrl: "https://cdn.example/live/playlist.m3u8",
         });
 
         expect(playlist.chunks).toEqual([
@@ -121,8 +119,8 @@ describe("Playlist", () => {
 
     test("applies AES-128 metadata until encryption is disabled", () => {
         const iv = "0000000000000000000000000000000a";
-        const playlist = new Playlist({
-            m3u8Content: [
+        const playlist = new MediaPlaylist({
+            content: [
                 "#EXTM3U",
                 "#EXT-X-MEDIA-SEQUENCE:10",
                 `#EXT-X-KEY:METHOD=AES-128,URI="keys/key.bin",IV=0x${iv}`,
@@ -133,7 +131,7 @@ describe("Playlist", () => {
                 "#EXTINF:2,",
                 "11.m4s",
             ].join("\n"),
-            m3u8Url: "https://cdn.example/live/playlist.m3u8",
+            playlistUrl: "https://cdn.example/live/playlist.m3u8",
         });
 
         expect(playlist.encryptKeys).toEqual(["keys/key.bin"]);
@@ -165,8 +163,8 @@ describe("Playlist", () => {
     });
 
     test("leaves an omitted media IV for the source to derive from its sequence", () => {
-        const playlist = new Playlist({
-            m3u8Content: [
+        const playlist = new MediaPlaylist({
+            content: [
                 "#EXTM3U",
                 "#EXT-X-MEDIA-SEQUENCE:7",
                 '#EXT-X-KEY:METHOD=AES-128,URI="key.bin"',
@@ -185,8 +183,8 @@ describe("Playlist", () => {
 
     test("warns once and treats unsupported encryption methods as plain segments", () => {
         const warning = jest.spyOn(logger, "warning").mockImplementation(() => undefined);
-        const playlist = new Playlist({
-            m3u8Content: [
+        const playlist = new MediaPlaylist({
+            content: [
                 "#EXTM3U",
                 '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="first.key"',
                 "#EXTINF:1,",
@@ -206,8 +204,8 @@ describe("Playlist", () => {
     });
 
     test("exposes chunk type guards for initial, media, and encrypted chunks", () => {
-        const playlist = new Playlist({
-            m3u8Content: [
+        const playlist = new MediaPlaylist({
+            content: [
                 '#EXT-X-KEY:METHOD=AES-128,URI="key.bin",IV=0x00000000000000000000000000000001',
                 '#EXT-X-MAP:URI="https://cdn.example/init.mp4"',
                 "#EXTINF:1,",
@@ -233,7 +231,7 @@ describe("Playlist", () => {
         {
             name: "a relative initialization segment without a playlist URL",
             content: '#EXT-X-MAP:URI="init.mp4"',
-            expectedMessage: "Missing full url for M3U8.",
+            expectedMessage: "Missing base URL for HLS playlist.",
         },
         {
             name: "an encrypted initialization segment without an IV",
@@ -245,14 +243,14 @@ describe("Playlist", () => {
         {
             name: "a media tag without a segment URI",
             content: "#EXTINF:1,\n",
-            expectedMessage: "Invalid M3U8 file.",
+            expectedMessage: "Invalid HLS playlist.",
         },
         {
             name: "a relative segment URI without a playlist URL",
             content: ["#EXTINF:1,", "0.ts"].join("\n"),
-            expectedMessage: "Missing full url for M3U8.",
+            expectedMessage: "Missing base URL for HLS playlist.",
         },
     ])("rejects $name", ({ content, expectedMessage }) => {
-        expect(() => new Playlist({ m3u8Content: content })).toThrow(new M3U8ParseError(expectedMessage));
+        expect(() => new MediaPlaylist({ content })).toThrow(new HLSParseError(expectedMessage));
     });
 });

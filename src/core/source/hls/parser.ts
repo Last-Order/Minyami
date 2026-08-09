@@ -1,7 +1,8 @@
-import { buildFullUrl } from "../utils/common";
-import logger from "../utils/log";
+import { buildFullUrl } from "../../../utils/common";
+import logger from "../../../utils/log";
 
-export class M3U8ParseError extends Error {}
+// HLS models stay with their parser so protocol details never leak into the shared downloader.
+export class HLSParseError extends Error {}
 
 interface BaseChunk {
     url: string;
@@ -37,7 +38,7 @@ interface EncryptedInitialChunk extends InitialChunk {
     isEncrypted: true;
 }
 
-export type M3U8Chunk = PlainNormalChunk | EncryptedNormalChunk | PlainInitialChunk | EncryptedInitialChunk;
+export type HLSChunk = PlainNormalChunk | EncryptedNormalChunk | PlainInitialChunk | EncryptedInitialChunk;
 
 export interface Stream {
     url: string;
@@ -47,15 +48,15 @@ export interface Stream {
     resolution?: { width: number; height: number };
 }
 
-export const isInitialChunk = (chunk: M3U8Chunk): chunk is PlainInitialChunk | EncryptedInitialChunk => {
+export const isInitialChunk = (chunk: HLSChunk): chunk is PlainInitialChunk | EncryptedInitialChunk => {
     return chunk.isInitialChunk;
 };
 
-export const isNormalChunk = (chunk: M3U8Chunk): chunk is PlainNormalChunk | EncryptedNormalChunk => {
+export const isNormalChunk = (chunk: HLSChunk): chunk is PlainNormalChunk | EncryptedNormalChunk => {
     return !isInitialChunk(chunk);
 };
 
-export const isEncryptedChunk = (chunk: M3U8Chunk): chunk is EncryptedNormalChunk | EncryptedInitialChunk => {
+export const isEncryptedChunk = (chunk: HLSChunk): chunk is EncryptedNormalChunk | EncryptedInitialChunk => {
     return chunk.isEncrypted;
 };
 
@@ -75,18 +76,18 @@ const parseTagBody = (body: string): Record<string, string> => {
 };
 
 export class MasterPlaylist {
-    m3u8Content: string;
-    m3u8Url: string;
+    content: string;
+    playlistUrl: string;
     streams: Stream[] = [];
 
-    constructor({ m3u8Content, m3u8Url }: { m3u8Content: string; m3u8Url: string }) {
-        this.m3u8Content = m3u8Content;
-        this.m3u8Url = m3u8Url;
+    constructor({ content, playlistUrl }: { content: string; playlistUrl: string }) {
+        this.content = content;
+        this.playlistUrl = playlistUrl;
         this.parse();
     }
 
     private parse() {
-        const lines = this.m3u8Content.split("\n");
+        const lines = this.content.split("\n");
         for (let i = 0; i <= lines.length - 1; i++) {
             /**
              * v8 引擎内部对 split/slice 出的字符串有一个对 parent 的引用
@@ -99,7 +100,7 @@ export class MasterPlaylist {
                 // stream information
                 const nextLine = lines[i + 1];
                 if (!nextLine) {
-                    throw new M3U8ParseError("Invalid M3U8 file.");
+                    throw new HLSParseError("Invalid HLS playlist.");
                 }
                 const tagBody = getTagBody(currentLine);
                 const parsedTagBody = parseTagBody(tagBody);
@@ -108,12 +109,12 @@ export class MasterPlaylist {
                      * @see https://datatracker.ietf.org/doc/html/rfc8216#section-4.3.4.2
                      * Every EXT-X-STREAM-INF tag MUST include the BANDWIDTH attribute.
                      */
-                    throw new M3U8ParseError("Missing BANDWIDTH attribute for streams.");
+                    throw new HLSParseError("Missing BANDWIDTH attribute for streams.");
                 }
-                if (!nextLine.startsWith("http") && !this.m3u8Url) {
-                    throw new M3U8ParseError("Missing full url for M3U8.");
+                if (!nextLine.startsWith("http") && !this.playlistUrl) {
+                    throw new HLSParseError("Missing base URL for HLS playlist.");
                 }
-                const url = buildFullUrl(this.m3u8Url, nextLine);
+                const url = buildFullUrl(this.playlistUrl, nextLine);
                 const streamInfo: Stream = {
                     url,
                     bandwidth: +parsedTagBody["BANDWIDTH"],
@@ -134,24 +135,24 @@ export class MasterPlaylist {
     }
 }
 
-export interface PlaylistParseParams {
-    m3u8Content: string;
-    m3u8Url?: string;
+export interface MediaPlaylistParseOptions {
+    content: string;
+    playlistUrl?: string;
 }
 
-export class Playlist {
-    m3u8Content: string;
-    m3u8Url: string;
+export class MediaPlaylist {
+    content: string;
+    playlistUrl: string;
     sequenceId: number = 0;
     isEnd: boolean = false;
-    chunks: M3U8Chunk[] = [];
+    chunks: HLSChunk[] = [];
     encryptKeys: string[] = [];
     averageChunkLength = 0;
     totalChunkLength = 0;
 
-    constructor({ m3u8Content, m3u8Url = "" }: PlaylistParseParams) {
-        this.m3u8Content = m3u8Content;
-        this.m3u8Url = m3u8Url;
+    constructor({ content, playlistUrl = "" }: MediaPlaylistParseOptions) {
+        this.content = content;
+        this.playlistUrl = playlistUrl;
         this.parse();
     }
 
@@ -163,7 +164,7 @@ export class Playlist {
             iv: string,
             isEncrypted = false,
             warned = false;
-        const lines = this.m3u8Content.split("\n");
+        const lines = this.content.split("\n");
         for (let i = 0; i <= lines.length - 1; i++) {
             /**
              * v8 引擎内部对 split/slice 出的字符串有一个对 parent 的引用
@@ -213,10 +214,10 @@ export class Playlist {
                 const parsedTagBody = parseTagBody(tagBody);
                 const initialSegmentUrl = parsedTagBody["URI"];
                 if (!initialSegmentUrl) {
-                    throw new M3U8ParseError("Missing URL for initialization segment");
+                    throw new HLSParseError("Missing URL for initialization segment");
                 }
-                if (!initialSegmentUrl.startsWith("http") && !this.m3u8Url) {
-                    throw new M3U8ParseError("Missing full url for M3U8.");
+                if (!initialSegmentUrl.startsWith("http") && !this.playlistUrl) {
+                    throw new HLSParseError("Missing base URL for HLS playlist.");
                 }
                 if (isEncrypted && !iv) {
                     /**
@@ -225,10 +226,10 @@ export class Playlist {
                      * tag that applies to the EXT-X-MAP is REQUIRED.
                      * @see https://datatracker.ietf.org/doc/html/rfc8216#section-4.3.2.5
                      */
-                    throw new M3U8ParseError("Missing IV for encrypted initialization segment");
+                    throw new HLSParseError("Missing IV for encrypted initialization segment");
                 }
                 this.chunks.push({
-                    url: buildFullUrl(this.m3u8Url, initialSegmentUrl),
+                    url: buildFullUrl(this.playlistUrl, initialSegmentUrl),
                     isEncrypted,
                     key,
                     iv,
@@ -252,14 +253,14 @@ export class Playlist {
                     }
                 }
                 if (!nextLine) {
-                    throw new M3U8ParseError("Invalid M3U8 file.");
+                    throw new HLSParseError("Invalid HLS playlist.");
                 }
-                if (!nextLine.startsWith("http") && !this.m3u8Url) {
-                    throw new M3U8ParseError("Missing full url for M3U8.");
+                if (!nextLine.startsWith("http") && !this.playlistUrl) {
+                    throw new HLSParseError("Missing base URL for HLS playlist.");
                 }
                 if (isEncrypted) {
                     this.chunks.push({
-                        url: buildFullUrl(this.m3u8Url, nextLine),
+                        url: buildFullUrl(this.playlistUrl, nextLine),
                         length: chunkLength,
                         isEncrypted: true,
                         key,
@@ -269,7 +270,7 @@ export class Playlist {
                     });
                 } else {
                     this.chunks.push({
-                        url: buildFullUrl(this.m3u8Url, nextLine),
+                        url: buildFullUrl(this.playlistUrl, nextLine),
                         length: chunkLength,
                         isEncrypted: false,
                         sequenceId: this.sequenceId,
@@ -310,30 +311,30 @@ export class Playlist {
     }
 }
 
-export default class M3U8 {
-    m3u8Content: string;
-    m3u8Url: string;
+export default class HLSParser {
+    content: string;
+    playlistUrl: string;
     initPrimaryKey: number;
     constructor({
-        m3u8Content,
-        m3u8Url,
+        content,
+        playlistUrl,
         initPrimaryKey,
     }: {
-        m3u8Content: string;
-        m3u8Url?: string;
+        content: string;
+        playlistUrl?: string;
         initPrimaryKey?: number;
     }) {
-        this.m3u8Content = m3u8Content;
-        this.m3u8Url = m3u8Url;
+        this.content = content;
+        this.playlistUrl = playlistUrl;
         this.initPrimaryKey = initPrimaryKey;
     }
     parse() {
-        if (this.m3u8Content.includes("#EXT-X-STREAM-INF")) {
-            return new MasterPlaylist({ m3u8Content: this.m3u8Content, m3u8Url: this.m3u8Url });
+        if (this.content.includes("#EXT-X-STREAM-INF")) {
+            return new MasterPlaylist({ content: this.content, playlistUrl: this.playlistUrl });
         } else {
-            return new Playlist({
-                m3u8Content: this.m3u8Content,
-                m3u8Url: this.m3u8Url,
+            return new MediaPlaylist({
+                content: this.content,
+                playlistUrl: this.playlistUrl,
             });
         }
     }

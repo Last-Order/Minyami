@@ -17,7 +17,7 @@ export interface ArchiveDownloadController {
 }
 
 export function createArchiveDownloader(
-    m3u8Path: string,
+    sourcePath: string,
     config: ArchiveDownloaderConfig = {}
 ): ArchiveDownloadController {
     const sourceOptions: HLSSourceOptions = { mode: "snapshot" };
@@ -29,7 +29,7 @@ export function createArchiveDownloader(
         };
     }
     // Keep the legacy public controller while delegating all execution to the shared source-driven lifecycle.
-    const downloader = createDownloader(createHLSSource(m3u8Path, sourceOptions), config);
+    const downloader = createDownloader(createHLSSource(sourcePath, sourceOptions), config);
     const controller: ArchiveDownloadController = {
         download: () => downloader.download(),
         getSnapshot: () => {
