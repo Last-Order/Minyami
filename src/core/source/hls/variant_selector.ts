@@ -8,7 +8,6 @@ export type HLSVariantSelector = (
 
 interface HLSVariantChoice {
     readonly title: string;
-    readonly description: string;
     readonly value: HLSVariant;
 }
 
@@ -40,7 +39,6 @@ function createHLSVariantChoices(variants: readonly HLSVariant[]): HLSVariantCho
         .sort((a, b) => b.bandwidth - a.bandwidth)
         .map((variant) => ({
             title: formatHLSVariant(variant),
-            description: variant.url,
             value: variant,
         }));
 }

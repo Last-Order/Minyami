@@ -36,19 +36,17 @@ describe("HLS variant selector", () => {
 
         const prompt = promptMock.mock.calls[0][0] as {
             initial: number;
-            choices: Array<{ title: string; description: string; value: HLSVariant }>;
+            choices: Array<{ title: string; value: HLSVariant }>;
         };
         expect(prompt.initial).toBe(0);
         expect(prompt.choices.map((choice) => choice.value)).toEqual([variants[1], variants[0]]);
         expect(variants.map((variant) => variant.bandwidth)).toEqual([800000, 2400000]);
         expect(prompt.choices[0]).toEqual({
             title: "1920x1080 | 2.40 Mbps | 59.94 fps | avc1.640028,mp4a.40.2",
-            description: variants[1].url,
             value: variants[1],
         });
         expect(prompt.choices[1]).toEqual({
             title: "unknown resolution | 0.80 Mbps",
-            description: variants[0].url,
             value: variants[0],
         });
     });
