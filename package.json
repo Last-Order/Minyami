@@ -36,7 +36,6 @@
         "axios": "^1.6.7",
         "chalk": "^2.4.2",
         "cli-progress": "^3.10.0",
-        "crypto-js": "^4.2.0",
         "erii": "^2.0.6",
         "https-proxy-agent": "^7.0.4",
         "socks-proxy-agent": "^8.0.2",
