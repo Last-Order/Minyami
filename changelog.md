@@ -2,35 +2,29 @@
 
 ## 6.0.0-beta.1 - 2026-08-04
 
-Breaking changes are measured from v5.5.1. Intermediate APIs used only during 6.0 beta development are omitted.
-
 ### Breaking changes
 
 -   Replaced the exported `ArchiveDownloader` and `LiveDownloader` classes with the `createArchiveDownloader()` and `createLiveDownloader()` controller factories. Downloads now expose state through `getSnapshot()`, `download()` promises resolve after the full lifecycle completes, and live downloads use `stop()` instead of `stopDownload()`.
--   Removed archive task resume, including the `resume` CLI command, `ArchiveDownloader.resume()`, and persisted task state. Live task-state persistence was also removed.
--   Removed the Nico archive/live parsers and their channel, task-grouping, persistence, API, type, and WebSocket support.
+-   Removed archive download resumption, including the `resume` CLI command and `ArchiveDownloader.resume()`.
+-   Removed built-in NicoVideo and NicoLive download support.
 -   Archive and live downloads now both drop a chunk after reaching the user-configured retry limit; archive downloads no longer retry ordinary failed chunks indefinitely.
 -   Changed the `chunk-downloaded` event payload. The 5.x `taskname`, `finishedChunksCount`, `totalChunksCount`, `chunkSpeed`, `ratioSpeed`, and `eta` fields were replaced by `taskName`, `trackId`, `completedChunkCount`, `successfulChunkCount`, `droppedChunkCount`, `totalChunkCount`, `successfulChunksPerSecond`, `successfulDurationRatio`, and `completionEta`.
--   Changed `--slice` selection to use segment overlap with a half-open `[start, end)` range. A segment is selected when its end is after `start` and its start is before `end`. Unlike 5.x, a segment ending exactly at `start` and a segment starting exactly at `end` are excluded; boundary segments and resulting output duration may therefore differ from previous releases.
--   Removed the `--chunk-naming-strategy` CLI option, `DownloaderConfig.chunkNamingStrategy`, and the `NamingStrategy` enum. Built-in HLS sources use the mixed `sequence_upstream-name` format; custom sources can provide an item namer.
+-   Changed `--slice` selection from the 5.x segment-start rule to segment overlap with a half-open `[start, end)` range. Segments spanning `start` are now included, while segments starting exactly at `end` are excluded, so boundary segments and output duration may differ.
+-   Removed the `--chunk-naming-strategy` CLI option and the corresponding `chunkNamingStrategy` library configuration. Temporary HLS chunks now use the mixed `sequence_upstream-name` format.
 -   Raised the minimum supported Node.js version to 22.
--   Changed the default parent directory for `minyami_<timestamp>_<random>` temporary workspaces from the system temporary directory to the current working directory. The workspace and temporary-file naming strategies are unchanged.
+-   Changed the default parent directory for temporary workspaces from the system temporary directory to the current working directory.
 -   Removed the `--clean` CLI command. Temporary workspaces that cannot be deleted automatically must now be removed manually.
 -   Removed the `--format` CLI option and `DownloaderConfig.format`. `--output` / `DownloaderConfig.output` is now an output basename: a recognized video extension is discarded, and the actual output extension is selected from the source or muxer container.
--   Custom `DownloadSource` preparation metadata must now declare its protocol-neutral `MediaContainer`. Custom `Muxer` implementations must likewise declare their `outputContainer`.
 
 ### Added
 
--   Added the protocol-neutral `DownloadSource`, `DownloadItem`, `SourceBatch`, and `SourceTrack` extension API, together with a configurable `HLSSource` and shared `createDownloader()` engine for custom sources.
--   Added the protocol-neutral `streamSelector`, `StreamCatalog`, `StreamOption`, `MediaTrack`, and `TrackSelection` APIs. A selector returns one or more canonical video/audio tracks from a compatible stream option, or `undefined` to cancel.
--   Added multi-track downloading with independent temporary directories, ordering, progress, dropped-item gaps, and output concentration for each physical track.
--   Added controller snapshots with per-track state and metadata-preserving `TrackArtifact` outputs. Logical `MediaTrack` identities remain separate from filesystem-safe execution track ids.
--   Added the extensible `Muxer` interface and built-in `mkvmerge` and FFmpeg implementations. Multi-track audio/video downloads automatically use the first available candidate from the configured muxer list.
+-   Added interactive video and audio selection for HLS master playlists. Choices show available resolution, frame rate, codec, bandwidth, language, and channel information, and the playlist's default audio rendition is preselected. Downloads start immediately when there is no choice to make; non-interactive terminals automatically use all tracks from the highest-bandwidth option.
+-   Added downloading of external HLS audio renditions and audio-only variants. Selected tracks are downloaded independently with separate progress, and remain as separate output files when they cannot be muxed.
+-   Added automatic muxing of separate video and audio tracks. Minyami uses `mkvmerge` when available and falls back to FFmpeg.
 
 ### Changed
 
--   HLS master playlists now expose external `EXT-X-MEDIA` audio renditions to stream selectors and download selected renditions as independent track outputs. URI-less embedded audio remains in the primary output.
--   CLI downloads of master playlists with multiple compatible options now open an interactive terminal selector. Non-TTY CLI usage and library defaults select every track in the highest-bandwidth option.
--   HTTP headers, cookies, and proxy configuration are isolated per downloader instance.
+-   CLI completion and ETA now count both successful and dropped chunks, while speed and downloaded-duration figures count only successful chunks. Progress output reports successful and dropped counts separately.
+-   Improved compatibility with HLS playlists containing blank or comment lines and AES-128 encryption metadata.
 -   Non-debug error logs now include the underlying error message when available.
--   HLS tracks retained without cross-track muxing use the `.ts` container. `mkvmerge` produces `.mkv`, while FFmpeg produces `.mp4` with `faststart`; successful muxing removes the intermediate per-track files.
+-   HLS tracks kept without audio/video muxing use `.ts`. If neither muxer is available, separate track files are retained; `mkvmerge` produces `.mkv`, while FFmpeg produces `.mp4` with `faststart`. Successful muxing removes the intermediate track files.
