@@ -3,6 +3,7 @@ import { URL } from "url";
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { Agent } from "agent-base";
 import UA from "../../../constants/ua";
+import { createTimedAbortScope } from "../../../utils/abort";
 import ProxyAgentHelper, { createProxyAgent } from "../../../utils/agent";
 
 export interface DownloadHttpClientConfig {
@@ -61,20 +62,19 @@ export class DownloadHttpClient {
     }
 
     async download(url: string, destination: string, options: AxiosRequestConfig = {}): Promise<void> {
-        const cancelSource = axios.CancelToken.source();
         const timeout = options.timeout || 60000;
         // Keep a local timeout guard because some adapters do not abort stalled response bodies consistently.
-        const timeoutId = setTimeout(() => cancelSource.cancel(), timeout);
+        const abortScope = createTimedAbortScope(timeout, options.signal);
 
         try {
             const response = await this.request<ArrayBuffer>(url, {
                 responseType: "arraybuffer",
-                cancelToken: cancelSource.token,
                 ...options,
+                signal: abortScope.signal,
             });
             const body = Buffer.from(response.data);
             const contentLength = response.headers["content-length"];
-            if (contentLength && parseInt(contentLength) !== body.length) {
+            if (contentLength && parseInt(String(contentLength)) !== body.length) {
                 throw new Error("Bad Response");
             }
             // Publish by rename so executors never observe a partially written destination as a successful item.
@@ -82,7 +82,7 @@ export class DownloadHttpClient {
             fs.writeFileSync(temporaryPath, body);
             fs.renameSync(temporaryPath, destination);
         } finally {
-            clearTimeout(timeoutId);
+            abortScope.dispose();
         }
     }
 }

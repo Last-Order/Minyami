@@ -4,6 +4,7 @@ import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import { exec } from "./system";
 import { getAvailableOutputPath } from "./common";
 import ProxyAgentHelper from "./agent";
+import { createTimedAbortScope } from "./abort";
 
 /**
  * 合并视频文件
@@ -79,14 +80,10 @@ export function mergeToTS(fileList = [], output = "./output.ts") {
  * @param path
  */
 export function download(url: string, path: string, options: AxiosRequestConfig = {}) {
-    const CancelToken = axios.CancelToken;
-    let source = CancelToken.source();
+    // Preserve caller cancellation while enforcing the legacy default deadline.
+    const abortScope = createTimedAbortScope(options.timeout || 60000, options.signal);
     const promise = new Promise<void>(async (resolve, reject) => {
         try {
-            setTimeout(() => {
-                source && source.cancel();
-                source = null;
-            }, options.timeout || 60000);
             const proxyAgentInstance = ProxyAgentHelper.getProxyAgentInstance();
             const response = await axios({
                 url,
@@ -96,12 +93,12 @@ export function download(url: string, path: string, options: AxiosRequestConfig 
                 headers: {
                     ...(!axios.defaults.headers.common["Host"] ? { Host: new URL(url).host } : {}),
                 },
-                cancelToken: source.token,
                 ...options,
+                signal: abortScope.signal,
             });
             if (
                 response.headers["content-length"] &&
-                parseInt(response.headers["content-length"]) !== response.data.length
+                parseInt(String(response.headers["content-length"])) !== response.data.length
             ) {
                 reject(new Error("Bad Response"));
             }
@@ -112,7 +109,7 @@ export function download(url: string, path: string, options: AxiosRequestConfig 
         } catch (e) {
             reject(e);
         } finally {
-            source = null;
+            abortScope.dispose();
         }
     });
     return promise;

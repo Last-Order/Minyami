@@ -33,7 +33,7 @@
     "license": "GPL-3.0-or-later",
     "dependencies": {
         "agent-base": "^7.1.0",
-        "axios": "^1.6.7",
+        "axios": "^1.19.0",
         "chalk": "^2.4.2",
         "cli-progress": "^3.10.0",
         "erii": "^2.0.6",
