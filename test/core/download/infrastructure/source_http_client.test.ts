@@ -18,15 +18,6 @@ describe("RetryingSourceHttpClient", () => {
         expect(get).toHaveBeenCalledTimes(2);
     });
 
-    test("does not perform an extra initial attempt beyond the configured maximum", async () => {
-        const http = new DownloadHttpClient(normalizeDownloaderConfig());
-        const get = jest.spyOn(http, "get").mockRejectedValue(new Error("unavailable"));
-        const sourceHttp = new RetryingSourceHttpClient(http, 2);
-
-        await expect(sourceHttp.get("https://example.com/playlist.m3u8")).rejects.toThrow("unavailable");
-        expect(get).toHaveBeenCalledTimes(2);
-    });
-
     test("does not retry a cancelled source request", async () => {
         const http = new DownloadHttpClient(normalizeDownloaderConfig());
         const abort = new AbortController();

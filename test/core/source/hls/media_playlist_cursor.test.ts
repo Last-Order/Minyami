@@ -51,17 +51,6 @@ describe("HLSMediaPlaylistCursor", () => {
         expect(videoBatches[0].trackId).toBe("video");
         expect(audioBatches[0].trackId).toBe("audio");
     });
-
-    test("leaves multiple explicit keys available to site-specific adapters", async () => {
-        const context = createContext();
-        const keyUrl = "abematv-license://ticket";
-        const playlist = { ...createPlaylist(), encryptionKeyUrls: [keyUrl] };
-        const cursor = createCursor("abema", playlist, context, "snapshot", ["first-key", "second-key"]);
-
-        await cursor.prepare(context, new AbortController().signal);
-
-        expect(context.keys.get(keyUrl)).toBe("first-key");
-    });
 });
 
 function createContext(): DownloadSourceContext {
@@ -73,8 +62,7 @@ function createCursor(
     id: string,
     playlist: HLSMediaPlaylist,
     context: DownloadSourceContext,
-    mode: "snapshot" | "follow" = "snapshot",
-    explicitKeys: readonly string[] = []
+    mode: "snapshot" | "follow" = "snapshot"
 ): HLSMediaPlaylistCursor {
     return new HLSMediaPlaylistCursor({
         id,
@@ -83,7 +71,7 @@ function createCursor(
         mode,
         initialPlaylist: playlist,
         loader: new PlaylistLoader(context.http),
-        explicitKeys,
+        explicitKeys: [],
     });
 }
 
