@@ -42,13 +42,20 @@ describe("createDownloader", () => {
                 };
                 const downloader = createDownloader(source, { output, tempDir: directory, threads: 2 });
                 let finished = false;
+                const finalizingStatuses: string[] = [];
                 downloader.once("finished", () => {
                     finished = true;
+                });
+                downloader.once("downloaded", () => {
+                    finalizingStatuses.push(downloader.getSnapshot().status);
+                    downloader.stop();
+                    finalizingStatuses.push(downloader.getSnapshot().status);
                 });
 
                 await downloader.download();
 
                 expect(finished).toBe(true);
+                expect(finalizingStatuses).toEqual(["merging", "merging"]);
                 expect(downloader.getSnapshot()).toMatchObject({
                     status: "finished",
                     sourcePath: "custom://media",
@@ -179,7 +186,7 @@ describe("createDownloader", () => {
                 const downloader = createDownloader(source, {
                     output,
                     tempDir: directory,
-                    retries: 1,
+                    taskAttempts: 1,
                     threads: 3,
                 });
 
@@ -256,5 +263,160 @@ describe("createDownloader", () => {
             expect(fs.existsSync(output)).toBe(false);
             expect(fs.readdirSync(directory)).toEqual([]);
         });
+    });
+
+    test("treats a graceful stop during preparation as cancellation", async () => {
+        await withTempDirectory("minyami-stop-preparing-", async (directory) => {
+            let preparationStarted!: () => void;
+            const started = new Promise<void>((resolve) => {
+                preparationStarted = resolve;
+            });
+            const source: DownloadSource = {
+                sourcePath: "custom://slow-prepare",
+                continuous: true,
+                async prepare(_context, signal) {
+                    preparationStarted();
+                    return new Promise((_resolve, reject) => {
+                        signal.addEventListener("abort", () => reject(new Error("preparation aborted")), {
+                            once: true,
+                        });
+                    });
+                },
+                async *discover() {
+                    throw new Error("Stopped preparation must not start discovery.");
+                },
+            };
+            const downloader = createDownloader(source, { tempDir: directory });
+            const events: string[] = [];
+            downloader.on("critical-error", () => events.push("critical-error"));
+            downloader.on("finished", () => events.push("finished"));
+
+            const completion = downloader.download();
+            await started;
+            downloader.stop();
+            expect(downloader.getSnapshot().status).toBe("stopping");
+
+            await expect(completion).resolves.toBeUndefined();
+            expect(events).toEqual(["finished"]);
+            expect(downloader.getSnapshot()).toMatchObject({ status: "finished", isEnd: true });
+            expect(fs.readdirSync(directory)).toEqual([]);
+        });
+    });
+
+    test("isolates observer failures from successful task commits", async () => {
+        await withMediaServer(async (playlistUrl, expectedOutput) => {
+            await withTempDirectory("minyami-observer-failure-", async (directory) => {
+                const output = path.join(directory, "observer.ts");
+                const source: DownloadSource = {
+                    sourcePath: "custom://observer",
+                    continuous: false,
+                    async prepare() {
+                        return {
+                            container: MPEG_TS_CONTAINER,
+                            tracks: [
+                                {
+                                    id: "main",
+                                    mediaTrack: { id: "logical-main", type: "video" },
+                                    sourcePath: this.sourcePath,
+                                },
+                            ],
+                        };
+                    },
+                    async *discover() {
+                        yield {
+                            trackId: "main",
+                            items: [
+                                { url: new URL("/0.ts", playlistUrl).href, kind: "init" },
+                                { url: new URL("/1.ts", playlistUrl).href, kind: "media", duration: 1 },
+                            ],
+                            totalItemCount: 2,
+                        };
+                    },
+                };
+                const downloader = createDownloader(source, { output, tempDir: directory, taskAttempts: 2 });
+                let laterObserverCalls = 0;
+                downloader.on("chunk-downloaded", () => {
+                    throw new Error("observer failed");
+                });
+                downloader.on("chunk-downloaded", () => laterObserverCalls++);
+
+                await expect(downloader.download()).resolves.toBeUndefined();
+
+                expect(laterObserverCalls).toBe(2);
+                expect(downloader.getSnapshot()).toMatchObject({
+                    status: "finished",
+                    completedChunkCount: 2,
+                    successfulChunkCount: 2,
+                    droppedChunkCount: 0,
+                });
+                expect(fs.readFileSync(output)).toEqual(expectedOutput);
+            });
+        });
+    });
+
+    test("hard abort cancels active task I/O before publishing a stable terminal event", async () => {
+        let requestStarted!: () => void;
+        const started = new Promise<void>((resolve) => {
+            requestStarted = resolve;
+        });
+        let responseTimer: NodeJS.Timeout | undefined;
+        const server = http.createServer((_request, response) => {
+            requestStarted();
+            responseTimer = setTimeout(() => response.end("late payload"), 1000);
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-hard-abort-", async (directory) => {
+                const source: DownloadSource = {
+                    sourcePath: "custom://hard-abort",
+                    continuous: true,
+                    async prepare() {
+                        return {
+                            container: MPEG_TS_CONTAINER,
+                            tracks: [
+                                {
+                                    id: "main",
+                                    mediaTrack: { id: "logical-main", type: "video" },
+                                    sourcePath: this.sourcePath,
+                                },
+                            ],
+                        };
+                    },
+                    async *discover(_context, signal) {
+                        yield {
+                            trackId: "main",
+                            items: [{ url: `${baseUrl}/slow.ts`, kind: "media", duration: 1 }],
+                        };
+                        await new Promise<void>((resolve) => {
+                            signal.addEventListener("abort", () => resolve(), { once: true });
+                        });
+                    },
+                };
+                const downloader = createDownloader(source, { tempDir: directory });
+                const events: string[] = [];
+                downloader.on("chunk-downloaded", () => events.push("chunk-downloaded"));
+                downloader.on("finished", () => events.push("finished"));
+
+                const completion = downloader.download();
+                await started;
+                downloader.abort();
+                await expect(completion).resolves.toBeUndefined();
+
+                expect(events).toEqual(["finished"]);
+                expect(downloader.getSnapshot()).toMatchObject({
+                    status: "aborted",
+                    completedChunkCount: 0,
+                    runningTaskCount: 0,
+                    pendingTaskCount: 0,
+                    isEnd: true,
+                });
+            });
+        } finally {
+            if (responseTimer) {
+                clearTimeout(responseTimer);
+            }
+            await close(server);
+        }
     });
 });

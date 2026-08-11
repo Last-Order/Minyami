@@ -58,10 +58,10 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 | `--version` | 显示当前版本。 |
 | `--download <input>`、`-d <input>` | 下载 m3u8 地址或文件。 |
 | `--threads <数量>` | 设置并发数量，默认为 `5`。 |
-| `--retries <次数>` | 设置重试次数上限。 |
+| `--retries <次数>` | 同时设置来源请求和下载任务的最大尝试次数，默认为 `5`。 |
 | `--output <路径>`、`-o <路径>` | 设置输出文件基名，默认为 `./output`。 |
 | `--temp-dir <路径>` | 设置临时文件所在的父目录。 |
-| `--key <密钥>` | 手动指定解密密钥。 |
+| `--key <密钥>` | 手动指定 HLS 解密密钥。common HLS adapter 会将它用于所有 key URI，同时跳过远程密钥下载。 |
 | `--cookies <内容>` | 为下载请求添加 Cookie。 |
 | `--headers <请求头>`、`-H <请求头>` | 添加 HTTP 请求头；可重复使用以添加多个请求头。 |
 | `--live` | 持续下载直播播放列表。 |

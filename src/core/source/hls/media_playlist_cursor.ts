@@ -28,6 +28,7 @@ export interface HLSMediaPlaylistCursorOptions {
     readonly initialPlaylist: HLSMediaPlaylist;
     readonly loader: PlaylistLoader;
     readonly slice?: HLSSlice;
+    readonly explicitKeys: readonly string[];
 }
 
 /**
@@ -60,8 +61,7 @@ export class HLSMediaPlaylistCursor {
             mode: this.parserMode,
             sourcePath: this.options.sourcePath,
             playlist: this.playlist,
-            key: context.explicitKey,
-            retries: context.retries,
+            explicitKeys: this.options.explicitKeys,
             http: context.http,
         });
         if (this.sitePlan.segments) {
@@ -71,7 +71,7 @@ export class HLSMediaPlaylistCursor {
             context.keys.setMany(this.sitePlan.encryptionKeys);
         }
         // Items may execute as soon as discovery yields, so known keys must be ready first.
-        await this.checkKeys(context);
+        await this.checkKeys(context, signal);
         this.prepared = true;
 
         return {
@@ -108,6 +108,7 @@ export class HLSMediaPlaylistCursor {
             }
 
             if (streamEnded) {
+                // ENDLIST closes only this cursor; the source waits for other selected tracks independently.
                 logger.info(`Stream track ${this.options.id} ended. Waiting for current tasks finished.`);
                 return;
             }
@@ -118,9 +119,12 @@ export class HLSMediaPlaylistCursor {
             }
 
             try {
-                this.playlist = await this.loadMediaPlaylist(context);
-                await this.checkKeys(context);
+                this.playlist = await this.loadMediaPlaylist(signal);
+                await this.checkKeys(context, signal);
             } catch (error) {
+                if (signal.aborted) {
+                    return;
+                }
                 // Before useful output a refresh failure is fatal; afterwards an unavailable live manifest ends the track.
                 if (this.discoveredItemCount === 0) {
                     throw error;
@@ -158,10 +162,10 @@ export class HLSMediaPlaylistCursor {
         this.timeout = Math.min(Math.max(20000, this.playlist.segments.length * this.safeChunkLength * 1000), 60000);
     }
 
-    private async loadMediaPlaylist(context: DownloadSourceContext): Promise<HLSMediaPlaylist> {
+    private async loadMediaPlaylist(signal: AbortSignal): Promise<HLSMediaPlaylist> {
         const loaded = await this.options.loader.load(this.options.sourcePath, {
-            retries: context.retries,
             timeout: this.timeout,
+            signal,
         });
         if (loaded.kind === HLSPlaylistKind.Master) {
             throw new Error("Selected HLS stream points to another master playlist.");
@@ -169,7 +173,7 @@ export class HLSMediaPlaylistCursor {
         return loaded;
     }
 
-    private async checkKeys(context: DownloadSourceContext): Promise<void> {
+    private async checkKeys(context: DownloadSourceContext, signal: AbortSignal): Promise<void> {
         if (this.playlist.encryptionKeyUrls.length === 0) {
             return;
         }
@@ -180,9 +184,10 @@ export class HLSMediaPlaylistCursor {
         if (!this.sitePlan.keyResolver) {
             throw new Error("No encryption key resolver is available for this playlist.");
         }
+        // Resolve only unseen identities; rotated live keys remain cached for already queued segments.
         const resolved = await this.sitePlan.keyResolver({
             keyUrls: missingKeys,
-            explicitKeys: context.explicitKey ? context.explicitKey.split(",") : [],
+            signal,
         });
         context.keys.setMany(resolved);
     }

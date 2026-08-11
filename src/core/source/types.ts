@@ -1,5 +1,4 @@
-import { DownloadHttpClient } from "../download/http_client";
-import { KeyStore } from "../download/key_store";
+import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { MediaContainer } from "../media_container";
 import { MediaTrack } from "./stream_selection";
 
@@ -79,12 +78,22 @@ export type SourceMetadata =
           readonly tracks: readonly SourceTrack[];
       };
 
+export interface DownloadSourceHttpClient {
+    get<T = any>(url: string, options?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
+    request<T = any>(url: string, options?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
+}
+
+export interface DownloadSourceKeyStore {
+    set(id: string, key: string): void;
+    get(id: string): string | undefined;
+    has(id: string): boolean;
+    setMany(keys: Readonly<Record<string, string>>): void;
+}
+
 export interface DownloadSourceContext {
-    /** Shared dependencies let discovery and execution use one isolated HTTP/key session. */
-    readonly http: DownloadHttpClient;
-    readonly keys: KeyStore;
-    readonly retries: number;
-    readonly explicitKey?: string;
+    /** Source requests use a retrying facade; protocols never own execution retry counters. */
+    readonly http: DownloadSourceHttpClient;
+    readonly keys: DownloadSourceKeyStore;
 }
 
 /**

@@ -15,6 +15,7 @@ export interface HLSSourceOptions {
     mode: HLSSourceMode;
     streamSelector?: StreamSelector;
     slice?: HLSSlice;
+    explicitKeys?: readonly string[];
 }
 
 interface SelectedHLSMediaTrack {
@@ -45,17 +46,18 @@ export class HLSSource implements DownloadSource {
         }
         throwIfAborted(signal);
         this.loader = new PlaylistLoader(context.http);
-        const selectedTracks = await this.selectMediaTracks(context, signal);
+        const selectedTracks = await this.selectMediaTracks(signal);
         if (!selectedTracks) {
             this.cancelled = true;
             this.prepared = true;
             return { cancelled: true };
         }
 
+        // Each selected Media Playlist owns independent sequence/dedup state even when tracks share one master.
         this.cursors = await Promise.all(
             selectedTracks.map(async (selected) => {
                 const playlist =
-                    selected.initialPlaylist ?? (await this.loadSelectedMediaPlaylist(selected.sourcePath, context));
+                    selected.initialPlaylist ?? (await this.loadSelectedMediaPlaylist(selected.sourcePath, signal));
                 return new HLSMediaPlaylistCursor({
                     id: selected.sourceTrackId,
                     mediaTrack: selected.mediaTrack,
@@ -64,9 +66,11 @@ export class HLSSource implements DownloadSource {
                     initialPlaylist: playlist,
                     loader: this.loader!,
                     slice: this.options.slice,
+                    explicitKeys: this.options.explicitKeys ?? [],
                 });
             })
         );
+        // All cursors resolve keys before any track metadata is published to the downloader.
         const tracks = await Promise.all(this.cursors.map((cursor) => cursor.prepare(context, signal)));
         this.prepared = true;
         return { container: MPEG_TS_CONTAINER, tracks };
@@ -88,6 +92,7 @@ export class HLSSource implements DownloadSource {
         signal.addEventListener("abort", onAbort, { once: true });
         try {
             const discoveries = this.cursors.map((cursor) => cursor.discover(context, discoveryAbort.signal));
+            // A failing rendition cancels its siblings so the downloader never finalizes a partial track set.
             yield* mergeAsyncIterables(discoveries, () => discoveryAbort.abort());
         } finally {
             discoveryAbort.abort();
@@ -95,16 +100,14 @@ export class HLSSource implements DownloadSource {
         }
     }
 
-    private async selectMediaTracks(
-        context: DownloadSourceContext,
-        signal: AbortSignal
-    ): Promise<readonly SelectedHLSMediaTrack[] | undefined> {
+    private async selectMediaTracks(signal: AbortSignal): Promise<readonly SelectedHLSMediaTrack[] | undefined> {
         const loaded = await this.loader!.load(this.sourcePath, {
-            retries: context.retries,
             timeout: 60000,
+            signal,
         });
         throwIfAborted(signal);
         if (loaded.kind === HLSPlaylistKind.Media) {
+            // A direct Media Playlist has one synthetic track because no master metadata supplies an identity.
             const mediaTrack = Object.freeze<MediaTrack>({ id: "main", type: "video" });
             return [
                 {
@@ -149,13 +152,10 @@ export class HLSSource implements DownloadSource {
         return validateTrackSelection(plan.catalog, selection);
     }
 
-    private async loadSelectedMediaPlaylist(
-        sourcePath: string,
-        context: DownloadSourceContext
-    ): Promise<HLSMediaPlaylist> {
+    private async loadSelectedMediaPlaylist(sourcePath: string, signal: AbortSignal): Promise<HLSMediaPlaylist> {
         const playlist = await this.loader!.load(sourcePath, {
-            retries: context.retries,
             timeout: 60000,
+            signal,
         });
         if (playlist.kind === HLSPlaylistKind.Master) {
             throw new Error(`Selected HLS track ${sourcePath} points to another master playlist.`);

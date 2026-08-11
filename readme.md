@@ -60,10 +60,10 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 | `--version` | Show the installed version. |
 | `--download <input>`, `-d <input>` | Download an m3u8 URL or file. |
 | `--threads <number>` | Set the concurrency limit. The default is `5`. |
-| `--retries <number>` | Set the retry limit. |
+| `--retries <number>` | Set the maximum attempts for both source requests and download tasks. The default is `5`. |
 | `--output <path>`, `-o <path>` | Set the output basename. The default is `./output`. |
 | `--temp-dir <path>` | Choose the parent directory for temporary files. |
-| `--key <key>` | Supply a decryption key manually. |
+| `--key <key>` | Supply an explicit HLS decryption key. The common HLS adapter applies it to every key URI and skips remote key downloads. |
 | `--cookies <cookies>` | Send cookies with download requests. |
 | `--headers <header>`, `-H <header>` | Send a custom HTTP header. Repeat the option to send multiple headers. |
 | `--live` | Follow a live playlist. |

@@ -1,5 +1,4 @@
-import { DownloadHttpClient } from "../../../download/http_client";
-import { DownloadItemNamer } from "../../types";
+import { DownloadItemNamer, DownloadSourceHttpClient } from "../../types";
 import { HLSMediaPlaylist, HLSSegment } from "../parser";
 
 export type SiteAdapterMode = "archive" | "live";
@@ -8,14 +7,13 @@ export interface SiteAdapterOptions {
     mode: SiteAdapterMode;
     sourcePath: string;
     playlist: HLSMediaPlaylist;
-    key?: string;
-    retries: number;
-    http: DownloadHttpClient;
+    explicitKeys: readonly string[];
+    http: DownloadSourceHttpClient;
 }
 
 export interface KeyResolverOptions {
     keyUrls: readonly string[];
-    explicitKeys: readonly string[];
+    signal: AbortSignal;
 }
 
 export type KeyResolver = (options: KeyResolverOptions) => Promise<Record<string, string>>;

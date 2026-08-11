@@ -1,50 +1,18 @@
-import { DownloaderConfig } from "./downloader";
-import { DownloadEvent, DownloadEventListener, DownloadSnapshot } from "./download/controller";
-import { createDownloader } from "./download/downloader";
+import { createDownloader, DownloadController } from "./download/downloader";
+import { DownloaderConfig } from "./download/types";
 import { createHLSSource } from "./source/hls";
 import { StreamSelector } from "./source/stream_selection";
 
 export interface LiveDownloaderConfig extends DownloaderConfig {
     streamSelector?: StreamSelector;
+    explicitKeys?: readonly string[];
 }
 
-export interface LiveDownloadSnapshot extends DownloadSnapshot {
-    totalChunkCount: number;
-    isEnd: boolean;
-}
-
-export interface LiveDownloadController {
-    download(): Promise<void>;
-    stop(): void;
-    getSnapshot(): LiveDownloadSnapshot;
-    on(event: DownloadEvent, listener: DownloadEventListener): LiveDownloadController;
-    once(event: DownloadEvent, listener: DownloadEventListener): LiveDownloadController;
-    off(event: DownloadEvent, listener: DownloadEventListener): LiveDownloadController;
-}
-
-export function createLiveDownloader(sourcePath: string, config: LiveDownloaderConfig = {}): LiveDownloadController {
-    const { streamSelector, ...downloaderConfig } = config;
-    // Live behavior is a follow-mode source, not a separate scheduler or output implementation.
-    const downloader = createDownloader(
-        createHLSSource(sourcePath, { mode: "follow", streamSelector }),
+export function createLiveDownloader(sourcePath: string, config: LiveDownloaderConfig = {}): DownloadController {
+    // Follow mode is a source behavior; it does not require a second scheduler or output lifecycle.
+    const { streamSelector, explicitKeys, ...downloaderConfig } = config;
+    return createDownloader(
+        createHLSSource(sourcePath, { mode: "follow", streamSelector, explicitKeys }),
         downloaderConfig
     );
-    const controller: LiveDownloadController = {
-        download: () => downloader.download(),
-        stop: () => downloader.stop(),
-        getSnapshot: () => downloader.getSnapshot(),
-        on(event, listener) {
-            downloader.on(event, listener);
-            return controller;
-        },
-        once(event, listener) {
-            downloader.once(event, listener);
-            return controller;
-        },
-        off(event, listener) {
-            downloader.off(event, listener);
-            return controller;
-        },
-    };
-    return controller;
 }

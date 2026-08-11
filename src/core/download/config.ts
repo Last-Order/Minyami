@@ -1,21 +1,19 @@
 import * as path from "path";
 import logger from "../../utils/log";
-import { DownloaderConfig } from "../downloader";
 import { normalizeOutputBasePath } from "../media_container";
 import { createDefaultMuxers, Muxer } from "../muxer";
+import { DownloaderConfig } from "./types";
 
 export interface NormalizedDownloaderConfig {
     threads: number;
     outputBasePath: string;
     tempPath: string;
-    key?: string;
-    verbose: boolean;
-    retries: number;
+    sourceRequestAttempts: number;
+    taskAttempts: number;
     proxy: string;
     cookies?: string;
     headers: Record<string, string>;
     noMerge: boolean;
-    cliMode: boolean;
     keepTemporaryFiles: boolean;
     keepEncryptedChunks: boolean;
     muxers: readonly Muxer[];
@@ -40,10 +38,25 @@ function parseHeaders(headers?: string | string[]): Record<string, string> {
 }
 
 export function normalizeDownloaderConfig(config: DownloaderConfig = {}): NormalizedDownloaderConfig {
+    const threads = config.threads === undefined ? 5 : Number(config.threads);
+    // Source I/O and task execution fail at different boundaries and therefore keep independent attempt budgets.
+    const sourceRequestAttempts = config.sourceRequestAttempts === undefined ? 5 : Number(config.sourceRequestAttempts);
+    const taskAttempts = config.taskAttempts === undefined ? 5 : Number(config.taskAttempts);
+    if (!Number.isSafeInteger(threads) || threads < 1) {
+        throw new Error("Downloader thread count must be a positive integer.");
+    }
+    if (!Number.isSafeInteger(sourceRequestAttempts) || sourceRequestAttempts < 1) {
+        throw new Error("Source request attempt count must be a positive integer.");
+    }
+    if (!Number.isSafeInteger(taskAttempts) || taskAttempts < 1) {
+        throw new Error("Task attempt count must be a positive integer.");
+    }
+
     if (config.noMerge) {
+        // Unmerged chunks are the requested result, so automatic temporary cleanup would destroy them.
         logger.warning("Chunks will not be merged.");
         logger.warning("Temporary files will not be deleted automatically.");
-    } else if (config.keep) {
+    } else if (config.keepTemporaryFiles) {
         logger.warning("Temporary files will not be deleted automatically.");
     }
 
@@ -55,18 +68,16 @@ export function normalizeDownloaderConfig(config: DownloaderConfig = {}): Normal
     }
 
     return {
-        threads: config.threads || 5,
+        threads,
         outputBasePath: normalizeOutputBasePath(config.output),
         tempPath: path.resolve(config.tempDir || "."),
-        key: config.key,
-        verbose: !!config.verbose,
-        retries: config.retries || 5,
+        sourceRequestAttempts,
+        taskAttempts,
         proxy: config.proxy || "",
         cookies: config.cookies,
         headers: parseHeaders(config.headers),
         noMerge: !!config.noMerge,
-        cliMode: !!config.cliMode,
-        keepTemporaryFiles: !!config.keep,
+        keepTemporaryFiles: !!config.keepTemporaryFiles,
         keepEncryptedChunks: !!config.keepEncryptedChunks,
         muxers: config.muxers === undefined ? createDefaultMuxers() : [...config.muxers],
     };

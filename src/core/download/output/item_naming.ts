@@ -1,4 +1,4 @@
-import { DownloadItemNamer } from "../source/types";
+import { DownloadItemNamer } from "../../source/types";
 
 /**
  * Track-local indices keep repeated upstream basenames unique and sortable inside

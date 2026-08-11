@@ -1,7 +1,7 @@
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
 import { normalizeDownloaderConfig } from "../../../src/core/download/config";
-import { DownloadRuntime } from "../../../src/core/download/runtime";
+import { OutputSession } from "../../../src/core/download/output/output_session";
 import { withTempDirectory } from "../../helpers/filesystem";
 
 describe("download configuration", () => {
@@ -11,15 +11,17 @@ describe("download configuration", () => {
 
     test("preserves the generated temporary workspace naming strategy", async () => {
         await withTempDirectory("minyami-runtime-", async (directory) => {
-            const runtime = new DownloadRuntime({
-                output: path.join(directory, "output.ts"),
-                tempDir: directory,
-            });
+            const outputSession = new OutputSession(
+                normalizeDownloaderConfig({
+                    output: path.join(directory, "output.ts"),
+                    tempDir: directory,
+                })
+            );
 
-            await runtime.allocateWorkspace();
+            await outputSession.allocateWorkspace();
 
-            expect(path.dirname(runtime.tempPath)).toBe(path.resolve(directory));
-            expect(path.basename(runtime.tempPath)).toMatch(/^minyami_\d+_[0-9a-f]{8}$/);
+            expect(path.dirname(outputSession.tempPath)).toBe(path.resolve(directory));
+            expect(path.basename(outputSession.tempPath)).toMatch(/^minyami_\d+_[0-9a-f]{8}$/);
         });
     });
 
@@ -39,5 +41,30 @@ describe("download configuration", () => {
 
     test("matches recognized video extensions case-insensitively", () => {
         expect(normalizeDownloaderConfig({ output: "./episode.MP4" }).outputBasePath).toBe("episode");
+    });
+
+    test("normalizes source and task attempt policies independently", () => {
+        expect(normalizeDownloaderConfig({ sourceRequestAttempts: 2, taskAttempts: 3 })).toMatchObject({
+            sourceRequestAttempts: 2,
+            taskAttempts: 3,
+        });
+        expect(normalizeDownloaderConfig()).toMatchObject({
+            sourceRequestAttempts: 5,
+            taskAttempts: 5,
+        });
+    });
+
+    test("preserves explicit temporary-file output policy", () => {
+        expect(normalizeDownloaderConfig({ keepTemporaryFiles: true })).toMatchObject({
+            keepTemporaryFiles: true,
+        });
+    });
+
+    test.each([
+        [{ threads: 0 }, "thread count"],
+        [{ sourceRequestAttempts: 0 }, "Source request attempt count"],
+        [{ taskAttempts: 0 }, "Task attempt count"],
+    ] as const)("rejects invalid execution policy %p", (config, message) => {
+        expect(() => normalizeDownloaderConfig(config)).toThrow(message);
     });
 });

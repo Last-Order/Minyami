@@ -2,17 +2,17 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { createDownloader } from "../../../src/core/download/downloader";
+import { createDownloader } from "../../../../src/core/download/downloader";
 import {
     MATROSKA_CONTAINER,
     MediaContainer,
     MP4_CONTAINER,
     MPEG_TS_CONTAINER,
-} from "../../../src/core/media_container";
-import { Muxer, MuxRequest } from "../../../src/core/muxer";
-import { DownloadSource } from "../../../src/core/source/types";
-import { withTempDirectory } from "../../helpers/filesystem";
-import { close, listen } from "../../helpers/http";
+} from "../../../../src/core/media_container";
+import { Muxer, MuxRequest } from "../../../../src/core/muxer";
+import { DownloadSource } from "../../../../src/core/source/types";
+import { withTempDirectory } from "../../../helpers/filesystem";
+import { close, listen } from "../../../helpers/http";
 
 class TestMuxer implements Muxer {
     availabilityChecks = 0;
@@ -160,7 +160,7 @@ describe("download output muxing", () => {
                     {
                         output,
                         tempDir: directory,
-                        retries: 1,
+                        taskAttempts: 1,
                         muxers: [muxer],
                     }
                 );

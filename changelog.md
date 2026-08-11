@@ -15,6 +15,7 @@
 -   Changed the default parent directory for temporary workspaces from the system temporary directory to the current working directory.
 -   Removed the `--clean` CLI command. Temporary workspaces that cannot be deleted automatically must now be removed manually.
 -   Removed the `--format` CLI option and `DownloaderConfig.format`. `--output` / `DownloaderConfig.output` is now an output basename: a recognized video extension is discarded, and the actual output extension is selected from the source or muxer container.
+-   Changed explicit-key handling in the common HLS adapter. `--key` and `HLSSourceOptions.explicitKeys` now accept at most one key for this adapter; when supplied, that key is used for every key URI and remote key downloads are skipped. Site-specific HLS adapters retain their own key handling.
 
 ### Added
 

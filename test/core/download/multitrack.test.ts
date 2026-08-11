@@ -164,7 +164,7 @@ describe("multi-track downloads", () => {
                 const downloader = createDownloader(source, {
                     output,
                     tempDir: directory,
-                    retries: 1,
+                    taskAttempts: 1,
                     threads: 5,
                     muxers: [],
                 });

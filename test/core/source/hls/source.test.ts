@@ -63,6 +63,114 @@ describe("HLSSource", () => {
         }
     });
 
+    test("maps one explicit key to every key URI without requesting remote keys", async () => {
+        const key = Buffer.from("0123456789abcdef");
+        const firstIv = Buffer.alloc(16);
+        firstIv[15] = 1;
+        const secondIv = Buffer.alloc(16);
+        secondIv[15] = 2;
+        const firstPayload = Buffer.from("first explicit-key payload");
+        const secondPayload = Buffer.from("second explicit-key payload");
+        const encrypt = (payload: Buffer, iv: Buffer): Buffer => {
+            const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
+            return Buffer.concat([cipher.update(payload), cipher.final()]);
+        };
+        const encryptedPayloads: Record<string, Buffer> = {
+            "/0.ts": encrypt(firstPayload, firstIv),
+            "/1.ts": encrypt(secondPayload, secondIv),
+        };
+        let keyRequestCount = 0;
+        const server = http.createServer((request, response) => {
+            if (request.url === "/key-a" || request.url === "/key-b") {
+                keyRequestCount++;
+                response.end("remote key must not be requested");
+                return;
+            }
+            if (encryptedPayloads[request.url!]) {
+                response.end(encryptedPayloads[request.url!]);
+                return;
+            }
+            const address = server.address() as AddressInfo;
+            response.end(
+                [
+                    "#EXTM3U",
+                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key-a",IV=0x${firstIv.toString(
+                        "hex"
+                    )}`,
+                    "#EXTINF:1,",
+                    `http://127.0.0.1:${address.port}/0.ts`,
+                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key-b",IV=0x${secondIv.toString(
+                        "hex"
+                    )}`,
+                    "#EXTINF:1,",
+                    `http://127.0.0.1:${address.port}/1.ts`,
+                    "#EXT-X-ENDLIST",
+                ].join("\n")
+            );
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-explicit-hls-key-", async (directory) => {
+                const output = path.join(directory, "explicit-key.ts");
+                const source = createHLSSource(`${baseUrl}/playlist.m3u8`, {
+                    mode: "snapshot",
+                    explicitKeys: [key.toString("hex")],
+                });
+                const downloader = createDownloader(source, { output, tempDir: directory });
+
+                await downloader.download();
+
+                expect(keyRequestCount).toBe(0);
+                expect(fs.readFileSync(output)).toEqual(Buffer.concat([firstPayload, secondPayload]));
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
+    test("rejects more than one explicit key in the common adapter before requesting remote keys", async () => {
+        let playlistRequestCount = 0;
+        let keyRequestCount = 0;
+        const server = http.createServer((request, response) => {
+            if (request.url === "/key") {
+                keyRequestCount++;
+                response.end("remote key must not be requested");
+                return;
+            }
+            playlistRequestCount++;
+            const address = server.address() as AddressInfo;
+            response.end(
+                [
+                    "#EXTM3U",
+                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key"`,
+                    "#EXTINF:1,",
+                    `http://127.0.0.1:${address.port}/0.ts`,
+                    "#EXT-X-ENDLIST",
+                ].join("\n")
+            );
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-explicit-hls-keys-limit-", async (directory) => {
+                const source = createHLSSource(`${baseUrl}/playlist.m3u8`, {
+                    mode: "snapshot",
+                    explicitKeys: ["00000000000000000000000000000000", "11111111111111111111111111111111"],
+                });
+                const downloader = createDownloader(source, { tempDir: directory });
+
+                await expect(downloader.download()).rejects.toThrow(
+                    "The common HLS adapter accepts at most one explicit decryption key."
+                );
+                expect(playlistRequestCount).toBe(1);
+                expect(keyRequestCount).toBe(0);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test("derives an omitted media IV from the media sequence", async () => {
         const key = Buffer.from("0123456789abcdef");
         const iv = Buffer.alloc(16);

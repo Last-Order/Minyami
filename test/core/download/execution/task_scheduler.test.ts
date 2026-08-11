@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { TaskScheduler } from "../../../src/core/download/task_scheduler";
+import { TaskScheduler } from "../../../../src/core/download/execution/task_scheduler";
 
 describe("TaskScheduler", () => {
     test("accepts batches while running and drains them after close", async () => {
@@ -57,5 +57,60 @@ describe("TaskScheduler", () => {
 
         expect(attempts.get(1)).toBe(2);
         expect(completed).toEqual([1]);
+    });
+
+    test("does not retry a successful execution when its commit callback fails", async () => {
+        let attempts = 0;
+        let errorCallbacks = 0;
+        let fatalCallbacks = 0;
+        const scheduler = new TaskScheduler<number, number>({
+            concurrency: 1,
+            execute: async (task) => {
+                attempts++;
+                return task;
+            },
+            onSuccess: () => {
+                throw new Error("commit failed");
+            },
+            onError: () => {
+                errorCallbacks++;
+                return true;
+            },
+            onFatal: () => fatalCallbacks++,
+        });
+
+        scheduler.add(1);
+        const completion = scheduler.start();
+        scheduler.close();
+
+        await expect(completion).rejects.toThrow("commit failed");
+        expect(attempts).toBe(1);
+        expect(errorCallbacks).toBe(0);
+        expect(fatalCallbacks).toBe(1);
+    });
+
+    test("treats an error-policy failure as fatal instead of losing the worker", async () => {
+        let fatalError: unknown;
+        const scheduler = new TaskScheduler<number>({
+            concurrency: 1,
+            execute: async () => {
+                throw new Error("execution failed");
+            },
+            onError: () => {
+                throw new Error("policy failed");
+            },
+            onFatal: (error) => {
+                fatalError = error;
+            },
+        });
+
+        scheduler.add(1);
+        const completion = scheduler.start();
+        scheduler.close();
+
+        await expect(completion).rejects.toThrow("policy failed");
+        expect(fatalError).toMatchObject({ message: "policy failed" });
+        expect(scheduler.pendingCount).toBe(0);
+        expect(scheduler.runningCount).toBe(0);
     });
 });

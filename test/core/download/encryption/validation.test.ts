@@ -1,9 +1,9 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { createDownloader } from "../../../src/core/download/downloader";
-import { MPEG_TS_CONTAINER } from "../../../src/core/media_container";
-import { DownloadHttpClient } from "../../../src/core/download/http_client";
-import { DownloadSource } from "../../../src/core/source/types";
-import { withTempDirectory } from "../../helpers/filesystem";
+import { createDownloader } from "../../../../src/core/download/downloader";
+import { DownloadHttpClient } from "../../../../src/core/download/infrastructure/http_client";
+import { MPEG_TS_CONTAINER } from "../../../../src/core/media_container";
+import { DownloadSource } from "../../../../src/core/source/types";
+import { withTempDirectory } from "../../../helpers/filesystem";
 
 describe("download encryption validation", () => {
     test.each([

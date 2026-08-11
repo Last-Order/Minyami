@@ -1,7 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
 import axios from "axios";
-import { normalizeDownloaderConfig } from "../../../src/core/download/config";
-import { DownloadHttpClient } from "../../../src/core/download/http_client";
+import { normalizeDownloaderConfig } from "../../../../src/core/download/config";
+import { DownloadHttpClient } from "../../../../src/core/download/infrastructure/http_client";
 
 describe("DownloadHttpClient", () => {
     test("keeps configured headers on its isolated Axios instance", () => {

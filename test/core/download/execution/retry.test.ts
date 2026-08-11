@@ -1,16 +1,16 @@
 import * as http from "http";
 import { AddressInfo } from "net";
 import { describe, expect, test } from "@jest/globals";
-import { createArchiveDownloader } from "../../../src/core/archive";
-import { createLiveDownloader } from "../../../src/core/live";
-import { withTempDirectory } from "../../helpers/filesystem";
-import { close, listen } from "../../helpers/http";
+import { createArchiveDownloader } from "../../../../src/core/archive";
+import { createLiveDownloader } from "../../../../src/core/live";
+import { withTempDirectory } from "../../../helpers/filesystem";
+import { close, listen } from "../../../helpers/http";
 
 describe("download retry lifecycle", () => {
     test.each([
         ["archive", createArchiveDownloader],
         ["live", createLiveDownloader],
-    ] as const)("records a dropped item after the %s downloader exhausts retries", async (name, create) => {
+    ] as const)("records a dropped item after the %s downloader exhausts task attempts", async (name, create) => {
         let chunkRequests = 0;
         const server = http.createServer((request, response) => {
             if (request.url === "/failed.ts") {
@@ -39,7 +39,7 @@ describe("download retry lifecycle", () => {
                 let chunkErrors = 0;
                 const downloader = create(`${baseUrl}/playlist.m3u8`, {
                     noMerge: true,
-                    retries: 2,
+                    taskAttempts: 2,
                     tempDir: directory,
                 });
                 downloader.on("chunk-error", () => chunkErrors++);

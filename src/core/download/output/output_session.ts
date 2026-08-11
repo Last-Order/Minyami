@@ -1,29 +1,25 @@
 import { randomBytes } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
-import { getAvailableOutputPath } from "../../utils/common";
-import logger from "../../utils/log";
-import FileConcentrator from "../file_concentrator";
-import { DownloadTask, DownloaderConfig } from "../downloader";
-import { createContainerOutputPath, MediaContainer } from "../media_container";
-import { MuxInput, selectAvailableMuxer } from "../muxer";
-import { MediaTrack } from "../source/stream_selection";
-import { DownloadItem, DownloadTrackId, SourceTrack } from "../source/types";
-import { TrackArtifact } from "./controller";
-import { ChunkExecutor, ChunkResult } from "./chunk_executor";
-import { normalizeDownloaderConfig, NormalizedDownloaderConfig } from "./config";
-import { Aes128CbcHandler } from "./encryption/aes_128_cbc";
-import { EncryptionHandlerRegistry } from "./encryption/registry";
-import { DownloadHttpClient } from "./http_client";
-import { mixedItemNamer } from "./item_naming";
-import { KeyStore } from "./key_store";
-import { ProgressTracker } from "./progress";
+import { getAvailableOutputPath } from "../../../utils/common";
+import logger from "../../../utils/log";
+import { createContainerOutputPath, MediaContainer } from "../../media_container";
+import { Muxer, MuxInput, selectAvailableMuxer } from "../../muxer";
+import { MediaTrack } from "../../source/stream_selection";
+import { DownloadTrackId, SourceTrack } from "../../source/types";
+import { TrackArtifact } from "../controller";
+import { DownloadTask } from "../execution/task";
+import FileConcentrator from "./file_concentrator";
 
-export interface ExecutedChunk extends ChunkResult {
-    task: DownloadTask;
+export interface OutputSessionConfig {
+    readonly tempPath: string;
+    readonly outputBasePath: string;
+    readonly noMerge: boolean;
+    readonly keepTemporaryFiles: boolean;
+    readonly muxers: readonly Muxer[];
 }
 
-export interface RuntimeTrackSnapshot {
+export interface OutputTrackSnapshot {
     readonly id: DownloadTrackId;
     readonly mediaTrack: MediaTrack;
     readonly sourcePath: string;
@@ -31,36 +27,27 @@ export interface RuntimeTrackSnapshot {
     readonly outputPaths: readonly string[];
 }
 
-interface RuntimeTrack {
+interface OutputTrack {
     readonly metadata: SourceTrack;
     readonly tempPath: string;
     readonly plannedOutputPath: string;
-    readonly concentrator?: FileConcentrator;
+    readonly writer?: FileConcentrator;
     outputPaths: string[];
 }
 
-export class DownloadRuntime {
-    readonly config: NormalizedDownloaderConfig;
-    readonly http: DownloadHttpClient;
-    readonly keys = new KeyStore();
-    readonly encryptionHandlers = new EncryptionHandlerRegistry([new Aes128CbcHandler()]);
-    readonly progress = new ProgressTracker();
-    readonly chunkExecutor: ChunkExecutor;
-
+/** Owns temporary storage and finalized artifacts, but no task or lifecycle accounting. */
+export class OutputSession {
     tempPath: string;
     readonly outputBasePath: string;
 
-    private readonly tracks = new Map<DownloadTrackId, RuntimeTrack>();
+    private readonly tracks = new Map<DownloadTrackId, OutputTrack>();
     private tracksConfigured = false;
     private sourceContainer?: MediaContainer;
     private muxedOutputPath?: string;
 
-    constructor(config: DownloaderConfig = {}) {
-        this.config = normalizeDownloaderConfig(config);
-        this.tempPath = this.config.tempPath;
-        this.outputBasePath = this.config.outputBasePath;
-        this.http = new DownloadHttpClient(this.config);
-        this.chunkExecutor = new ChunkExecutor(this.http, this.keys, this.encryptionHandlers);
+    constructor(readonly config: OutputSessionConfig) {
+        this.tempPath = config.tempPath;
+        this.outputBasePath = config.outputBasePath;
     }
 
     async allocateWorkspace(): Promise<void> {
@@ -71,21 +58,19 @@ export class DownloadRuntime {
 
     configureTracks(metadata: readonly SourceTrack[], container: MediaContainer): void {
         if (this.tracksConfigured) {
-            throw new Error("Download tracks have already been configured.");
+            throw new Error("Download output tracks have already been configured.");
         }
         this.tracksConfigured = true;
         this.sourceContainer = container;
-        this.progress.registerTracks(metadata.map((track) => track.id));
 
         for (const track of metadata) {
             const trackTempPath = path.resolve(this.tempPath, track.id);
-            fs.mkdirSync(trackTempPath);
             const plannedOutputPath = getAvailableOutputPath(this.createTrackOutputPath(track.id, metadata.length));
             this.tracks.set(track.id, {
                 metadata: track,
                 tempPath: trackTempPath,
                 plannedOutputPath,
-                concentrator: this.config.noMerge
+                writer: this.config.noMerge
                     ? undefined
                     : new FileConcentrator({
                           outputPath: plannedOutputPath,
@@ -94,72 +79,43 @@ export class DownloadRuntime {
                 outputPaths: [],
             });
         }
-    }
-
-    nameItem(item: DownloadItem, taskId: number, trackId: DownloadTrackId, trackIndex: number): string {
-        const track = this.requireTrack(trackId);
-        const filename = (track.metadata.itemNamer ?? mixedItemNamer)(item, { taskId, trackId, trackIndex });
-        // Source naming may affect a basename, but the runtime owns track-directory isolation.
-        if (
-            !filename ||
-            filename === "." ||
-            filename === ".." ||
-            path.isAbsolute(filename) ||
-            filename.includes("/") ||
-            filename.includes("\\")
-        ) {
-            throw new Error(`Invalid output filename for track ${trackId}: ${filename}`);
+        // Publish the complete output plan before filesystem creation so failure snapshots remain coherent.
+        for (const track of this.tracks.values()) {
+            fs.mkdirSync(track.tempPath);
         }
-        return filename;
     }
 
-    async execute(task: DownloadTask): Promise<ExecutedChunk> {
-        const track = this.requireTrack(task.trackId);
-        const result = await this.chunkExecutor.execute(task, {
-            tempPath: track.tempPath,
-            itemTimeout: track.metadata.itemTimeout ?? 60000,
-            keepEncryptedChunks: this.config.keepEncryptedChunks,
-        });
-        return { ...result, task };
+    getTrackTempPath(trackId: DownloadTrackId): string {
+        return this.requireTrack(trackId).tempPath;
     }
 
-    recordTaskSuccess(task: DownloadTask): void {
-        this.progress.recordSuccessful(task);
+    markTaskReady(task: DownloadTask, outputPath: string): void {
+        this.requireTrack(task.trackId).writer?.markTaskReady({ filePath: outputPath, index: task.trackIndex });
     }
 
-    markOutputReady(task: DownloadTask, outputPath: string): void {
-        const concentrator = this.requireTrack(task.trackId).concentrator;
-        if (!concentrator) {
-            return;
-        }
-        concentrator.markTaskReady({ filePath: outputPath, index: task.trackIndex });
+    markTaskDropped(task: DownloadTask): void {
+        this.requireTrack(task.trackId).writer?.markTaskDropped(task.trackIndex);
     }
 
-    recordTaskFailure(task: DownloadTask): "retry" | "drop" {
-        task.retryCount = task.retryCount ? task.retryCount + 1 : 1;
-        if (task.retryCount < this.config.retries) {
-            return "retry";
-        }
-        this.requireTrack(task.trackId).concentrator?.markTaskDropped(task.trackIndex);
-        this.progress.recordDropped(task);
-        return "drop";
-    }
-
-    async finishOutput(expectedTaskCounts: ReadonlyMap<DownloadTrackId, number>): Promise<readonly TrackArtifact[]> {
+    async finalize(expectedTaskCounts: ReadonlyMap<DownloadTrackId, number>): Promise<readonly TrackArtifact[]> {
         if (this.config.noMerge) {
             return [];
         }
 
         const errors: unknown[] = [];
+        // Settle every track before reporting failure so no writer is left running behind a rejected session.
         await Promise.all(
             [...this.tracks.values()].map(async (track) => {
                 try {
+                    if (!track.writer) {
+                        throw new Error(`Missing ordered output writer for track ${track.metadata.id}.`);
+                    }
                     const expectedTaskCount = expectedTaskCounts.get(track.metadata.id);
                     if (expectedTaskCount === undefined) {
                         throw new Error(`Missing expected task count for track ${track.metadata.id}.`);
                     }
-                    await track.concentrator.waitAllFilesWritten(expectedTaskCount);
-                    track.outputPaths = track.concentrator.getOutputFilePaths();
+                    await track.writer.waitAllFilesWritten(expectedTaskCount);
+                    track.outputPaths = track.writer.getOutputFilePaths();
                 } catch (error) {
                     errors.push(error);
                 }
@@ -168,19 +124,20 @@ export class DownloadRuntime {
         if (errors.length > 0) {
             throw errors[0];
         }
-        // Cross-track muxing starts only after every concentrator has closed its immutable inputs.
+
+        // Cross-track muxing starts only after every ordered writer has closed its immutable inputs.
         const artifacts = this.getTrackArtifacts();
         await this.muxTrackArtifacts(artifacts);
         return this.getTrackArtifacts();
     }
 
-    abortOutput(): void {
+    abort(): void {
         for (const track of this.tracks.values()) {
-            track.concentrator?.abort();
+            track.writer?.abort();
         }
     }
 
-    getTrackSnapshots(): readonly RuntimeTrackSnapshot[] {
+    getTrackSnapshots(): readonly OutputTrackSnapshot[] {
         return [...this.tracks.values()].map((track) => ({
             id: track.metadata.id,
             mediaTrack: track.metadata.mediaTrack,
@@ -209,6 +166,7 @@ export class DownloadRuntime {
     }
 
     cleanupEmptyWorkspace(): void {
+        // Remove only provably empty directories; retained chunks and recovery data are never guessed away.
         for (const track of this.tracks.values()) {
             if (fs.existsSync(track.tempPath) && fs.readdirSync(track.tempPath).length === 0) {
                 fs.rmdirSync(track.tempPath);
@@ -285,10 +243,10 @@ export class DownloadRuntime {
         }
     }
 
-    private requireTrack(trackId: DownloadTrackId): RuntimeTrack {
+    private requireTrack(trackId: DownloadTrackId): OutputTrack {
         const track = this.tracks.get(trackId);
         if (!track) {
-            throw new Error(`Unknown download track: ${trackId}`);
+            throw new Error(`Unknown output track: ${trackId}`);
         }
         return track;
     }

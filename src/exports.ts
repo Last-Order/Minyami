@@ -1,7 +1,7 @@
 export { createArchiveDownloader } from "./core/archive";
-export type { ArchiveDownloadController, ArchiveDownloaderConfig, ArchiveDownloadSnapshot } from "./core/archive";
+export type { ArchiveDownloaderConfig } from "./core/archive";
 export { createLiveDownloader } from "./core/live";
-export type { LiveDownloadController, LiveDownloaderConfig, LiveDownloadSnapshot } from "./core/live";
+export type { LiveDownloaderConfig } from "./core/live";
 export { createDownloader } from "./core/download/downloader";
 export type { DownloadController, SourceDownloadSnapshot } from "./core/download/downloader";
 export { createHLSSource, HLSSource } from "./core/source/hls";
@@ -26,6 +26,8 @@ export type {
     DownloadItemNamingContext,
     DownloadSource,
     DownloadSourceContext,
+    DownloadSourceHttpClient,
+    DownloadSourceKeyStore,
     DownloadTrackId,
     InitialDownloadItem,
     MediaDownloadItem,
@@ -36,12 +38,14 @@ export type {
 export type {
     ChunkDownloadedInfo,
     DownloadEvent,
+    DownloadEventListener,
+    DownloadEventMap,
     DownloadSnapshot,
     DownloadStatus,
     DownloadTrackSnapshot,
     TrackArtifact,
 } from "./core/download/controller";
-export type { DownloadTask, DownloaderConfig } from "./core/downloader";
+export type { DownloaderConfig } from "./core/download/types";
 export { MATROSKA_CONTAINER, MP4_CONTAINER, MPEG_TS_CONTAINER } from "./core/media_container";
 export type { MediaContainer } from "./core/media_container";
 export { FFmpegMuxer, MkvmergeMuxer } from "./core/muxer";

@@ -1,17 +1,16 @@
 import { DownloadTrackId } from "../source/types";
 import { MediaTrack } from "../source/stream_selection";
 
-export type DownloadStatus = "idle" | "preparing" | "downloading" | "stopping" | "merging" | "finished" | "failed";
-
-export type DownloadEvent =
-    | "parsed"
-    | "chunk-downloaded"
-    | "chunk-error"
-    | "downloaded"
+/** Graceful stop can finish normally; only a hard abort produces `aborted`. */
+export type DownloadStatus =
+    | "idle"
+    | "preparing"
+    | "downloading"
+    | "stopping"
+    | "merging"
     | "finished"
-    | "critical-error";
-
-export type DownloadEventListener = (...args: any[]) => void;
+    | "aborted"
+    | "failed";
 
 export interface ChunkDownloadedInfo {
     taskName: string;
@@ -24,6 +23,21 @@ export interface ChunkDownloadedInfo {
     successfulDurationRatio: string;
     completionEta?: string;
 }
+
+export interface DownloadEventMap {
+    parsed: [];
+    "chunk-downloaded": [info: ChunkDownloadedInfo];
+    "chunk-error": [error: unknown, taskName: string, trackId: DownloadTrackId];
+    /** All accepted tasks are terminal; merge/finalization may still be running. */
+    downloaded: [];
+    /** The session reached a stable finished or aborted state. */
+    finished: [];
+    "critical-error": [error: unknown];
+}
+
+export type DownloadEvent = keyof DownloadEventMap;
+
+export type DownloadEventListener<TEvent extends DownloadEvent> = (...args: DownloadEventMap[TEvent]) => void;
 
 export interface DownloadTrackSnapshot {
     id: DownloadTrackId;
@@ -67,4 +81,10 @@ export interface DownloadSnapshot {
     successfulDuration: number;
     runningTaskCount: number;
     pendingTaskCount: number;
+}
+
+export interface SourceDownloadSnapshot extends DownloadSnapshot {
+    totalChunkCount: number;
+    /** True after discovery has exhausted, been cancelled, or failed terminally. */
+    isEnd: boolean;
 }

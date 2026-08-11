@@ -1,15 +1,17 @@
 import * as fs from "fs";
 import * as path from "path";
-import logger from "../../utils/log";
-import { DownloadTask } from "../downloader";
-import { EncryptionHandlerRegistry } from "./encryption/registry";
-import { DownloadHttpClient } from "./http_client";
-import { KeyStore } from "./key_store";
+import logger from "../../../utils/log";
+import { EncryptionHandlerRegistry } from "../encryption/registry";
+import { DownloadHttpClient } from "../infrastructure/http_client";
+import { KeyStore } from "../infrastructure/key_store";
+import { DownloadTask } from "./task";
 
 export interface ExecuteChunkOptions {
     tempPath: string;
     itemTimeout: number;
     keepEncryptedChunks: boolean;
+    attempt: number;
+    signal: AbortSignal;
 }
 
 export interface ChunkResult {
@@ -28,16 +30,18 @@ export class ChunkExecutor {
         logger.debug(`Downloading ${item.url}`);
         logger.debug(`Downloading ${task.filename}`);
         const downloadedPath = path.resolve(options.tempPath, task.filename);
-        const timeout = Math.min(((task.retryCount || 0) + 1) * options.itemTimeout, options.itemTimeout * 5);
+        // Later attempts tolerate slow media, but the cap prevents one task from blocking shutdown indefinitely.
+        const timeout = Math.min(options.attempt * options.itemTimeout, options.itemTimeout * 5);
 
         try {
-            await this.http.download(item.url, downloadedPath, { timeout });
+            await this.http.download(item.url, downloadedPath, { timeout, signal: options.signal });
             logger.debug(`Downloading ${task.filename} succeed.`);
 
             if (!item.encryption) {
                 return { outputPath: downloadedPath };
             }
 
+            // Decrypt beside the encrypted input so a failed transform never replaces recoverable source bytes.
             const handler = this.encryptionHandlers.require(item.encryption.scheme);
             const key = this.keys.get(item.encryption.keyId);
             if (!key) {
@@ -60,8 +64,13 @@ export class ChunkExecutor {
                 }
             }
             logger.debug(`Decrypting ${task.filename} succeed`);
+            // Only the fully downloaded/decrypted path is admitted to ordered output by the session.
             return { outputPath: decryptedPath };
         } catch (error) {
+            if (options.signal.aborted) {
+                logger.debug(`Processing ${task.filename} was aborted.`);
+                throw error;
+            }
             const e = error as any;
             const reason =
                 e.code ||

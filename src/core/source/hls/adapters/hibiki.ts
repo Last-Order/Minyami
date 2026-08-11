@@ -1,6 +1,7 @@
 import { SiteAdapterOptions, SiteAdapterResult } from "./types";
 
-export function adaptHibiki({ key, playlist }: SiteAdapterOptions): SiteAdapterResult {
+export function adaptHibiki({ explicitKeys, playlist }: SiteAdapterOptions): SiteAdapterResult {
+    const key = explicitKeys[0];
     if (!key) {
         throw new Error("To download Hibiki-Radio, you need to set a key manually");
     }

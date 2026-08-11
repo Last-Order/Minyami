@@ -2,16 +2,21 @@ import * as fs from "fs";
 import { URL } from "url";
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { Agent } from "agent-base";
-import UA from "../../constants/ua";
-import ProxyAgentHelper, { createProxyAgent } from "../../utils/agent";
-import { NormalizedDownloaderConfig } from "./config";
+import UA from "../../../constants/ua";
+import ProxyAgentHelper, { createProxyAgent } from "../../../utils/agent";
+
+export interface DownloadHttpClientConfig {
+    readonly proxy: string;
+    readonly cookies?: string;
+    readonly headers: Readonly<Record<string, string>>;
+}
 
 export class DownloadHttpClient {
     readonly axios: AxiosInstance;
     readonly agent: Agent;
     private readonly hasExplicitHostHeader: boolean;
 
-    constructor(config: NormalizedDownloaderConfig) {
+    constructor(config: DownloadHttpClientConfig) {
         this.agent = config.proxy
             ? createProxyAgent(config.proxy, { allowNonPrefixSocksProxy: true })
             : ProxyAgentHelper.getProxyAgentInstance();
@@ -29,6 +34,7 @@ export class DownloadHttpClient {
     }
 
     private hostHeader(url: string): Record<string, string> {
+        // Redirected/media hosts need their own authority unless the caller intentionally pinned Host.
         return this.hasExplicitHostHeader ? {} : { Host: new URL(url).host };
     }
 
@@ -57,6 +63,7 @@ export class DownloadHttpClient {
     async download(url: string, destination: string, options: AxiosRequestConfig = {}): Promise<void> {
         const cancelSource = axios.CancelToken.source();
         const timeout = options.timeout || 60000;
+        // Keep a local timeout guard because some adapters do not abort stalled response bodies consistently.
         const timeoutId = setTimeout(() => cancelSource.cancel(), timeout);
 
         try {
@@ -70,6 +77,7 @@ export class DownloadHttpClient {
             if (contentLength && parseInt(contentLength) !== body.length) {
                 throw new Error("Bad Response");
             }
+            // Publish by rename so executors never observe a partially written destination as a successful item.
             const temporaryPath = destination + ".t";
             fs.writeFileSync(temporaryPath, body);
             fs.renameSync(temporaryPath, destination);

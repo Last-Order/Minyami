@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import logger from "../utils/log";
+import logger from "../../../utils/log";
 
 // Read streams produce 64 KiB chunks by default. A larger, finite output buffer
 // preserves read/write overlap and writev opportunities without unbounded queueing.

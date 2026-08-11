@@ -3,15 +3,15 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { DownloadTask } from "../../../src/core/downloader";
-import { ChunkExecutor } from "../../../src/core/download/chunk_executor";
-import { normalizeDownloaderConfig } from "../../../src/core/download/config";
-import { Aes128CbcHandler } from "../../../src/core/download/encryption/aes_128_cbc";
-import { EncryptionHandlerRegistry } from "../../../src/core/download/encryption/registry";
-import { DownloadHttpClient } from "../../../src/core/download/http_client";
-import { KeyStore } from "../../../src/core/download/key_store";
-import { withTempDirectory } from "../../helpers/filesystem";
-import { close, listen } from "../../helpers/http";
+import { normalizeDownloaderConfig } from "../../../../src/core/download/config";
+import { Aes128CbcHandler } from "../../../../src/core/download/encryption/aes_128_cbc";
+import { EncryptionHandlerRegistry } from "../../../../src/core/download/encryption/registry";
+import { ChunkExecutor } from "../../../../src/core/download/execution/chunk_executor";
+import { DownloadTask } from "../../../../src/core/download/execution/task";
+import { DownloadHttpClient } from "../../../../src/core/download/infrastructure/http_client";
+import { KeyStore } from "../../../../src/core/download/infrastructure/key_store";
+import { withTempDirectory } from "../../../helpers/filesystem";
+import { close, listen } from "../../../helpers/http";
 
 describe("ChunkExecutor encryption lifecycle", () => {
     test.each([false, true])("retains the encrypted input when keepEncryptedChunks is %s", async (keep) => {
@@ -39,7 +39,6 @@ describe("ChunkExecutor encryption lifecycle", () => {
                     trackId: "main",
                     trackIndex: 0,
                     filename: "000000_chunk.ts",
-                    retryCount: 0,
                     item: {
                         url: `${baseUrl}/chunk.ts`,
                         kind: "media",
@@ -52,6 +51,8 @@ describe("ChunkExecutor encryption lifecycle", () => {
                     tempPath: directory,
                     itemTimeout: 1000,
                     keepEncryptedChunks: keep,
+                    attempt: 1,
+                    signal: new AbortController().signal,
                 });
 
                 expect(fs.readFileSync(result.outputPath)).toEqual(plaintext);

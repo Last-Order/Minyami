@@ -1,18 +1,17 @@
 import * as fs from "fs";
 import logger from "../../../utils/log";
-import { DownloadHttpClient } from "../../download/http_client";
+import { DownloadSourceHttpClient } from "../types";
 import { HLSPlaylist, parseHLSPlaylist } from "./parser";
 
 export interface LoadPlaylistOptions {
-    retries?: number;
     timeout?: number;
+    signal?: AbortSignal;
 }
 
 export class PlaylistLoader {
-    constructor(private readonly http: DownloadHttpClient) {}
+    constructor(private readonly http: DownloadSourceHttpClient) {}
 
     async load(sourcePath: string, options: LoadPlaylistOptions = {}): Promise<HLSPlaylist> {
-        const retries = options.retries === undefined ? 1 : options.retries;
         const timeout = options.timeout || 60000;
 
         if (!sourcePath.startsWith("http")) {
@@ -26,35 +25,26 @@ export class PlaylistLoader {
         }
 
         logger.info("Start fetching HLS playlist.");
-        let retriesLeft = retries;
-        while (retriesLeft >= 0) {
-            try {
-                const response = await this.http.get<string>(sourcePath, { timeout });
-                logger.info("HLS playlist fetched.");
-                const responseUrl = response.request?.res?.responseUrl || sourcePath;
-                return parseHLSPlaylist({
-                    content: response.data,
-                    playlistUrl: responseUrl,
-                });
-            } catch (error) {
-                const e = error as any;
-                const reason =
-                    e.code ||
-                    (e.response ? `${e.response.status} ${e.response.statusText}` : undefined) ||
-                    e.message ||
-                    "UNKNOWN";
-                logger.warning(`Fail to fetch M3U8 file: [${reason}]`);
-                logger.warning("If you are downloading a live stream, this may result in a broken output video.");
-                retriesLeft--;
-                if (retriesLeft >= 0) {
-                    logger.info("Try again.");
-                } else {
-                    logger.warning("Max retries exceeded. Abort.");
-                    throw error;
-                }
-            }
+        let content: string;
+        let playlistUrl: string;
+        try {
+            const response = await this.http.get<string>(sourcePath, { timeout, signal: options.signal });
+            content = response.data;
+            // Relative playlist references must resolve against the final URL after redirects, not the requested URL.
+            playlistUrl = response.request?.res?.responseUrl || sourcePath;
+        } catch (error) {
+            const e = error as any;
+            const reason =
+                e.code ||
+                (e.response ? `${e.response.status} ${e.response.statusText}` : undefined) ||
+                e.message ||
+                "UNKNOWN";
+            logger.warning(`Fail to fetch M3U8 file: [${reason}]`);
+            logger.warning("If you are downloading a live stream, this may result in a broken output video.");
+            logger.warning("Source request attempts exhausted. Abort.");
+            throw error;
         }
-
-        throw new Error("Unable to load M3U8 file.");
+        logger.info("HLS playlist fetched.");
+        return parseHLSPlaylist({ content, playlistUrl });
     }
 }

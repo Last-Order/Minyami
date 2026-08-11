@@ -1,7 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
 import { normalizeDownloaderConfig } from "../../../../src/core/download/config";
-import { DownloadHttpClient } from "../../../../src/core/download/http_client";
-import { KeyStore } from "../../../../src/core/download/key_store";
+import { DownloadHttpClient } from "../../../../src/core/download/infrastructure/http_client";
+import { KeyStore } from "../../../../src/core/download/infrastructure/key_store";
 import { HLSMediaPlaylistCursor } from "../../../../src/core/source/hls/media_playlist_cursor";
 import { HLSMediaPlaylist, HLSPlaylistKind, HLSSegmentKind } from "../../../../src/core/source/hls/parser";
 import { PlaylistLoader } from "../../../../src/core/source/hls/playlist_loader";
@@ -51,18 +51,30 @@ describe("HLSMediaPlaylistCursor", () => {
         expect(videoBatches[0].trackId).toBe("video");
         expect(audioBatches[0].trackId).toBe("audio");
     });
+
+    test("leaves multiple explicit keys available to site-specific adapters", async () => {
+        const context = createContext();
+        const keyUrl = "abematv-license://ticket";
+        const playlist = { ...createPlaylist(), encryptionKeyUrls: [keyUrl] };
+        const cursor = createCursor("abema", playlist, context, "snapshot", ["first-key", "second-key"]);
+
+        await cursor.prepare(context, new AbortController().signal);
+
+        expect(context.keys.get(keyUrl)).toBe("first-key");
+    });
 });
 
 function createContext(): DownloadSourceContext {
     const http = new DownloadHttpClient(normalizeDownloaderConfig());
-    return { http, keys: new KeyStore(), retries: 1 };
+    return { http, keys: new KeyStore() };
 }
 
 function createCursor(
     id: string,
     playlist: HLSMediaPlaylist,
     context: DownloadSourceContext,
-    mode: "snapshot" | "follow" = "snapshot"
+    mode: "snapshot" | "follow" = "snapshot",
+    explicitKeys: readonly string[] = []
 ): HLSMediaPlaylistCursor {
     return new HLSMediaPlaylistCursor({
         id,
@@ -71,6 +83,7 @@ function createCursor(
         mode,
         initialPlaylist: playlist,
         loader: new PlaylistLoader(context.http),
+        explicitKeys,
     });
 }
 

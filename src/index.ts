@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import Erii from "erii";
 import { createArchiveDownloader } from "./core/archive";
+import { DownloadController } from "./core/download/downloader";
 import { createLiveDownloader } from "./core/live";
 import { selectStreamInteractively } from "./core/source/stream_selector";
 import { readConfigFile } from "./utils/system";
@@ -75,29 +76,43 @@ Erii.bind(
                 options[key] = fileOptions[key];
             }
         }
-        const finalOptions = Object.assign(options, {
-            cliMode: true,
-            logger,
+        // Explicit adaptation prevents CLI-only state and unknown config-file keys from entering the core API.
+        const downloadOptions = {
+            threads: options.threads,
+            output: options.output,
+            tempDir: options.tempDir,
+            cookies: options.cookies,
+            headers: options.headers,
+            // The CLI keeps one retry knob while the core enforces separate source-I/O and task budgets.
+            sourceRequestAttempts: options.retries,
+            taskAttempts: options.retries,
+            proxy: options.proxy,
+            noMerge: !!options.noMerge,
+            keepTemporaryFiles: !!options.keep,
+            keepEncryptedChunks: !!options.keepEncryptedChunks,
+            explicitKeys: options.key ? String(options.key).split(",") : undefined,
             streamSelector: selectStreamInteractively,
-        });
+        };
         if (options.live) {
-            const downloader = createLiveDownloader(path, finalOptions);
-            downloader.on("finished", () => {
-                process.exit();
-            });
-            downloader.on("critical-error", () => {
-                process.exit(1);
-            });
-            await downloader.download();
+            const downloader = createLiveDownloader(path, downloadOptions);
+            const dispose = installCliDownloadControls(downloader, !!options.verbose, true);
+            try {
+                await downloader.download();
+            } catch {
+                process.exitCode = 1;
+            } finally {
+                dispose();
+            }
         } else {
-            const downloader = createArchiveDownloader(path, finalOptions);
-            downloader.on("finished", () => {
-                process.exit();
-            });
-            downloader.on("critical-error", () => {
-                process.exit(1);
-            });
-            await downloader.download();
+            const downloader = createArchiveDownloader(path, { ...downloadOptions, slice: options.slice });
+            const dispose = installCliDownloadControls(downloader, !!options.verbose, false);
+            try {
+                await downloader.download();
+            } catch {
+                process.exitCode = 1;
+            } finally {
+                dispose();
+            }
         }
     }
 );
@@ -121,10 +136,10 @@ Erii.addOption({
 Erii.addOption({
     name: ["retries"],
     command: "download",
-    description: "Retry limit",
+    description: "Maximum attempts for source requests and download tasks",
     argument: {
         name: "limit",
-        description: "(Optional) Limit of retry times",
+        description: "(Optional) Attempt count for both retry policies, defaults to 5",
         validate: "isInt",
     },
 });
@@ -159,10 +174,10 @@ Erii.addOption({
 Erii.addOption({
     name: ["key"],
     command: "download",
-    description: "Set key manually (Internal use)",
+    description: "Set an explicit HLS decryption key",
     argument: {
         name: "key",
-        description: "(Optional) Key for decrypt video.",
+        description: "The common HLS adapter accepts one hexadecimal key.",
     },
 });
 
@@ -257,3 +272,39 @@ Erii.default(() => {
 });
 
 Erii.okite();
+
+function installCliDownloadControls(
+    downloader: DownloadController,
+    verbose: boolean,
+    handleSignals: boolean
+): () => void {
+    const verboseTimer = verbose
+        ? setInterval(() => {
+              const snapshot = downloader.getSnapshot();
+              logger.debug(
+                  `Waiting tasks: ${snapshot.pendingTaskCount}, completed chunks: ${snapshot.completedChunkCount}, successful chunks: ${snapshot.successfulChunkCount}, dropped chunks: ${snapshot.droppedChunkCount}, total discovered chunks: ${snapshot.totalChunkCount}`
+              );
+          }, 3000)
+        : undefined;
+
+    let sigintCount = 0;
+    const onSigint = () => {
+        sigintCount++;
+        if (sigintCount === 1) {
+            logger.info("Ctrl+C pressed, waiting for known tasks to finish.");
+            downloader.stop();
+            return;
+        }
+        downloader.abort();
+    };
+    if (handleSignals) {
+        process.on("SIGINT", onSigint);
+    }
+
+    return () => {
+        if (verboseTimer) {
+            clearInterval(verboseTimer);
+        }
+        process.off("SIGINT", onSigint);
+    };
+}
