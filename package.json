@@ -39,13 +39,13 @@
     },
     "license": "GPL-3.0-or-later",
     "dependencies": {
-        "agent-base": "^7.1.0",
+        "agent-base": "^9.0.0",
         "axios": "^1.19.0",
         "chalk": "^2.4.2",
         "erii": "^2.0.6",
-        "https-proxy-agent": "^7.0.4",
+        "https-proxy-agent": "^9.1.0",
         "prompts": "^2.4.2",
-        "socks-proxy-agent": "^8.0.2",
+        "socks-proxy-agent": "^10.1.0",
         "winreg": "^1.2.5"
     },
     "devDependencies": {

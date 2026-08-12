@@ -11,5 +11,21 @@ module.exports = {
     testTimeout: 10000,
     transform: {
         "^.+\\.tsx?$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.test.json" }],
+        // Tests remain CommonJS, so the ESM-only proxy stack must cross that boundary through ts-jest.
+        "^.+\\.js$": [
+            "ts-jest",
+            {
+                diagnostics: false,
+                tsconfig: {
+                    allowJs: true,
+                    esModuleInterop: true,
+                    module: "commonjs",
+                    target: "es2022",
+                },
+            },
+        ],
     },
+    transformIgnorePatterns: [
+        "/node_modules/(?!https-proxy-agent|socks-proxy-agent|agent-base|proxy-agent-negotiate)/",
+    ],
 };
