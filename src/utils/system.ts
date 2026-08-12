@@ -11,16 +11,19 @@ export const initMinyamiDirectory = () => {
     return minyamiPath;
 };
 
-export const readConfigFile = () => {
+export const readConfigFile = (): Record<string, unknown> => {
     const minyamiPath = initMinyamiDirectory();
     const availableConfigFilenames = [".minyamirc", ".minyamirc.json", "minyami.config.json"];
     for (const filename of availableConfigFilenames) {
         const configFilePath = path.resolve(minyamiPath, filename);
         if (fs.existsSync(configFilePath)) {
             try {
-                const content = JSON.parse(fs.readFileSync(configFilePath).toString());
+                const content: unknown = JSON.parse(fs.readFileSync(configFilePath).toString());
+                if (typeof content !== "object" || content === null || Array.isArray(content)) {
+                    throw new Error("Configuration root must be an object.");
+                }
                 logger.debug(`Config file loaded: ${JSON.stringify(content)}`);
-                return content;
+                return content as Record<string, unknown>;
             } catch {
                 logger.debug(`Config file ${configFilePath} not exists or not valid, skip.`);
             }

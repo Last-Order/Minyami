@@ -17,8 +17,7 @@ export async function adaptCommon({ explicitKeys, http }: SiteAdapterOptions): P
             }
 
             const resolved: Record<string, string> = {};
-            for (let index = 0; index < keyUrls.length; index++) {
-                const url = keyUrls[index];
+            for (const [index, url] of keyUrls.entries()) {
                 logger.info(`Downloading decrypt keys. (${index + 1} / ${keyUrls.length})`);
 
                 try {

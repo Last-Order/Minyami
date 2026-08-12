@@ -14,7 +14,7 @@ export interface DownloadHttpClientConfig {
 
 export class DownloadHttpClient {
     readonly axios: AxiosInstance;
-    readonly agent: Agent;
+    readonly agent: Agent | undefined;
     private readonly hasExplicitHostHeader: boolean;
 
     constructor(config: DownloadHttpClientConfig) {
@@ -29,8 +29,8 @@ export class DownloadHttpClient {
                 ...config.headers,
             },
             proxy: false,
-            httpAgent: this.agent || undefined,
-            httpsAgent: this.agent || undefined,
+            httpAgent: this.agent,
+            httpsAgent: this.agent,
         });
     }
 

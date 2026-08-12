@@ -31,7 +31,15 @@ type ConcentrationOutcome =
       };
 
 function toError(error: unknown): Error {
-    if (typeof error === "object" && error !== null) {
+    // Jest and stream internals may surface errors from another realm, where instanceof is false.
+    if (
+        typeof error === "object" &&
+        error !== null &&
+        "name" in error &&
+        typeof error.name === "string" &&
+        "message" in error &&
+        typeof error.message === "string"
+    ) {
         return error as Error;
     }
     return new Error(String(error));
@@ -215,12 +223,9 @@ class FileConcentrator {
             await this.closeWriteStream();
             this.splitBeforeNextFile = false;
         }
-        if (!this.writeStream) {
-            // Leading drops likewise produce no empty numbered staging files.
-            await this.createNextWriteStream();
-        }
-
-        await this.appendFile(filePath, this.writeStream);
+        // Leading drops likewise produce no empty numbered staging files.
+        const output = this.writeStream ?? (await this.createNextWriteStream());
+        await this.appendFile(filePath, output);
         this.hasWrittenFile = true;
 
         if (this.deleteAfterWritten) {
@@ -240,10 +245,7 @@ class FileConcentrator {
         let inputEnded = false;
         let writeError: Error | undefined;
         let appendError: Error | undefined;
-        let resolveWritesCompleted: () => void;
-        const writesCompleted = new Promise<void>((resolve) => {
-            resolveWritesCompleted = resolve;
-        });
+        const { promise: writesCompleted, resolve: resolveWritesCompleted } = Promise.withResolvers<void>();
         const completeWrite = (error?: Error | null) => {
             // Preserve the first write failure while still settling every queued callback.
             if (error && !writeError) {
@@ -321,7 +323,7 @@ class FileConcentrator {
         });
     }
 
-    private async createNextWriteStream(): Promise<void> {
+    private async createNextWriteStream(): Promise<fs.WriteStream> {
         const sequence = this.outputFilePaths.length;
         const outputPath = `${this.outputFilename}_${sequence}${this.outputFileExt}`;
         const stream = fs.createWriteStream(outputPath, {
@@ -354,6 +356,7 @@ class FileConcentrator {
         }
         this.outputFilePaths.push(outputPath);
         logger.debug(`Created output stream ${sequence}.`);
+        return stream;
     }
 
     private async closeWriteStream(): Promise<void> {

@@ -81,6 +81,6 @@ export class DownloadEventHub {
 
     private reportListenerError(event: DownloadEvent, error: unknown): void {
         logger.warning(`Download event listener for ${event} failed and was isolated from the session.`);
-        logger.debug(error as any);
+        logger.debug(error);
     }
 }

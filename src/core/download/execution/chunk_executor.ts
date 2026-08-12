@@ -71,16 +71,31 @@ export class ChunkExecutor {
                 logger.debug(`Processing ${task.filename} was aborted.`);
                 throw error;
             }
-            const e = error as any;
-            const reason =
-                e.code ||
-                (e.response ? `${e.response.status} ${e.response.statusText}` : undefined) ||
-                e.message ||
-                e.constructor?.name ||
-                "UNKNOWN";
+            const reason = describeFailure(error);
             logger.warning(`Downloading or decrypting ${task.filename} failed. Retry later. [${reason}]`);
-            logger.debug(e);
+            logger.debug(error);
             throw error;
         }
     }
+}
+
+function describeFailure(error: unknown): string {
+    if (typeof error !== "object" || error === null) {
+        return String(error) || "UNKNOWN";
+    }
+
+    const details = error as Record<string, unknown>;
+    if (typeof details.code === "string" && details.code) {
+        return details.code;
+    }
+    if (typeof details.response === "object" && details.response !== null) {
+        const response = details.response as Record<string, unknown>;
+        if (response.status !== undefined) {
+            return `${String(response.status)} ${String(response.statusText ?? "")}`.trim();
+        }
+    }
+    if (error instanceof Error) {
+        return error.message || error.constructor.name;
+    }
+    return "UNKNOWN";
 }

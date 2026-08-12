@@ -22,7 +22,6 @@ interface QueuedTask<T> {
 export class TaskScheduler<T, TResult = void> {
     private readonly queue: QueuedTask<T>[] = [];
     private readonly waiters: Array<() => void> = [];
-    private started = false;
     private closed = false;
     private aborted = false;
     private activeTasks = 0;
@@ -44,18 +43,19 @@ export class TaskScheduler<T, TResult = void> {
     }
 
     start(): Promise<void> {
-        if (!this.started) {
-            this.started = true;
-            const workers = Array.from({ length: this.options.concurrency }, () => this.runWorker());
-            // Fatal completion still waits for sibling workers, keeping terminal snapshots stable.
-            this.completion = Promise.allSettled(workers).then((results) => {
-                const failure = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
-                if (failure) {
-                    throw failure.reason;
-                }
-            });
+        if (this.completion) {
+            return this.completion;
         }
-        return this.completion;
+        const workers = Array.from({ length: this.options.concurrency }, () => this.runWorker());
+        // Fatal completion still waits for sibling workers, keeping terminal snapshots stable.
+        const completion = Promise.allSettled(workers).then((results) => {
+            const failure = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+            if (failure) {
+                throw failure.reason;
+            }
+        });
+        this.completion = completion;
+        return completion;
     }
 
     close(): void {
@@ -136,8 +136,8 @@ export class TaskScheduler<T, TResult = void> {
     }
 
     private notify(): void {
-        while (this.waiters.length > 0) {
-            this.waiters.shift()();
+        for (const resolve of this.waiters.splice(0)) {
+            resolve();
         }
     }
 

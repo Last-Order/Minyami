@@ -1,12 +1,16 @@
 {
     "compilerOptions": {
         "target": "es2022",
+        "rootDir": "src",
         "outDir": "dist",
         "declaration": true,
         "module": "esnext",
         "moduleResolution": "bundler",
         "sourceMap": true,
         "lib": ["es7", "esnext"],
+        "types": ["node"],
+        "strict": true,
+        "stableTypeOrdering": true,
         "experimentalDecorators": true,
         "esModuleInterop": true,
         "newLine": "LF"

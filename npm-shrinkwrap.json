@@ -24,13 +24,15 @@
             "devDependencies": {
                 "@types/jest": "^30.0.0",
                 "@types/node": "^24.13.3",
+                "@types/prompts": "^2.4.9",
+                "@types/winreg": "^1.2.36",
                 "husky": "^7.0.2",
                 "jest": "^30.4.2",
                 "lint-staged": "^11.1.2",
                 "prettier": "^2.3.2",
                 "ts-jest": "^29.4.12",
                 "tsdown": "^0.22.14",
-                "typescript": "^5.4.2"
+                "typescript": "^6.0.3"
             },
             "engines": {
                 "node": ">=24"
@@ -2054,10 +2056,28 @@
             "integrity": "sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==",
             "dev": true
         },
+        "node_modules/@types/prompts": {
+            "version": "2.4.9",
+            "resolved": "https://registry.npmjs.org/@types/prompts/-/prompts-2.4.9.tgz",
+            "integrity": "sha512-qTxFi6Buiu8+50/+3DGIWLHM6QuWsEKugJnnP6iv2Mc4ncxE4A/OJkjuVOA+5X0X1S/nq5VJRa8Lu+nwcvbrKA==",
+            "dev": true,
+            "license": "MIT",
+            "dependencies": {
+                "@types/node": "*",
+                "kleur": "^3.0.3"
+            }
+        },
         "node_modules/@types/stack-utils": {
             "version": "2.0.3",
             "resolved": "https://registry.npmjs.org/@types/stack-utils/-/stack-utils-2.0.3.tgz",
             "integrity": "sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==",
+            "dev": true,
+            "license": "MIT"
+        },
+        "node_modules/@types/winreg": {
+            "version": "1.2.36",
+            "resolved": "https://registry.npmjs.org/@types/winreg/-/winreg-1.2.36.tgz",
+            "integrity": "sha512-DtafHy5A8hbaosXrbr7YdjQZaqVewXmiasRS5J4tYMzt3s1gkh40ixpxgVFfKiQ0JIYetTJABat47v9cpr/sQg==",
             "dev": true,
             "license": "MIT"
         },
@@ -8089,10 +8109,11 @@
             }
         },
         "node_modules/typescript": {
-            "version": "5.4.2",
-            "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.4.2.tgz",
-            "integrity": "sha512-+2/g0Fds1ERlP6JsakQQDXjZdZMM+rqpamFZJEKh4kwTIn3iDkgKtby0CeNd5ATNZ4Ry1ax15TMx0W2V+miizQ==",
+            "version": "6.0.3",
+            "resolved": "https://registry.npmjs.org/typescript/-/typescript-6.0.3.tgz",
+            "integrity": "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==",
             "dev": true,
+            "license": "Apache-2.0",
             "bin": {
                 "tsc": "bin/tsc",
                 "tsserver": "bin/tsserver"
@@ -9901,10 +9922,26 @@
             "integrity": "sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==",
             "dev": true
         },
+        "@types/prompts": {
+            "version": "2.4.9",
+            "resolved": "https://registry.npmjs.org/@types/prompts/-/prompts-2.4.9.tgz",
+            "integrity": "sha512-qTxFi6Buiu8+50/+3DGIWLHM6QuWsEKugJnnP6iv2Mc4ncxE4A/OJkjuVOA+5X0X1S/nq5VJRa8Lu+nwcvbrKA==",
+            "dev": true,
+            "requires": {
+                "@types/node": "*",
+                "kleur": "^3.0.3"
+            }
+        },
         "@types/stack-utils": {
             "version": "2.0.3",
             "resolved": "https://registry.npmjs.org/@types/stack-utils/-/stack-utils-2.0.3.tgz",
             "integrity": "sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==",
+            "dev": true
+        },
+        "@types/winreg": {
+            "version": "1.2.36",
+            "resolved": "https://registry.npmjs.org/@types/winreg/-/winreg-1.2.36.tgz",
+            "integrity": "sha512-DtafHy5A8hbaosXrbr7YdjQZaqVewXmiasRS5J4tYMzt3s1gkh40ixpxgVFfKiQ0JIYetTJABat47v9cpr/sQg==",
             "dev": true
         },
         "@types/yargs": {
@@ -13851,9 +13888,9 @@
             "dev": true
         },
         "typescript": {
-            "version": "5.4.2",
-            "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.4.2.tgz",
-            "integrity": "sha512-+2/g0Fds1ERlP6JsakQQDXjZdZMM+rqpamFZJEKh4kwTIn3iDkgKtby0CeNd5ATNZ4Ry1ax15TMx0W2V+miizQ==",
+            "version": "6.0.3",
+            "resolved": "https://registry.npmjs.org/typescript/-/typescript-6.0.3.tgz",
+            "integrity": "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==",
             "dev": true
         },
         "uglify-js": {

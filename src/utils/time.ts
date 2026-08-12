@@ -1,16 +1,7 @@
 export function timeStringToSeconds(timeString: string): number {
-    if (!timeString.includes(":")) {
+    const parts = timeString.split(":");
+    if (parts.length < 2 || parts.some((part) => !/^\d+$/.test(part))) {
         throw new Error("Invalid time string");
     }
-    let timeArray = timeString.split(":"),
-        seconds = 0,
-        m = 1;
-
-    while (timeArray.length > 0) {
-        const digit = parseInt(timeArray.pop());
-        seconds += m * digit;
-        m *= 60;
-    }
-
-    return seconds;
+    return parts.reduce((seconds, part) => seconds * 60 + Number(part), 0);
 }

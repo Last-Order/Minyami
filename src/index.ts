@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import * as fs from "fs";
 import * as path from "path";
-import { Erii as EriiConstructor } from "erii";
 import { createArchiveDownloader } from "./core/archive";
 import { DownloadController } from "./core/download/downloader";
 import { createLiveDownloader } from "./core/live";
@@ -10,9 +9,28 @@ import { readConfigFile } from "./utils/system";
 import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
 import ProxyAgentHelper from "./utils/agent";
+import { createErii } from "./utils/erii";
 
-// erii's default export relies on transpiled CommonJS interop, so construct its named class in native ESM.
-const Erii = new EriiConstructor();
+interface CliOptions {
+    [key: string]: unknown;
+    verbose?: boolean;
+    noProxy?: boolean;
+    threads?: number;
+    retries?: number;
+    output?: string;
+    tempDir?: string;
+    cookies?: string;
+    headers?: string | string[];
+    proxy?: string;
+    noMerge?: boolean;
+    keep?: boolean;
+    keepEncryptedChunks?: boolean;
+    key?: string | string[];
+    live?: boolean;
+    slice?: string;
+}
+
+const Erii = createErii<CliOptions>();
 
 Erii.setMetaInfo({
     version:

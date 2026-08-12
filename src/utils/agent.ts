@@ -4,16 +4,12 @@ import { SocksProxyAgent } from "socks-proxy-agent";
 import logger from "./log";
 import { default as Registry } from "winreg";
 
-interface RegistryKeyItem {
-    name: string;
-    value: string;
-}
-
-const readRegistryKey = (key: any): Promise<RegistryKeyItem[]> => {
+const readRegistryKey = (key: InstanceType<typeof Registry>): Promise<Winreg.RegistryItem[]> => {
     return new Promise((resolve, reject) => {
         key.values((err, items) => {
             if (err) {
                 reject(err);
+                return;
             }
             resolve(items);
         });
@@ -22,11 +18,19 @@ const readRegistryKey = (key: any): Promise<RegistryKeyItem[]> => {
 
 class InvalidProxyServerError extends Error {}
 
-class ProxyAgentHelper {
-    proxyAgentInstance: Agent = null;
-    isEnableProxy = true;
+function parseProxyAddress(proxy: string, pattern: RegExp): [host: string, port: string] {
+    const match = pattern.exec(proxy);
+    const host = match?.[1];
+    const port = match?.[2];
+    if (!host || !port) {
+        throw new InvalidProxyServerError("Proxy server invalid.");
+    }
+    return [host, port];
+}
 
-    constructor() {}
+class ProxyAgentHelper {
+    proxyAgentInstance: Agent | undefined;
+    isEnableProxy = true;
 
     /**
      * Set up proxy server and initialize the proxy agent instance
@@ -49,37 +53,25 @@ class ProxyAgentHelper {
                 throw new InvalidProxyServerError("Socks4 is not supported. Please use HTTP or Socks5 proxy.");
             }
             // Socks5 Proxy
-            try {
-                const [_, host, port] = proxy.match(/socks5?(?:(?<=5)h)?[:：]\/\/(.+)[:：](\d+)/);
-                this.proxyAgentInstance = new SocksProxyAgent(`socks5h://${host}:${port}`, {
-                    keepAlive: true,
-                });
-                logger.debug(`Socks5 Proxy set: socks5h://${host}:${port}`);
-            } catch (e) {
-                throw new InvalidProxyServerError("Proxy server invalid.");
-            }
+            const [host, port] = parseProxyAddress(proxy, /^socks(?:5h?)?[:：]\/\/(.+)[:：](\d+)$/);
+            this.proxyAgentInstance = new SocksProxyAgent(`socks5h://${host}:${port}`, {
+                keepAlive: true,
+            });
+            logger.debug(`Socks5 Proxy set: socks5h://${host}:${port}`);
         } else if (allowNonPrefixSocksProxy && !proxy.match(/\//)) {
             // For compatibility, use proxy without protocol as socks5 proxy
-            try {
-                const [_, host, port] = proxy.match(/(.+)[:：](\d+)/);
-                this.proxyAgentInstance = new SocksProxyAgent(`socks5h://${host}:${port}`, {
-                    keepAlive: true,
-                });
-                logger.debug(`Socks5 Proxy set: socks5h://${host}:${port}`);
-            } catch (e) {
-                throw new InvalidProxyServerError("Proxy server invalid.");
-            }
+            const [host, port] = parseProxyAddress(proxy, /^(.+)[:：](\d+)$/);
+            this.proxyAgentInstance = new SocksProxyAgent(`socks5h://${host}:${port}`, {
+                keepAlive: true,
+            });
+            logger.debug(`Socks5 Proxy set: socks5h://${host}:${port}`);
         } else if (proxy.includes(":")) {
             // Treat as an http proxy without protocol prefix
-            try {
-                const [_, host, port] = proxy.match(/(.+)[:：](\d+)/);
-                this.proxyAgentInstance = new HttpsProxyAgent(`http://${host}:${port}`, {
-                    keepAlive: true,
-                });
-                logger.debug(`HTTP Proxy set: http://${host}:${port}`);
-            } catch (e) {
-                throw new InvalidProxyServerError("Proxy server invalid.");
-            }
+            const [host, port] = parseProxyAddress(proxy, /^(.+)[:：](\d+)$/);
+            this.proxyAgentInstance = new HttpsProxyAgent(`http://${host}:${port}`, {
+                keepAlive: true,
+            });
+            logger.debug(`HTTP Proxy set: http://${host}:${port}`);
         } else {
             throw new InvalidProxyServerError("Proxy server invalid.");
         }
@@ -92,9 +84,9 @@ class ProxyAgentHelper {
         this.isEnableProxy = false;
     }
 
-    getProxyAgentInstance() {
+    getProxyAgentInstance(): Agent | undefined {
         if (!this.isEnableProxy) {
-            return null;
+            return undefined;
         }
         return this.proxyAgentInstance;
     }
@@ -127,7 +119,7 @@ class ProxyAgentHelper {
             const items = await readRegistryKey(key);
             const proxyEnableItem = items.find((item) => item.name === "ProxyEnable");
             const proxyServerItem = items.find((item) => item.name === "ProxyServer");
-            const isProxyEnable = proxyEnableItem.value === "0x1";
+            const isProxyEnable = proxyEnableItem?.value === "0x1";
             if (isProxyEnable && proxyServerItem && proxyServerItem.value !== "") {
                 if (proxyServerItem.value.startsWith("socks=")) {
                     // socks proxy
@@ -145,7 +137,11 @@ class ProxyAgentHelper {
 export function createProxyAgent(proxy: string, options: { allowNonPrefixSocksProxy?: boolean } = {}): Agent {
     const helper = new ProxyAgentHelper();
     helper.setProxy(proxy, options);
-    return helper.getProxyAgentInstance();
+    const agent = helper.getProxyAgentInstance();
+    if (!agent) {
+        throw new InvalidProxyServerError("Proxy server invalid.");
+    }
+    return agent;
 }
 
 export default new ProxyAgentHelper();

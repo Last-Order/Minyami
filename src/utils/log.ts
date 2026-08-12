@@ -2,8 +2,8 @@ import chalk from "chalk";
 
 class ConsoleLogger {
     private isDebugMode = false;
-    debug(message: string) {
-        this.isDebugMode && console.debug(chalk.gray(`[MINYAMI][DEBUG] ${message}`));
+    debug(message: unknown) {
+        this.isDebugMode && console.debug(chalk.gray(`[MINYAMI][DEBUG] ${String(message)}`));
     }
 
     info(message: string) {

@@ -87,7 +87,7 @@ async function selectVideo(choices: readonly VideoChoice[]): Promise<VideoChoice
         type: "select",
         name: "video",
         message: "Select a video track",
-        choices,
+        choices: [...choices],
         initial: 0,
     });
     return response.video as VideoChoiceValue | undefined;
