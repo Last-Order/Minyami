@@ -1,9 +1,10 @@
 {
     "compilerOptions": {
-        "target": "es6",
+        "target": "es2022",
         "outDir": "dist",
         "declaration": true,
-        "module": "commonjs",
+        "module": "esnext",
+        "moduleResolution": "bundler",
         "sourceMap": true,
         "lib": ["es7", "esnext"],
         "experimentalDecorators": true,

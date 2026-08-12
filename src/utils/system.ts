@@ -1,10 +1,11 @@
-const util = require("util");
+import { exec as execCallback } from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
+import { promisify } from "util";
 import logger from "./log";
 
-export const exec = util.promisify(require("child_process").exec);
+export const exec = promisify(execCallback);
 
 export const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 

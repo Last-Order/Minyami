@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as fs from "fs";
 import * as path from "path";
-import Erii from "erii";
+import { Erii as EriiConstructor } from "erii";
 import { createArchiveDownloader } from "./core/archive";
 import { DownloadController } from "./core/download/downloader";
 import { createLiveDownloader } from "./core/live";
@@ -11,9 +11,12 @@ import logger from "./utils/log";
 import { timeStringToSeconds } from "./utils/time";
 import ProxyAgentHelper from "./utils/agent";
 
+// erii's default export relies on transpiled CommonJS interop, so construct its named class in native ESM.
+const Erii = new EriiConstructor();
+
 Erii.setMetaInfo({
     version:
-        JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json")).toString())["version"] +
+        JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url)).toString())["version"] +
         "\nうめにゃん~ (虎>ω<)",
     name: "Minyami / A lovely video downloader",
 });

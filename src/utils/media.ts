@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import { URL } from "url";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+import cliProgress from "cli-progress";
 import { exec } from "./system";
 import { getAvailableOutputPath } from "./common";
 import ProxyAgentHelper from "./agent";
@@ -32,7 +33,6 @@ export function mergeToMKV(fileList = [], output = "./output.mkv") {
 }
 
 export function mergeToTS(fileList = [], output = "./output.ts") {
-    const cliProgress = require("cli-progress");
     const outputPath = getAvailableOutputPath(output);
     return new Promise<string>(async (resolve) => {
         if (fileList.length === 0) {

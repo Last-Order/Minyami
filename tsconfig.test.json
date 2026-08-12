@@ -1,6 +1,8 @@
 {
     "extends": "./tsconfig.json",
     "compilerOptions": {
+        "module": "commonjs",
+        "moduleResolution": "node",
         "noEmit": true,
         "types": ["node", "jest"]
     },

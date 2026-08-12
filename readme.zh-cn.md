@@ -6,7 +6,7 @@
 
 ## 运行要求
 
-- Node.js 22 或更高版本，推荐使用活跃的 LTS 版本。
+- Node.js 24 或更高版本，推荐使用活跃的 LTS 版本。
 - `mkvmerge` 或 `ffmpeg` 为可选依赖。如需混流独立音视频轨道，请安装其中一个并将其加入 `PATH`。
 
 ## 安装
@@ -76,6 +76,8 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 如果 master playlist 包含多个流选项，Minyami 会按带宽从高到低显示交互式菜单。在非交互式终端中，程序会自动选择带宽最高的选项。只有一个选项时会直接开始下载。
 
 ## 作为库使用
+
+Minyami 以 ESM 格式发布，请使用 `import` 加载，不支持 CommonJS `require()`。
 
 下载点播播放列表：
 

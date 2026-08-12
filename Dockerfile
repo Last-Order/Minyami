@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 COPY / /Minyami/
 
@@ -9,7 +9,7 @@ RUN npm ci && npm run build && \
     mv minyami-`node -p "require('./package.json').version"`.tgz minyami.tgz
 
 
-FROM node:22-alpine
+FROM node:24-alpine
 
 COPY --from=builder /Minyami/minyami.tgz /minyami.tgz
 

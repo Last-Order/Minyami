@@ -11,7 +11,8 @@
 -   Changed the `chunk-downloaded` event payload. The 5.x `taskname`, `finishedChunksCount`, `totalChunksCount`, `chunkSpeed`, `ratioSpeed`, and `eta` fields were replaced by `taskName`, `trackId`, `completedChunkCount`, `successfulChunkCount`, `droppedChunkCount`, `totalChunkCount`, `successfulChunksPerSecond`, `successfulDurationRatio`, and `completionEta`.
 -   Changed `--slice` selection from the 5.x segment-start rule to segment overlap with a half-open `[start, end)` range. Segments spanning `start` are now included, while segments starting exactly at `end` are excluded, so boundary segments and output duration may differ.
 -   Removed the `--chunk-naming-strategy` CLI option and the corresponding `chunkNamingStrategy` library configuration. Temporary HLS chunks now use the mixed `sequence_upstream-name` format.
--   Raised the minimum supported Node.js version to 22.
+-   Published the package as ESM-only bundles. CommonJS `require()` and internal `dist/` module paths are no longer supported.
+-   Raised the minimum supported Node.js version to 24.
 -   Changed the default parent directory for temporary workspaces from the system temporary directory to the current working directory.
 -   Removed the `--clean` CLI command. Temporary workspaces that cannot be deleted automatically must now be removed manually.
 -   Removed the `--format` CLI option and `DownloaderConfig.format`. `--output` / `DownloaderConfig.output` is now an output basename: a recognized video extension is discarded, and the actual output extension is selected from the source or muxer container.

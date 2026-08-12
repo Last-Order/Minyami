@@ -8,7 +8,7 @@
 
 ## Requirements
 
-- Node.js 22 or newer; an active LTS release is recommended.
+- Node.js 24 or newer; an active LTS release is recommended.
 - `mkvmerge` or `ffmpeg` is optional. Install either one and add it to `PATH` if you need to mux separate audio and video tracks.
 
 ## Installation
@@ -78,6 +78,8 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 If a master playlist contains multiple stream options, Minyami displays an interactive menu ordered by bandwidth. In a non-interactive terminal, it selects the highest-bandwidth option automatically. A playlist with only one option starts without prompting.
 
 ## Use as a library
+
+Minyami is distributed as ESM and must be loaded with `import` rather than CommonJS `require()`.
 
 Download an archive playlist:
 

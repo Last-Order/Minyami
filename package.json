@@ -2,29 +2,36 @@
     "name": "minyami",
     "version": "6.0.0-beta.1",
     "description": "",
-    "main": "dist/exports.js",
-    "types": "dist/exports.d.ts",
+    "main": "./dist/exports.mjs",
+    "types": "./dist/exports.d.mts",
+    "exports": {
+        ".": {
+            "types": "./dist/exports.d.mts",
+            "import": "./dist/exports.mjs"
+        }
+    },
     "repository": {
         "type": "git",
         "url": "https://github.com/Last-Order/Minyami"
     },
     "scripts": {
-        "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc --newLine lf",
+        "build": "tsdown",
+        "typecheck": "tsc --noEmit",
         "test": "jest",
         "test:watch": "jest --watch",
         "test:coverage": "jest --coverage",
-        "lint": "prettier ./src/**/* ./test/**/* ./jest.config.js ./tsconfig*.json ./.github/workflows/*.yml --check",
-        "lint-fix": "prettier ./src/**/* ./test/**/* ./jest.config.js ./tsconfig*.json ./.github/workflows/*.yml --write",
+        "lint": "prettier ./src/**/* ./test/**/* ./jest.config.js ./tsdown.config.mjs ./tsconfig*.json ./.github/workflows/*.yml --check",
+        "lint-fix": "prettier ./src/**/* ./test/**/* ./jest.config.js ./tsdown.config.mjs ./tsconfig*.json ./.github/workflows/*.yml --write",
         "prepare": "husky install"
     },
     "bin": {
-        "minyami": "./dist/index.js"
+        "minyami": "./dist/index.mjs"
     },
     "files": [
         "/dist/"
     ],
     "engines": {
-        "node": ">=22"
+        "node": ">=24"
     },
     "author": {
         "email": "sora@sound.moe",
@@ -44,12 +51,13 @@
     },
     "devDependencies": {
         "@types/jest": "^30.0.0",
-        "@types/node": "^22.20.1",
+        "@types/node": "^24.13.3",
         "husky": "^7.0.2",
         "jest": "^30.4.2",
         "lint-staged": "^11.1.2",
         "prettier": "^2.3.2",
         "ts-jest": "^29.4.12",
+        "tsdown": "^0.22.14",
         "typescript": "^5.4.2"
     },
     "lint-staged": {
