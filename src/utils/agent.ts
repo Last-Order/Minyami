@@ -86,24 +86,10 @@ class ProxyAgentHelper {
     }
 
     /**
-     * Whether the proxy is enabled
-     */
-    isProxyEnabled() {
-        return this.isEnableProxy;
-    }
-
-    /**
      * Disable the proxy
      */
     disableProxy() {
         this.isEnableProxy = false;
-    }
-
-    /**
-     * Enable the proxy
-     */
-    enableProxy() {
-        this.isEnableProxy = true;
     }
 
     getProxyAgentInstance() {

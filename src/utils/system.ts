@@ -1,33 +1,7 @@
-import { exec as execCallback } from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
-import { promisify } from "util";
 import logger from "./log";
-
-export const exec = promisify(execCallback);
-
-export const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
-
-export const deleteDirectory = (directoryPath: string, fileList: string[] = []) => {
-    for (const filename of fileList) {
-        try {
-            fs.unlinkSync(path.resolve(directoryPath, filename));
-        } catch (e) {
-            logger.debug(e);
-            logger.warning(`Delete ${path.resolve(directoryPath, filename)} failed, ignored`);
-        }
-    }
-    if (fs.readdirSync(directoryPath).length === 0) {
-        fs.rmdirSync(directoryPath);
-    }
-};
-
-export const deleteEmptyDirectory = (directoryPath: string) => {
-    if (fs.readdirSync(directoryPath).length === 0) {
-        fs.rmdirSync(directoryPath);
-    }
-};
 
 export const initMinyamiDirectory = () => {
     const minyamiPath = path.resolve(os.homedir(), "./.minyami/");

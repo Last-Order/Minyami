@@ -18,19 +18,3 @@ export function getAvailableOutputPath(path: string) {
     }
     return path;
 }
-
-/** 获得文件后缀名 */
-export function getFileExt(filePath: string): string {
-    let ext = "";
-    if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
-        const urlPath = new URL(filePath).pathname.slice(1).split("/");
-        if (urlPath[urlPath.length - 1].includes(".")) {
-            ext = urlPath[urlPath.length - 1].split(".").slice(-1)[0];
-        }
-    } else {
-        const filePathArr = filePath.split("/");
-        const filename = filePathArr[filePathArr.length - 1];
-        ext = filename.includes(".") ? filename.split(".").slice(-1)[0] : "";
-    }
-    return ext;
-}
