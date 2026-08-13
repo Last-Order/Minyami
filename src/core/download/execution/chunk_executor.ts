@@ -34,7 +34,11 @@ export class ChunkExecutor {
         const timeout = Math.min(options.attempt * options.itemTimeout, options.itemTimeout * 5);
 
         try {
-            await this.http.download(item.url, downloadedPath, { timeout, signal: options.signal });
+            await this.http.download(item.url, downloadedPath, {
+                timeout,
+                signal: options.signal,
+                ...(item.byteRange ? { byteRange: item.byteRange } : {}),
+            });
             logger.debug(`Downloading ${task.filename} succeed.`);
 
             if (!item.encryption) {

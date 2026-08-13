@@ -19,6 +19,7 @@ export type {
 } from "./core/source/stream_selection";
 export type {
     Aes128CbcEncryption,
+    DownloadByteRange,
     DownloadEncryption,
     DownloadItem,
     DownloadItemKind,

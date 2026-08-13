@@ -16,6 +16,11 @@ export enum HLSSegmentKind {
     Media = "media",
 }
 
+export interface HLSByteRange {
+    readonly offset: number;
+    readonly length: number;
+}
+
 export interface HLSVariant {
     readonly url: string;
     readonly bandwidth: number;
@@ -55,6 +60,7 @@ export interface HLSInitializationEncryption extends HLSMediaEncryption {
 export interface HLSInitializationSegment {
     readonly kind: HLSSegmentKind.Initialization;
     readonly url: string;
+    readonly byteRange?: HLSByteRange;
     readonly encryption?: HLSInitializationEncryption;
 }
 
@@ -63,6 +69,7 @@ export interface HLSMediaSegment {
     readonly url: string;
     readonly duration: number;
     readonly sequenceId: number;
+    readonly byteRange?: HLSByteRange;
     readonly encryption?: HLSMediaEncryption;
 }
 

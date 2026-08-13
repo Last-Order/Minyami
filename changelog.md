@@ -23,6 +23,7 @@
 -   Added interactive video and audio selection for HLS master playlists. Choices show available resolution, frame rate, codec, bandwidth, language, and channel information, and the playlist's default audio rendition is preselected. Downloads start immediately when there is no choice to make; non-interactive terminals automatically use all tracks from the highest-bandwidth option.
 -   Added downloading of external HLS audio renditions and audio-only variants. Selected tracks are downloaded independently with separate progress, and remain as separate output files when they cannot be muxed.
 -   Added automatic muxing of separate video and audio tracks. Minyami uses `mkvmerge` when available and falls back to FFmpeg.
+-   Added end-to-end HLS byte-range downloads for `EXT-X-BYTERANGE` media segments and `EXT-X-MAP:BYTERANGE` initialization sections. Custom download sources can also publish an optional byte range on each item.
 
 ### Changed
 

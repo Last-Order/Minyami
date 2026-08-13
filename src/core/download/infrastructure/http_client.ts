@@ -5,11 +5,16 @@ import { Agent } from "agent-base";
 import UA from "../../../constants/ua";
 import { createTimedAbortScope } from "../../../utils/abort";
 import ProxyAgentHelper, { createProxyAgent } from "../../../utils/agent";
+import { DownloadByteRange } from "../../source/types";
 
 export interface DownloadHttpClientConfig {
     readonly proxy: string;
     readonly cookies?: string;
     readonly headers: Readonly<Record<string, string>>;
+}
+
+export interface DownloadRequestConfig extends AxiosRequestConfig {
+    readonly byteRange?: DownloadByteRange;
 }
 
 export class DownloadHttpClient {
@@ -61,21 +66,39 @@ export class DownloadHttpClient {
         });
     }
 
-    async download(url: string, destination: string, options: AxiosRequestConfig = {}): Promise<void> {
-        const timeout = options.timeout || 60000;
+    async download(url: string, destination: string, options: DownloadRequestConfig = {}): Promise<void> {
+        const { byteRange, ...requestOptions } = options;
+        const timeout = requestOptions.timeout || 60000;
         // Keep a local timeout guard because some adapters do not abort stalled response bodies consistently.
-        const abortScope = createTimedAbortScope(timeout, options.signal);
+        const abortScope = createTimedAbortScope(timeout, requestOptions.signal);
 
         try {
             const response = await this.request<ArrayBuffer>(url, {
                 responseType: "arraybuffer",
-                ...options,
+                ...requestOptions,
+                ...(byteRange
+                    ? {
+                          headers: {
+                              ...(requestOptions.headers || {}),
+                              Range: `bytes=${byteRange.offset}-${byteRange.offset + byteRange.length - 1}`,
+                              "Accept-Encoding": "identity",
+                          },
+                      }
+                    : {}),
                 signal: abortScope.signal,
             });
             const body = Buffer.from(response.data);
             const contentLength = response.headers["content-length"];
             if (contentLength && parseInt(String(contentLength)) !== body.length) {
                 throw new Error("Bad Response");
+            }
+            if (byteRange) {
+                if (response.status !== 206) {
+                    throw new Error(`Unexpected response status for byte-range request: ${response.status}`);
+                }
+                if (body.length !== byteRange.length) {
+                    throw new Error("Downloaded byte count does not match the requested byte range.");
+                }
             }
             // Publish by rename so executors never observe a partially written destination as a successful item.
             const temporaryPath = destination + ".t";

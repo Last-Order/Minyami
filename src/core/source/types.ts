@@ -6,6 +6,13 @@ export type DownloadItemKind = "init" | "media";
 
 export type DownloadTrackId = string;
 
+export interface DownloadByteRange {
+    /** Zero-based offset from the beginning of the upstream resource. */
+    readonly offset: number;
+    /** Number of bytes to download. */
+    readonly length: number;
+}
+
 export interface Aes128CbcEncryption {
     readonly scheme: "aes-128-cbc";
     /** Stable key-store identity. HLS sources use the absolute key URL. */
@@ -18,6 +25,7 @@ export type DownloadEncryption = Aes128CbcEncryption;
 
 interface BaseDownloadItem {
     readonly url: string;
+    readonly byteRange?: DownloadByteRange;
     readonly encryption?: DownloadEncryption;
 }
 

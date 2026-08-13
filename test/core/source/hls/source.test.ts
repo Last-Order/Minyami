@@ -13,6 +13,98 @@ import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
 
 describe("HLSSource", () => {
+    test("downloads initialization and media byte ranges from one resource in playlist order", async () => {
+        const resource = Buffer.from("INITfirstsecond");
+        const requestedRanges: string[] = [];
+        const server = http.createServer((request, response) => {
+            if (request.url === "/media.mp4") {
+                requestedRanges.push(String(request.headers.range));
+                respondWithByteRange(request, response, resource);
+                return;
+            }
+            response.end(
+                [
+                    "#EXTM3U",
+                    '#EXT-X-MAP:URI="/media.mp4",BYTERANGE="4@0"',
+                    "#EXTINF:1,",
+                    "#EXT-X-BYTERANGE:5@4",
+                    "/media.mp4",
+                    "#EXTINF:1,",
+                    "#EXT-X-BYTERANGE:6",
+                    "/media.mp4",
+                    "#EXT-X-ENDLIST",
+                ].join("\n")
+            );
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-ranged-hls-", async (directory) => {
+                const output = path.join(directory, "ranged.ts");
+                const downloader = createDownloader(createHLSSource(`${baseUrl}/playlist.m3u8`, { mode: "snapshot" }), {
+                    output,
+                    tempDir: directory,
+                    threads: 3,
+                });
+
+                await downloader.download();
+
+                expect(fs.readFileSync(output)).toEqual(resource);
+                expect(requestedRanges.sort()).toEqual(["bytes=0-3", "bytes=4-8", "bytes=9-14"]);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
+    test("decrypts an AES-128 media segment after selecting its byte range", async () => {
+        const key = Buffer.from("0123456789abcdef");
+        const iv = Buffer.alloc(16);
+        iv[15] = 1;
+        const expected = Buffer.from("encrypted ranged chunk payload");
+        const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
+        const encrypted = Buffer.concat([cipher.update(expected), cipher.final()]);
+        const prefix = Buffer.from("skip-");
+        const resource = Buffer.concat([prefix, encrypted, Buffer.from("-tail")]);
+        const server = http.createServer((request, response) => {
+            if (request.url === "/key") {
+                response.end(key);
+                return;
+            }
+            if (request.url === "/media.bin") {
+                respondWithByteRange(request, response, resource);
+                return;
+            }
+            response.end(
+                [
+                    "#EXTM3U",
+                    '#EXT-X-KEY:METHOD=AES-128,URI="/key",IV=0x00000000000000000000000000000001',
+                    "#EXTINF:1,",
+                    `#EXT-X-BYTERANGE:${encrypted.length}@${prefix.length}`,
+                    "/media.bin",
+                    "#EXT-X-ENDLIST",
+                ].join("\n")
+            );
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-encrypted-ranged-hls-", async (directory) => {
+                const output = path.join(directory, "encrypted-range.ts");
+                const downloader = createDownloader(createHLSSource(`${baseUrl}/playlist.m3u8`, { mode: "snapshot" }), {
+                    output,
+                    tempDir: directory,
+                });
+
+                await downloader.download();
+
+                expect(fs.readFileSync(output)).toEqual(expected);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test("resolves playlist encryption metadata and produces decryptable items", async () => {
         const key = Buffer.from("0123456789abcdef");
         const iv = Buffer.alloc(16);
@@ -446,4 +538,25 @@ function emptyMediaPlaylist(): HLSMediaPlaylist {
         totalDuration: 0,
         averageSegmentDuration: 0,
     };
+}
+
+function respondWithByteRange(request: http.IncomingMessage, response: http.ServerResponse, resource: Buffer): void {
+    const match = String(request.headers.range).match(/^bytes=([0-9]+)-([0-9]+)$/);
+    if (!match) {
+        response.statusCode = 400;
+        response.end("missing range");
+        return;
+    }
+    const start = Number(match[1]);
+    const end = Number(match[2]);
+    if (start < 0 || end < start || end >= resource.length) {
+        response.statusCode = 416;
+        response.end();
+        return;
+    }
+    const body = resource.subarray(start, end + 1);
+    response.statusCode = 206;
+    response.setHeader("content-range", `bytes ${start}-${end}/${resource.length}`);
+    response.setHeader("content-length", body.length);
+    response.end(body);
 }

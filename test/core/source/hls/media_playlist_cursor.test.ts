@@ -25,8 +25,17 @@ describe("HLSMediaPlaylistCursor", () => {
             {
                 trackId: "video",
                 items: [
-                    { url: "https://media.example/init.mp4", kind: "init" },
-                    { url: "https://media.example/segment.m4s", kind: "media", duration: 2 },
+                    {
+                        url: "https://media.example/init.mp4",
+                        kind: "init",
+                        byteRange: { offset: 0, length: 100 },
+                    },
+                    {
+                        url: "https://media.example/segment.m4s",
+                        kind: "media",
+                        duration: 2,
+                        byteRange: { offset: 100, length: 200 },
+                    },
                 ],
                 totalItemCount: 2,
             },
@@ -50,6 +59,49 @@ describe("HLSMediaPlaylistCursor", () => {
         expect(audioBatches[0].items).toHaveLength(2);
         expect(videoBatches[0].trackId).toBe("video");
         expect(audioBatches[0].trackId).toBe("audio");
+    });
+
+    test("keeps initialization ranges with the same URL as distinct follow items", async () => {
+        const context = createContext();
+        const playlist: HLSMediaPlaylist = {
+            ...createPlaylist(),
+            segments: [
+                {
+                    kind: HLSSegmentKind.Initialization,
+                    url: "https://media.example/shared.mp4",
+                    byteRange: { offset: 0, length: 100 },
+                },
+                {
+                    kind: HLSSegmentKind.Initialization,
+                    url: "https://media.example/shared.mp4",
+                    byteRange: { offset: 300, length: 100 },
+                },
+                {
+                    kind: HLSSegmentKind.Initialization,
+                    url: "https://media.example/shared.mp4",
+                    byteRange: { offset: 0, length: 100 },
+                },
+            ],
+            totalDuration: 0,
+            averageSegmentDuration: 0,
+        };
+        const cursor = createCursor("video", playlist, context, "follow");
+        await cursor.prepare(context, new AbortController().signal);
+
+        const batches = await collect(cursor.discover(context, new AbortController().signal));
+
+        expect(batches[0].items).toEqual([
+            {
+                url: "https://media.example/shared.mp4",
+                kind: "init",
+                byteRange: { offset: 0, length: 100 },
+            },
+            {
+                url: "https://media.example/shared.mp4",
+                kind: "init",
+                byteRange: { offset: 300, length: 100 },
+            },
+        ]);
     });
 });
 
@@ -79,12 +131,17 @@ function createPlaylist(): HLSMediaPlaylist {
     return {
         kind: HLSPlaylistKind.Media,
         segments: [
-            { kind: HLSSegmentKind.Initialization, url: "https://media.example/init.mp4" },
+            {
+                kind: HLSSegmentKind.Initialization,
+                url: "https://media.example/init.mp4",
+                byteRange: { offset: 0, length: 100 },
+            },
             {
                 kind: HLSSegmentKind.Media,
                 url: "https://media.example/segment.m4s",
                 duration: 2,
                 sequenceId: 7,
+                byteRange: { offset: 100, length: 200 },
             },
         ],
         encryptionKeyUrls: [],

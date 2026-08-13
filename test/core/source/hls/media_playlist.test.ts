@@ -33,6 +33,7 @@ describe("parseMediaPlaylist", () => {
                     url: "https://cdn.example/live/segments/41.m4s",
                     duration: 4.25,
                     sequenceId: 41,
+                    byteRange: { offset: 0, length: 1000 },
                 },
                 {
                     kind: HLSSegmentKind.Media,
@@ -46,6 +47,119 @@ describe("parseMediaPlaylist", () => {
             totalDuration: 10,
             averageSegmentDuration: 5,
         });
+    });
+
+    test("resolves initialization and explicit or implicit media byte ranges", () => {
+        const playlist = parseMediaPlaylist({
+            content: [
+                "#EXTM3U",
+                '#EXT-X-MAP:URI="media.mp4",BYTERANGE="20@0"',
+                "#EXTINF:1,",
+                "#EXT-X-BYTERANGE:4@20",
+                "media.mp4",
+                "#EXT-X-BYTERANGE:5",
+                "#EXTINF:1,",
+                "media.mp4",
+            ].join("\n"),
+            playlistUrl: "https://cdn.example/playlist.m3u8",
+        });
+
+        expect(playlist.segments).toEqual([
+            {
+                kind: HLSSegmentKind.Initialization,
+                url: "https://cdn.example/media.mp4",
+                byteRange: { offset: 0, length: 20 },
+            },
+            {
+                kind: HLSSegmentKind.Media,
+                url: "https://cdn.example/media.mp4",
+                duration: 1,
+                sequenceId: 0,
+                byteRange: { offset: 20, length: 4 },
+            },
+            {
+                kind: HLSSegmentKind.Media,
+                url: "https://cdn.example/media.mp4",
+                duration: 1,
+                sequenceId: 1,
+                byteRange: { offset: 24, length: 5 },
+            },
+        ]);
+    });
+
+    test.each([
+        ["a malformed range", "invalid", "Invalid byte range for media segment"],
+        ["a zero-length range", "0@0", "Invalid byte range for media segment"],
+        ["an overflowing range", "2@9007199254740991", "Invalid byte range for media segment"],
+    ])("rejects %s", (_name, byteRange, message) => {
+        const content = ["#EXTINF:1,", `#EXT-X-BYTERANGE:${byteRange}`, "https://cdn.example/media.mp4"].join("\n");
+
+        expect(() => parseMediaPlaylist({ content })).toThrow(new HLSParseError(message));
+    });
+
+    test("rejects an implicit media byte range without an adjacent range of the same resource", () => {
+        const invalidPlaylists = [
+            ["#EXTINF:1,", "#EXT-X-BYTERANGE:4", "https://cdn.example/media.mp4"],
+            [
+                "#EXTINF:1,",
+                "#EXT-X-BYTERANGE:4@0",
+                "https://cdn.example/first.mp4",
+                "#EXTINF:1,",
+                "#EXT-X-BYTERANGE:4",
+                "https://cdn.example/second.mp4",
+            ],
+            [
+                "#EXTINF:1,",
+                "https://cdn.example/media.mp4",
+                "#EXTINF:1,",
+                "#EXT-X-BYTERANGE:4",
+                "https://cdn.example/media.mp4",
+            ],
+        ];
+
+        for (const lines of invalidPlaylists) {
+            expect(() => parseMediaPlaylist({ content: lines.join("\n") })).toThrow(
+                new HLSParseError("Cannot derive byte-range offset for media segment")
+            );
+        }
+    });
+
+    test("rejects an initialization byte range without an explicit offset", () => {
+        expect(() =>
+            parseMediaPlaylist({
+                content: '#EXT-X-MAP:URI="https://cdn.example/init.mp4",BYTERANGE="100"',
+            })
+        ).toThrow(new HLSParseError("Missing byte-range offset for initialization segment"));
+    });
+
+    test("rejects encrypted I-frame byte ranges that require CBC range widening", () => {
+        expect(() =>
+            parseMediaPlaylist({
+                content: [
+                    "#EXT-X-I-FRAMES-ONLY",
+                    '#EXT-X-KEY:METHOD=AES-128,URI="https://cdn.example/key",IV=0x01',
+                    "#EXTINF:1,",
+                    "#EXT-X-BYTERANGE:32@16",
+                    "https://cdn.example/media.ts",
+                ].join("\n"),
+            })
+        ).toThrow(new HLSParseError("Encrypted I-frame byte ranges are not supported"));
+    });
+
+    test("treats I-FRAMES-ONLY as global when declared after a ranged segment", () => {
+        expect(() =>
+            parseMediaPlaylist({
+                content: [
+                    "#EXTM3U",
+                    '#EXT-X-KEY:METHOD=AES-128,URI="https://cdn.example/key",IV=0x01',
+                    "#EXTINF:1,",
+                    "#EXT-X-BYTERANGE:32@16",
+                    "https://cdn.example/media.ts",
+                    "#EXT-X-I-FRAMES-ONLY",
+                    "#EXT-X-ENDLIST",
+                ].join("\n"),
+            })
+        ).toThrow(new HLSParseError("Encrypted I-frame byte ranges are not supported"));
     });
 
     test("applies AES-128 metadata until encryption is disabled", () => {
@@ -87,6 +201,20 @@ describe("parseMediaPlaylist", () => {
                 sequenceId: 11,
             },
         ]);
+    });
+
+    test("applies encryption tags that appear between EXTINF and its media URI", () => {
+        const playlist = parseMediaPlaylist({
+            content: [
+                "#EXTINF:1,",
+                '#EXT-X-KEY:METHOD=AES-128,URI="https://cdn.example/key",IV=0x01',
+                "https://cdn.example/media.ts",
+            ].join("\n"),
+        });
+
+        expect(playlist.segments[0]).toMatchObject({
+            encryption: { method: "AES-128", keyUrl: "https://cdn.example/key", iv: "01" },
+        });
     });
 
     test("keeps delimiters inside quoted encryption attributes", () => {

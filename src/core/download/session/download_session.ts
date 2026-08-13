@@ -317,6 +317,18 @@ export class DownloadSession {
     }
 
     private validateDownloadItem(item: DownloadItem): void {
+        if (item.byteRange) {
+            const { offset, length } = item.byteRange;
+            if (
+                !Number.isSafeInteger(offset) ||
+                offset < 0 ||
+                !Number.isSafeInteger(length) ||
+                length <= 0 ||
+                offset > Number.MAX_SAFE_INTEGER - (length - 1)
+            ) {
+                throw new Error("Download byte range must have a safe non-negative offset and positive length.");
+            }
+        }
         if (!item.encryption) {
             return;
         }

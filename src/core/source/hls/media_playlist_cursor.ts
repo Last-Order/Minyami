@@ -9,7 +9,7 @@ import {
 } from "../types";
 import { MediaTrack } from "../stream_selection";
 import { SiteAdapterMode, SiteAdapterResult } from "./adapters/types";
-import { HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
+import { HLSInitializationSegment, HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
 import { PlaylistLoader } from "./playlist_loader";
 import { prepareSite } from "./site_adapter";
 
@@ -36,7 +36,7 @@ export interface HLSMediaPlaylistCursorOptions {
  * Sequence identities are playlist-local, so every future rendition needs its own cursor.
  */
 export class HLSMediaPlaylistCursor {
-    private readonly initialSegmentUrls = new Set<string>();
+    private readonly initialSegmentIdentities = new Set<string>();
     private readonly sequenceIds = new Set<number>();
     private playlist: HLSMediaPlaylist;
     private sitePlan: SiteAdapterResult = {};
@@ -202,10 +202,11 @@ export class HLSMediaPlaylistCursor {
                 this.sequenceIds.add(segment.sequenceId);
                 return true;
             }
-            if (this.initialSegmentUrls.has(segment.url)) {
+            const identity = initializationSegmentIdentity(segment);
+            if (this.initialSegmentIdentities.has(identity)) {
                 return false;
             }
-            this.initialSegmentUrls.add(segment.url);
+            this.initialSegmentIdentities.add(identity);
             return true;
         });
     }
@@ -217,6 +218,7 @@ export class HLSMediaPlaylistCursor {
                 return {
                     url: segment.url,
                     kind: "init",
+                    ...(segment.byteRange ? { byteRange: { ...segment.byteRange } } : {}),
                     ...(encryption ? { encryption } : {}),
                 };
             }
@@ -224,6 +226,7 @@ export class HLSMediaPlaylistCursor {
                 url: segment.url,
                 kind: "media",
                 duration: segment.duration,
+                ...(segment.byteRange ? { byteRange: { ...segment.byteRange } } : {}),
                 ...(encryption ? { encryption } : {}),
             };
         });
@@ -244,6 +247,10 @@ export class HLSMediaPlaylistCursor {
                     : segment.encryption.iv || segment.sequenceId.toString(16),
         };
     }
+}
+
+function initializationSegmentIdentity(segment: HLSInitializationSegment): string {
+    return JSON.stringify([segment.url, segment.byteRange?.offset, segment.byteRange?.length]);
 }
 
 function sliceItems(items: DownloadItem[], slice?: HLSSlice): DownloadItem[] {

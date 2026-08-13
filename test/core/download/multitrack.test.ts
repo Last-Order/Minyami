@@ -285,6 +285,40 @@ describe("multi-track downloads", () => {
     });
 
     test.each([
+        { offset: -1, length: 1 },
+        { offset: 0, length: 0 },
+        { offset: Number.MAX_SAFE_INTEGER, length: 2 },
+    ])("rejects an invalid download byte range $offset+$length before execution", async (byteRange) => {
+        await withTempDirectory("minyami-invalid-byte-range-", async (directory) => {
+            const source: DownloadSource = {
+                sourcePath: "custom://invalid-byte-range",
+                continuous: false,
+                async prepare() {
+                    return { container: MPEG_TS_CONTAINER, tracks: [createTrack("main")] };
+                },
+                async *discover() {
+                    yield {
+                        trackId: "main",
+                        items: [
+                            {
+                                url: "https://example.com/unused.ts",
+                                kind: "media",
+                                duration: 1,
+                                byteRange,
+                            },
+                        ],
+                        totalItemCount: 1,
+                    };
+                },
+            };
+
+            await expect(createDownloader(source, { noMerge: true, tempDir: directory }).download()).rejects.toThrow(
+                "Download byte range"
+            );
+        });
+    });
+
+    test.each([
         {
             name: "empty track list",
             tracks: [],
