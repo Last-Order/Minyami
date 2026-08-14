@@ -7,8 +7,12 @@ export { HLSParseError, HLSPlaylistKind, HLSSegmentKind } from "./models";
 export type {
     HLSAudioRendition,
     HLSByteRange,
+    HLSExternalKeyReference,
+    HLSHttpKeyReference,
+    HLSInlineKeyReference,
     HLSInitializationEncryption,
     HLSInitializationSegment,
+    HLSKeyReference,
     HLSMasterPlaylist,
     HLSMediaEncryption,
     HLSMediaPlaylist,
@@ -18,6 +22,7 @@ export type {
     HLSSegment,
     HLSVariant,
 } from "./models";
+export { HLSKeyReferenceKind } from "./models";
 
 export function parseHLSPlaylist(options: HLSParseOptions): HLSPlaylist {
     return isMasterPlaylist(options.content) ? parseMasterPlaylist(options) : parseMediaPlaylist(options);

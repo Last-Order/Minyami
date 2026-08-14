@@ -155,6 +155,49 @@ describe("HLSSource", () => {
         }
     });
 
+    test("decrypts AES-128 media with an inline data key without a key request", async () => {
+        const key = Buffer.from("0123456789abcdef");
+        const iv = Buffer.alloc(16);
+        iv[15] = 1;
+        const expected = Buffer.from("inline HLS key payload");
+        const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
+        const encrypted = Buffer.concat([cipher.update(expected), cipher.final()]);
+        const keyUri = `data:application/octet-stream;base64,${key.toString("base64")}`;
+        const requestedPaths: string[] = [];
+        const server = http.createServer((request, response) => {
+            requestedPaths.push(request.url!);
+            if (request.url === "/0.ts") {
+                response.end(encrypted);
+                return;
+            }
+            response.end(
+                [
+                    "#EXTM3U",
+                    `#EXT-X-KEY:METHOD=AES-128,URI="${keyUri}",IV=0x00000000000000000000000000000001`,
+                    "#EXTINF:1,",
+                    "/0.ts",
+                    "#EXT-X-ENDLIST",
+                ].join("\n")
+            );
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-inline-hls-key-", async (directory) => {
+                const output = path.join(directory, "inline-key.ts");
+                const source = createHLSSource(`${baseUrl}/playlist.m3u8`, { mode: "snapshot" });
+                const downloader = createDownloader(source, { output, tempDir: directory });
+
+                await downloader.download();
+
+                expect(requestedPaths).toEqual(["/playlist.m3u8", "/0.ts"]);
+                expect(fs.readFileSync(output)).toEqual(expected);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test("maps one explicit key to every key URI without requesting remote keys", async () => {
         const key = Buffer.from("0123456789abcdef");
         const firstIv = Buffer.alloc(16);
@@ -533,7 +576,7 @@ function emptyMediaPlaylist(): HLSMediaPlaylist {
     return {
         kind: HLSPlaylistKind.Media,
         segments: [],
-        encryptionKeyUrls: [],
+        keys: [],
         hasEndList: true,
         totalDuration: 0,
         averageSegmentDuration: 0,

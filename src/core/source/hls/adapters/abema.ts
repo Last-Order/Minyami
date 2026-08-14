@@ -6,12 +6,12 @@ export function adaptAbema({ explicitKeys, playlist }: SiteAdapterOptions): Site
         throw new Error("To download AbemaTV, you need to set a key manually");
     }
     const encryptionKeys: Record<string, string> = {};
-    for (const keyUrl of playlist.encryptionKeyUrls) {
-        encryptionKeys[keyUrl] = key;
+    for (const keyReference of playlist.keys) {
+        encryptionKeys[keyReference.id] = key;
     }
     return {
         encryptionKeys,
-        keyResolver: async ({ keyUrls }) => Object.fromEntries(keyUrls.map((keyUrl) => [keyUrl, key])),
+        keyResolver: async ({ keys }) => Object.fromEntries(keys.map((keyReference) => [keyReference.id, key])),
         segments: playlist.segments.filter(
             (segment) => !segment.url.includes("/tspgsl/") && !segment.url.includes("/tsad/")
         ),

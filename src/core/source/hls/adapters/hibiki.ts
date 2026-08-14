@@ -6,11 +6,11 @@ export function adaptHibiki({ explicitKeys, playlist }: SiteAdapterOptions): Sit
         throw new Error("To download Hibiki-Radio, you need to set a key manually");
     }
     const encryptionKeys: Record<string, string> = {};
-    for (const keyUrl of playlist.encryptionKeyUrls) {
-        encryptionKeys[keyUrl] = key;
+    for (const keyReference of playlist.keys) {
+        encryptionKeys[keyReference.id] = key;
     }
     return {
         encryptionKeys,
-        keyResolver: async ({ keyUrls }) => Object.fromEntries(keyUrls.map((keyUrl) => [keyUrl, key])),
+        keyResolver: async ({ keys }) => Object.fromEntries(keys.map((keyReference) => [keyReference.id, key])),
     };
 }

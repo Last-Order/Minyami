@@ -174,10 +174,10 @@ export class HLSMediaPlaylistCursor {
     }
 
     private async checkKeys(context: DownloadSourceContext, signal: AbortSignal): Promise<void> {
-        if (this.playlist.encryptionKeyUrls.length === 0) {
+        if (this.playlist.keys.length === 0) {
             return;
         }
-        const missingKeys = this.playlist.encryptionKeyUrls.filter((keyUrl) => !context.keys.has(keyUrl));
+        const missingKeys = this.playlist.keys.filter((key) => !context.keys.has(key.id));
         if (missingKeys.length === 0) {
             return;
         }
@@ -186,7 +186,7 @@ export class HLSMediaPlaylistCursor {
         }
         // Resolve only unseen identities; rotated live keys remain cached for already queued segments.
         const resolved = await this.sitePlan.keyResolver({
-            keyUrls: missingKeys,
+            keys: missingKeys,
             signal,
         });
         context.keys.setMany(resolved);
@@ -238,8 +238,8 @@ export class HLSMediaPlaylistCursor {
         }
         return {
             scheme: "aes-128-cbc",
-            // Resolved key URLs keep identities stable across later playlist refreshes.
-            keyId: segment.encryption.keyUrl,
+            // Source-defined key identities remain stable across later playlist refreshes.
+            keyId: segment.encryption.key.id,
             // Resolve HLS's sequence-derived default before crossing the protocol boundary.
             iv:
                 segment.kind === HLSSegmentKind.Initialization

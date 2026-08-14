@@ -1,4 +1,3 @@
-import { buildFullUrl } from "../../../utils/common";
 import { HLSParseError } from "./models";
 
 /**
@@ -69,10 +68,13 @@ export function parseAttributeList(body: string): Record<string, string> {
 }
 
 export function resolvePlaylistUri(playlistUrl: string, uri: string): string {
-    if (!uri.startsWith("http") && !playlistUrl) {
+    if (URL.canParse(uri)) {
+        return new URL(uri).href;
+    }
+    if (!playlistUrl) {
         throw new HLSParseError("Missing base URL for HLS playlist.");
     }
-    return buildFullUrl(playlistUrl, uri);
+    return new URL(uri, playlistUrl).href;
 }
 
 /**

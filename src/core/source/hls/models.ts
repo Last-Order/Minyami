@@ -16,6 +16,12 @@ export enum HLSSegmentKind {
     Media = "media",
 }
 
+export enum HLSKeyReferenceKind {
+    Http = "http",
+    Inline = "inline",
+    External = "external",
+}
+
 export interface HLSByteRange {
     readonly offset: number;
     readonly length: number;
@@ -47,9 +53,35 @@ export interface HLSMasterPlaylist {
     readonly audioRenditions: readonly HLSAudioRendition[];
 }
 
+export interface HLSHttpKeyReference {
+    readonly kind: HLSKeyReferenceKind.Http;
+    /** Stable identity used by the shared key store. */
+    readonly id: string;
+    /** Fetchable HTTP(S) location for the raw key bytes. */
+    readonly url: string;
+}
+
+export interface HLSExternalKeyReference {
+    readonly kind: HLSKeyReferenceKind.External;
+    /** Stable identity used by the shared key store. */
+    readonly id: string;
+    /** Opaque source-provided URI; it is never treated as a download URL. */
+    readonly uri: string;
+}
+
+export interface HLSInlineKeyReference {
+    readonly kind: HLSKeyReferenceKind.Inline;
+    /** Stable identity used by the shared key store. */
+    readonly id: string;
+    /** Self-contained data URI resolved locally without external key acquisition. */
+    readonly uri: string;
+}
+
+export type HLSKeyReference = HLSHttpKeyReference | HLSInlineKeyReference | HLSExternalKeyReference;
+
 export interface HLSMediaEncryption {
     readonly method: "AES-128";
-    readonly keyUrl: string;
+    readonly key: HLSKeyReference;
     readonly iv?: string;
 }
 
@@ -78,7 +110,7 @@ export type HLSSegment = HLSInitializationSegment | HLSMediaSegment;
 export interface HLSMediaPlaylist {
     readonly kind: HLSPlaylistKind.Media;
     readonly segments: readonly HLSSegment[];
-    readonly encryptionKeyUrls: readonly string[];
+    readonly keys: readonly HLSKeyReference[];
     readonly hasEndList: boolean;
     readonly totalDuration: number;
     readonly averageSegmentDuration: number;

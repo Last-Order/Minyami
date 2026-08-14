@@ -1,6 +1,11 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { parseMediaPlaylist } from "../../../../src/core/source/hls/media_playlist";
-import { HLSParseError, HLSPlaylistKind, HLSSegmentKind } from "../../../../src/core/source/hls/parser";
+import {
+    HLSKeyReferenceKind,
+    HLSParseError,
+    HLSPlaylistKind,
+    HLSSegmentKind,
+} from "../../../../src/core/source/hls/parser";
 import logger from "../../../../src/utils/log";
 
 describe("parseMediaPlaylist", () => {
@@ -42,7 +47,7 @@ describe("parseMediaPlaylist", () => {
                     sequenceId: 42,
                 },
             ],
-            encryptionKeyUrls: [],
+            keys: [],
             hasEndList: true,
             totalDuration: 10,
             averageSegmentDuration: 5,
@@ -180,19 +185,20 @@ describe("parseMediaPlaylist", () => {
             playlistUrl: "https://cdn.example/live/playlist.m3u8",
         });
 
-        expect(playlist.encryptionKeyUrls).toEqual([keyUrl]);
+        const key = { kind: HLSKeyReferenceKind.Http, id: keyUrl, url: keyUrl } as const;
+        expect(playlist.keys).toEqual([key]);
         expect(playlist.segments).toEqual([
             {
                 kind: HLSSegmentKind.Initialization,
                 url: "https://cdn.example/live/init.mp4",
-                encryption: { method: "AES-128", keyUrl, iv },
+                encryption: { method: "AES-128", key, iv },
             },
             {
                 kind: HLSSegmentKind.Media,
                 url: "https://cdn.example/live/10.m4s",
                 duration: 1.5,
                 sequenceId: 10,
-                encryption: { method: "AES-128", keyUrl, iv },
+                encryption: { method: "AES-128", key, iv },
             },
             {
                 kind: HLSSegmentKind.Media,
@@ -213,7 +219,15 @@ describe("parseMediaPlaylist", () => {
         });
 
         expect(playlist.segments[0]).toMatchObject({
-            encryption: { method: "AES-128", keyUrl: "https://cdn.example/key", iv: "01" },
+            encryption: {
+                method: "AES-128",
+                key: {
+                    kind: HLSKeyReferenceKind.Http,
+                    id: "https://cdn.example/key",
+                    url: "https://cdn.example/key",
+                },
+                iv: "01",
+            },
         });
     });
 
@@ -225,8 +239,9 @@ describe("parseMediaPlaylist", () => {
             playlistUrl: "https://cdn.example/live/playlist.m3u8",
         });
 
-        expect(playlist.encryptionKeyUrls).toEqual([keyUrl]);
-        expect(playlist.segments[0]).toMatchObject({ encryption: { keyUrl } });
+        const key = { kind: HLSKeyReferenceKind.Http, id: keyUrl, url: keyUrl } as const;
+        expect(playlist.keys).toEqual([key]);
+        expect(playlist.segments[0]).toMatchObject({ encryption: { key } });
     });
 
     test("leaves an omitted media IV for the source to derive from its sequence", () => {
@@ -243,7 +258,13 @@ describe("parseMediaPlaylist", () => {
         expect(playlist.segments[0]).toMatchObject({
             kind: HLSSegmentKind.Media,
             sequenceId: 7,
-            encryption: { keyUrl: "https://cdn.example/key.bin" },
+            encryption: {
+                key: {
+                    kind: HLSKeyReferenceKind.Http,
+                    id: "https://cdn.example/key.bin",
+                    url: "https://cdn.example/key.bin",
+                },
+            },
         });
         expect(playlist.segments[0].encryption).not.toHaveProperty("iv");
     });
@@ -261,8 +282,46 @@ describe("parseMediaPlaylist", () => {
         });
 
         expect(playlist.segments[0]).toMatchObject({ encryption: { iv: "01" } });
-        expect(playlist.segments[1]).toMatchObject({ encryption: { keyUrl: "https://cdn.example/second.key" } });
+        expect(playlist.segments[1]).toMatchObject({
+            encryption: {
+                key: {
+                    kind: HLSKeyReferenceKind.Http,
+                    id: "https://cdn.example/second.key",
+                    url: "https://cdn.example/second.key",
+                },
+            },
+        });
         expect(playlist.segments[1].encryption).not.toHaveProperty("iv");
+    });
+
+    test("keeps a non-HTTP absolute key URI as an external identity", () => {
+        const keyUri = "skd://streaks?assetId=test";
+        const playlist = parseMediaPlaylist({
+            content: [
+                `#EXT-X-KEY:METHOD=AES-128,URI="${keyUri}",IV=0x01`,
+                "#EXTINF:1,",
+                "https://cdn.example/0.ts",
+            ].join("\n"),
+        });
+        const key = { kind: HLSKeyReferenceKind.External, id: keyUri, uri: keyUri } as const;
+
+        expect(playlist.keys).toEqual([key]);
+        expect(playlist.segments[0]).toMatchObject({ encryption: { key } });
+    });
+
+    test("keeps a data key URI as an inline identity", () => {
+        const keyUri = "data:application/octet-stream;base64,AAECAwQFBgcICQoLDA0ODw==";
+        const playlist = parseMediaPlaylist({
+            content: [
+                `#EXT-X-KEY:METHOD=AES-128,URI="${keyUri}",IV=0x01`,
+                "#EXTINF:1,",
+                "https://cdn.example/0.ts",
+            ].join("\n"),
+        });
+        const key = { kind: HLSKeyReferenceKind.Inline, id: keyUri, uri: keyUri } as const;
+
+        expect(playlist.keys).toEqual([key]);
+        expect(playlist.segments[0]).toMatchObject({ encryption: { key } });
     });
 
     test.each(["prefix0x01", "0xGG", `0x${"0".repeat(33)}`])("rejects malformed IV %s", (iv) => {

@@ -144,7 +144,7 @@ function createPlaylist(): HLSMediaPlaylist {
                 byteRange: { offset: 100, length: 200 },
             },
         ],
-        encryptionKeyUrls: [],
+        keys: [],
         hasEndList: true,
         totalDuration: 2,
         averageSegmentDuration: 2,

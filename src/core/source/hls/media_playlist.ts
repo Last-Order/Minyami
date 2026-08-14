@@ -2,6 +2,8 @@ import logger from "../../../utils/log";
 import {
     HLSByteRange,
     HLSInitializationSegment,
+    HLSKeyReference,
+    HLSKeyReferenceKind,
     HLSMediaEncryption,
     HLSMediaPlaylist,
     HLSMediaSegment,
@@ -39,7 +41,7 @@ const SEGMENT_NAMES: Record<HLSSegmentKind, string> = {
 export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOptions): HLSMediaPlaylist {
     const lines = getPlaylistLines(content);
     const segments: HLSSegment[] = [];
-    const encryptionKeyUrls = new Set<string>();
+    const keys = new Map<string, HLSKeyReference>();
     let encryption: HLSMediaEncryption | undefined;
     let sequenceId = 0;
     let mediaSegmentCount = 0;
@@ -60,7 +62,7 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
             encryption = result.encryption;
             warnedAboutEncryption = result.warned;
             if (encryption) {
-                encryptionKeyUrls.add(encryption.keyUrl);
+                keys.set(encryption.key.id, encryption.key);
             }
             continue;
         }
@@ -140,7 +142,7 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
     return {
         kind: HLSPlaylistKind.Media,
         segments,
-        encryptionKeyUrls: [...encryptionKeyUrls],
+        keys: [...keys.values()],
         hasEndList,
         totalDuration,
         averageSegmentDuration: totalDuration / mediaSegmentCount,
@@ -160,10 +162,32 @@ function parseEncryption(
         if (!keyUri) {
             throw new HLSParseError("Missing URL for encryption key");
         }
+        const resolvedKeyUri = resolvePlaylistUri(playlistUrl, keyUri);
+        const protocol = new URL(resolvedKeyUri).protocol;
+        let key: HLSKeyReference;
+        if (protocol === "http:" || protocol === "https:") {
+            key = {
+                kind: HLSKeyReferenceKind.Http,
+                id: resolvedKeyUri,
+                url: resolvedKeyUri,
+            };
+        } else if (protocol === "data:") {
+            key = {
+                kind: HLSKeyReferenceKind.Inline,
+                id: resolvedKeyUri,
+                uri: resolvedKeyUri,
+            };
+        } else {
+            key = {
+                kind: HLSKeyReferenceKind.External,
+                id: resolvedKeyUri,
+                uri: resolvedKeyUri,
+            };
+        }
         return {
             encryption: {
                 method,
-                keyUrl: resolvePlaylistUri(playlistUrl, keyUri),
+                key,
                 ...(attributes["IV"] ? { iv: parseIv(attributes["IV"]) } : {}),
             },
             warned,

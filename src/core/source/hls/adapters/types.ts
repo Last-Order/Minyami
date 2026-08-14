@@ -1,5 +1,5 @@
 import { DownloadItemNamer, DownloadSourceHttpClient } from "../../types";
-import { HLSMediaPlaylist, HLSSegment } from "../parser";
+import { HLSKeyReference, HLSMediaPlaylist, HLSSegment } from "../parser";
 
 export type SiteAdapterMode = "archive" | "live";
 
@@ -12,7 +12,7 @@ export interface SiteAdapterOptions {
 }
 
 export interface KeyResolverOptions {
-    keyUrls: readonly string[];
+    keys: readonly HLSKeyReference[];
     signal: AbortSignal;
 }
 

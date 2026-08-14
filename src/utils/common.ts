@@ -1,12 +1,4 @@
-import { URL } from "url";
 import * as fs from "fs";
-
-export function buildFullUrl(host: string, path: string) {
-    if (path.startsWith("http")) {
-        return path;
-    }
-    return new URL(path, host).href;
-}
 
 export function getAvailableOutputPath(path: string) {
     const pathArr = path.split(".");
