@@ -121,7 +121,7 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
                 ...(encryption ? { encryption } : {}),
             };
             if (hasIFramesOnly && segment.encryption && segment.byteRange) {
-                // AES-128 I-frame ranges need block-aligned widening and a preceding cipher block.
+                // AES-128 ranges need cipher-block widening, while SAMPLE-AES needs complete TS/PES signaling.
                 throw new HLSParseError("Encrypted I-frame byte ranges are not supported");
             }
             segments.push(segment);
@@ -137,6 +137,12 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
 
     if (!hasEndList && (pending.duration !== undefined || pending.byteRange !== undefined)) {
         throw new HLSParseError("Invalid HLS playlist.");
+    }
+    if (
+        segments.some((segment) => segment.kind === HLSSegmentKind.Initialization) &&
+        segments.some((segment) => segment.encryption?.method === "SAMPLE-AES")
+    ) {
+        throw new HLSParseError("SAMPLE-AES initialization segments are not supported");
     }
 
     return {
@@ -162,37 +168,44 @@ function parseEncryption(
         if (!keyUri) {
             throw new HLSParseError("Missing URL for encryption key");
         }
-        const resolvedKeyUri = resolvePlaylistUri(playlistUrl, keyUri);
-        const protocol = new URL(resolvedKeyUri).protocol;
-        let key: HLSKeyReference;
-        if (protocol === "http:" || protocol === "https:") {
-            key = {
-                kind: HLSKeyReferenceKind.Http,
-                id: resolvedKeyUri,
-                url: resolvedKeyUri,
-            };
-        } else if (protocol === "data:") {
-            key = {
-                kind: HLSKeyReferenceKind.Inline,
-                id: resolvedKeyUri,
-                uri: resolvedKeyUri,
-            };
-        } else {
-            key = {
-                kind: HLSKeyReferenceKind.External,
-                id: resolvedKeyUri,
-                uri: resolvedKeyUri,
-            };
+        const key = parseKeyReference(resolvePlaylistUri(playlistUrl, keyUri));
+        const iv = attributes["IV"] ? parseIv(attributes["IV"]) : undefined;
+        return {
+            encryption: {
+                method,
+                key,
+                ...(iv ? { iv } : {}),
+            },
+            warned,
+        };
+    }
+
+    if (method === "SAMPLE-AES") {
+        const keyUri = attributes["URI"];
+        if (!keyUri) {
+            throw new HLSParseError("Missing URL for encryption key");
+        }
+        const key = parseKeyReference(resolvePlaylistUri(playlistUrl, keyUri));
+        const ivAttribute = attributes["IV"];
+        if (!ivAttribute) {
+            throw new HLSParseError("Missing IV for SAMPLE-AES encryption key");
+        }
+        const iv = parseIv(ivAttribute);
+        const keyFormat = attributes["KEYFORMAT"] || "identity";
+        if (keyFormat !== "identity" && keyFormat !== "com.apple.streamingkeydelivery") {
+            throw new HLSParseError(`Unsupported SAMPLE-AES key format: "${keyFormat}"`);
         }
         return {
             encryption: {
                 method,
                 key,
-                ...(attributes["IV"] ? { iv: parseIv(attributes["IV"]) } : {}),
+                iv,
+                keyFormat,
             },
             warned,
         };
     }
+
     if (method === "NONE") {
         return { warned };
     }
@@ -201,6 +214,29 @@ function parseEncryption(
         logger.warning(`Unsupported encryption method: "${method}". Chunks will not be decrypted.`);
     }
     return { warned: true };
+}
+
+function parseKeyReference(resolvedKeyUri: string): HLSKeyReference {
+    const protocol = new URL(resolvedKeyUri).protocol;
+    if (protocol === "http:" || protocol === "https:") {
+        return {
+            kind: HLSKeyReferenceKind.Http,
+            id: resolvedKeyUri,
+            url: resolvedKeyUri,
+        };
+    }
+    if (protocol === "data:") {
+        return {
+            kind: HLSKeyReferenceKind.Inline,
+            id: resolvedKeyUri,
+            uri: resolvedKeyUri,
+        };
+    }
+    return {
+        kind: HLSKeyReferenceKind.External,
+        id: resolvedKeyUri,
+        uri: resolvedKeyUri,
+    };
 }
 
 function parseIv(value: string): string {
@@ -236,6 +272,9 @@ function parseInitializationSegment(
     } as const;
     if (!encryption) {
         return base;
+    }
+    if (encryption.method === "SAMPLE-AES") {
+        throw new HLSParseError("SAMPLE-AES initialization segments are not supported");
     }
     if (!encryption.iv) {
         // Initialization segments have no media sequence from which an omitted IV could be derived.

@@ -21,7 +21,15 @@ export interface Aes128CbcEncryption {
     readonly iv: string;
 }
 
-export type DownloadEncryption = Aes128CbcEncryption;
+export interface MpegTsSampleAesEncryption {
+    readonly scheme: "mpeg-ts-sample-aes";
+    /** Stable key-store identity. FairPlay HLS sources normally use the opaque skd URI. */
+    readonly keyId: string;
+    /** Explicit hexadecimal IV from the playlist; this implementation never derives a FairPlay IV. */
+    readonly iv: string;
+}
+
+export type DownloadEncryption = Aes128CbcEncryption | MpegTsSampleAesEncryption;
 
 interface BaseDownloadItem {
     readonly url: string;

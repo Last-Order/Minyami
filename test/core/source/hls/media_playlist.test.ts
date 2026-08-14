@@ -1,4 +1,4 @@
-import { describe, expect, jest, test } from "@jest/globals";
+import { describe, expect, test } from "@jest/globals";
 import { parseMediaPlaylist } from "../../../../src/core/source/hls/media_playlist";
 import {
     HLSKeyReferenceKind,
@@ -6,7 +6,6 @@ import {
     HLSPlaylistKind,
     HLSSegmentKind,
 } from "../../../../src/core/source/hls/parser";
-import logger from "../../../../src/utils/log";
 
 describe("parseMediaPlaylist", () => {
     test("parses sequence, initialization, segment, end, and duration metadata", () => {
@@ -334,26 +333,53 @@ describe("parseMediaPlaylist", () => {
         expect(() => parseMediaPlaylist({ content })).toThrow(new HLSParseError("Invalid IV for encryption key"));
     });
 
-    test("warns once and treats unsupported encryption methods as plain segments", () => {
-        const warning = jest.spyOn(logger, "warning").mockImplementation(() => undefined);
+    test("parses SAMPLE-AES FairPlay metadata with an explicit IV", () => {
+        const keyUri = "skd://asset-id";
         const playlist = parseMediaPlaylist({
             content: [
                 "#EXTM3U",
-                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="first.key"',
+                `#EXT-X-KEY:METHOD=SAMPLE-AES,URI="${keyUri}",KEYFORMAT="com.apple.streamingkeydelivery",IV=0x01`,
                 "#EXTINF:1,",
                 "https://cdn.example/0.ts",
-                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="second.key"',
-                "#EXTINF:1,",
-                "https://cdn.example/1.ts",
             ].join("\n"),
         });
 
-        expect(playlist.segments).toHaveLength(2);
-        expect(playlist.segments.every((segment) => !segment.encryption)).toBe(true);
-        expect(warning).toHaveBeenCalledTimes(1);
-        expect(warning).toHaveBeenCalledWith(
-            'Unsupported encryption method: "SAMPLE-AES". Chunks will not be decrypted.'
-        );
+        const key = { kind: HLSKeyReferenceKind.External, id: keyUri, uri: keyUri } as const;
+        expect(playlist.keys).toEqual([key]);
+        expect(playlist.segments[0]).toMatchObject({
+            encryption: {
+                method: "SAMPLE-AES",
+                key,
+                iv: "01",
+                keyFormat: "com.apple.streamingkeydelivery",
+            },
+        });
+    });
+
+    test.each([
+        [
+            "a missing SAMPLE-AES IV",
+            '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="com.apple.streamingkeydelivery"',
+            "Missing IV for SAMPLE-AES encryption key",
+        ],
+        [
+            "an unsupported SAMPLE-AES key format",
+            '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="unsupported",IV=0x01',
+            'Unsupported SAMPLE-AES key format: "unsupported"',
+        ],
+        [
+            "a SAMPLE-AES initialization segment",
+            [
+                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="com.apple.streamingkeydelivery",IV=0x01',
+                '#EXT-X-MAP:URI="https://cdn.example/init.mp4"',
+            ].join("\n"),
+            "SAMPLE-AES initialization segments are not supported",
+        ],
+    ])("rejects %s", (_name, keyTag, message) => {
+        const content = keyTag.includes("#EXT-X-MAP")
+            ? keyTag
+            : [keyTag, "#EXTINF:1,", "https://cdn.example/0.ts"].join("\n");
+        expect(() => parseMediaPlaylist({ content })).toThrow(new HLSParseError(message));
     });
 
     test.each([

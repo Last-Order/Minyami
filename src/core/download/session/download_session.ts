@@ -13,6 +13,7 @@ import { DownloadTask } from "../execution/task";
 import { TaskScheduler } from "../execution/task_scheduler";
 import { normalizeDownloaderConfig, NormalizedDownloaderConfig } from "../config";
 import { Aes128CbcHandler } from "../encryption/aes_128_cbc";
+import { MpegTsSampleAesHandler } from "../encryption/mpeg_ts_sample_aes/handler";
 import { EncryptionHandlerRegistry } from "../encryption/registry";
 import { DownloadEventHub } from "./event_hub";
 import { DownloadHttpClient } from "../infrastructure/http_client";
@@ -42,7 +43,10 @@ export class DownloadSession {
     private readonly config: NormalizedDownloaderConfig;
     private readonly http: DownloadHttpClient;
     private readonly keys = new KeyStore();
-    private readonly encryptionHandlers = new EncryptionHandlerRegistry([new Aes128CbcHandler()]);
+    private readonly encryptionHandlers = new EncryptionHandlerRegistry([
+        new Aes128CbcHandler(),
+        new MpegTsSampleAesHandler(),
+    ]);
     private readonly executor: ChunkExecutor;
     private readonly manifest = new DownloadManifest();
     private readonly output: OutputSession;

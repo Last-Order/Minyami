@@ -5,14 +5,74 @@ import * as path from "path";
 import { AddressInfo } from "net";
 import { describe, expect, jest, test } from "@jest/globals";
 import { createDownloader } from "../../../../src/core/download/downloader";
+import { KeyStore } from "../../../../src/core/download/infrastructure/key_store";
 import { createHLSSource } from "../../../../src/core/source/hls";
 import { HLSMediaPlaylist, HLSPlaylistKind, HLSVariant } from "../../../../src/core/source/hls/parser";
 import { PlaylistLoader } from "../../../../src/core/source/hls/playlist_loader";
 import { StreamSelector, TrackSelection } from "../../../../src/core/source/stream_selection";
+import { DownloadSourceHttpClient, SourceBatch } from "../../../../src/core/source/types";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
 
 describe("HLSSource", () => {
+    test("requires a manual key for SAMPLE-AES and publishes its explicit IV", async () => {
+        await withTempDirectory("minyami-sample-aes-source-", async (directory) => {
+            const playlistPath = path.join(directory, "sample-aes.m3u8");
+            const keyId = "skd://test-asset";
+            const key = "00112233445566778899aabbccddeeff";
+            fs.writeFileSync(
+                playlistPath,
+                [
+                    "#EXTM3U",
+                    `#EXT-X-KEY:METHOD=SAMPLE-AES,URI="${keyId}",KEYFORMAT="com.apple.streamingkeydelivery",IV=0x01`,
+                    "#EXTINF:1,",
+                    "https://cdn.example/0.ts",
+                    "#EXT-X-ENDLIST",
+                ].join("\n")
+            );
+            const http: DownloadSourceHttpClient = {
+                async get<T>() {
+                    throw new Error("Unexpected source request.");
+                },
+                async request<T>() {
+                    throw new Error("Unexpected key request.");
+                },
+            };
+            const keys = new KeyStore();
+            const missingKeySource = createHLSSource(playlistPath, { mode: "snapshot" });
+            await expect(missingKeySource.prepare({ http, keys }, new AbortController().signal)).rejects.toThrow(
+                "Exactly one explicit decryption key is required for SAMPLE-AES HLS."
+            );
+
+            const source = createHLSSource(playlistPath, { mode: "snapshot", explicitKeys: [key] });
+            await source.prepare({ http, keys }, new AbortController().signal);
+            const batches: SourceBatch[] = [];
+            for await (const batch of source.discover({ http, keys }, new AbortController().signal)) {
+                batches.push(batch);
+            }
+
+            expect(keys.get(keyId)).toBe(key);
+            expect(batches).toEqual([
+                {
+                    trackId: "main",
+                    items: [
+                        {
+                            url: "https://cdn.example/0.ts",
+                            kind: "media",
+                            duration: 1,
+                            encryption: {
+                                scheme: "mpeg-ts-sample-aes",
+                                keyId,
+                                iv: "01",
+                            },
+                        },
+                    ],
+                    totalItemCount: 1,
+                },
+            ]);
+        });
+    });
+
     test("downloads initialization and media byte ranges from one resource in playlist order", async () => {
         const resource = Buffer.from("INITfirstsecond");
         const requestedRanges: string[] = [];

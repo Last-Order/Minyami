@@ -31,6 +31,8 @@ export interface HLSMediaPlaylistCursorOptions {
     readonly explicitKeys: readonly string[];
 }
 
+class HLSSampleAesConfigurationError extends Error {}
+
 /**
  * Owns the refresh and discovery state for exactly one HLS Media Playlist.
  * Sequence identities are playlist-local, so every future rendition needs its own cursor.
@@ -56,6 +58,7 @@ export class HLSMediaPlaylistCursor {
         if (this.continuous) {
             this.updateFollowTimeouts();
         }
+        this.validateSampleAesKey(this.playlist);
 
         this.sitePlan = await prepareSite({
             mode: this.parserMode,
@@ -66,6 +69,7 @@ export class HLSMediaPlaylistCursor {
         });
         if (this.sitePlan.segments) {
             this.playlist = { ...this.playlist, segments: this.sitePlan.segments };
+            this.validateSampleAesKey(this.playlist);
         }
         if (this.sitePlan.encryptionKeys) {
             context.keys.setMany(this.sitePlan.encryptionKeys);
@@ -120,10 +124,16 @@ export class HLSMediaPlaylistCursor {
 
             try {
                 this.playlist = await this.loadMediaPlaylist(signal);
+                // A live playlist may switch encryption methods after preparation. Never let a newly observed
+                // SAMPLE-AES key identity fall through to an adapter's network key resolver.
+                this.validateSampleAesKey(this.playlist);
                 await this.checkKeys(context, signal);
             } catch (error) {
                 if (signal.aborted) {
                     return;
+                }
+                if (error instanceof HLSSampleAesConfigurationError) {
+                    throw error;
                 }
                 // Before useful output a refresh failure is fatal; afterwards an unavailable live manifest ends the track.
                 if (this.discoveredItemCount === 0) {
@@ -192,6 +202,22 @@ export class HLSMediaPlaylistCursor {
         context.keys.setMany(resolved);
     }
 
+    private validateSampleAesKey(playlist: HLSMediaPlaylist): void {
+        if (!playlist.segments.some((segment) => segment.encryption?.method === "SAMPLE-AES")) {
+            return;
+        }
+        if (this.options.explicitKeys.length !== 1) {
+            throw new HLSSampleAesConfigurationError(
+                "Exactly one explicit decryption key is required for SAMPLE-AES HLS."
+            );
+        }
+        if (!/^[0-9a-fA-F]{32}$/.test(this.options.explicitKeys[0])) {
+            throw new HLSSampleAesConfigurationError(
+                "SAMPLE-AES key must contain exactly 16 bytes of hexadecimal data."
+            );
+        }
+    }
+
     private takeNewSegments(segments: readonly HLSSegment[]): HLSSegment[] {
         return segments.filter((segment) => {
             if (segment.kind === HLSSegmentKind.Media) {
@@ -235,6 +261,13 @@ export class HLSMediaPlaylistCursor {
     private toEncryption(segment: HLSSegment): DownloadEncryption | undefined {
         if (!segment.encryption) {
             return undefined;
+        }
+        if (segment.encryption.method === "SAMPLE-AES") {
+            return {
+                scheme: "mpeg-ts-sample-aes",
+                keyId: segment.encryption.key.id,
+                iv: segment.encryption.iv,
+            };
         }
         return {
             scheme: "aes-128-cbc",

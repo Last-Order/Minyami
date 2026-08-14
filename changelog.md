@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.0.0-beta.2 - 2026-08-14
+
+### Added
+
+-   Added MPEG-TS SAMPLE-AES decryption for H.264, AAC, AC-3, and E-AC-3.
+
 ## 6.0.0-beta.1 - 2026-08-04
 
 ### Breaking changes

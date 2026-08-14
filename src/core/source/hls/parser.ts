@@ -6,6 +6,7 @@ import { getPlaylistLines } from "./playlist_syntax";
 export { HLSParseError, HLSPlaylistKind, HLSSegmentKind } from "./models";
 export type {
     HLSAudioRendition,
+    HLSAes128Encryption,
     HLSByteRange,
     HLSExternalKeyReference,
     HLSHttpKeyReference,
@@ -17,6 +18,7 @@ export type {
     HLSMediaEncryption,
     HLSMediaPlaylist,
     HLSMediaSegment,
+    HLSSampleAesEncryption,
     HLSParseOptions,
     HLSPlaylist,
     HLSSegment,

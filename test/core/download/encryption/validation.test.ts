@@ -49,4 +49,49 @@ describe("download encryption validation", () => {
             expect(download).not.toHaveBeenCalled();
         });
     });
+
+    test("rejects invalid SAMPLE-AES metadata before downloading media", async () => {
+        await withTempDirectory("minyami-sample-aes-validation-", async (directory) => {
+            const download = jest.spyOn(DownloadHttpClient.prototype, "download");
+            const source: DownloadSource = {
+                sourcePath: "custom://invalid-sample-aes",
+                continuous: false,
+                async prepare(context) {
+                    context.keys.set("skd://test", "00".repeat(16));
+                    return {
+                        container: MPEG_TS_CONTAINER,
+                        tracks: [
+                            {
+                                id: "main",
+                                mediaTrack: { id: "logical-main", type: "video" },
+                                sourcePath: this.sourcePath,
+                            },
+                        ],
+                    };
+                },
+                async *discover() {
+                    yield {
+                        trackId: "main",
+                        items: [
+                            {
+                                url: "http://127.0.0.1/unused.ts",
+                                kind: "media",
+                                duration: 1,
+                                encryption: {
+                                    scheme: "mpeg-ts-sample-aes",
+                                    keyId: "skd://test",
+                                    iv: "invalid",
+                                },
+                            },
+                        ],
+                        totalItemCount: 1,
+                    };
+                },
+            };
+            const downloader = createDownloader(source, { noMerge: true, tempDir: directory });
+
+            await expect(downloader.download()).rejects.toThrow("SAMPLE-AES IV");
+            expect(download).not.toHaveBeenCalled();
+        });
+    });
 });

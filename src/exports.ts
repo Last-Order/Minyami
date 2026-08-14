@@ -32,6 +32,7 @@ export type {
     DownloadTrackId,
     InitialDownloadItem,
     MediaDownloadItem,
+    MpegTsSampleAesEncryption,
     SourceBatch,
     SourceMetadata,
     SourceTrack,

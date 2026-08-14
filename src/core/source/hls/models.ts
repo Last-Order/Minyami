@@ -79,13 +79,22 @@ export interface HLSInlineKeyReference {
 
 export type HLSKeyReference = HLSHttpKeyReference | HLSInlineKeyReference | HLSExternalKeyReference;
 
-export interface HLSMediaEncryption {
+export interface HLSAes128Encryption {
     readonly method: "AES-128";
     readonly key: HLSKeyReference;
     readonly iv?: string;
 }
 
-export interface HLSInitializationEncryption extends HLSMediaEncryption {
+export interface HLSSampleAesEncryption {
+    readonly method: "SAMPLE-AES";
+    readonly key: HLSKeyReference;
+    readonly iv: string;
+    readonly keyFormat: "identity" | "com.apple.streamingkeydelivery";
+}
+
+export type HLSMediaEncryption = HLSAes128Encryption | HLSSampleAesEncryption;
+
+export interface HLSInitializationEncryption extends HLSAes128Encryption {
     readonly iv: string;
 }
 

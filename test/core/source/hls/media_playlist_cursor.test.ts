@@ -1,9 +1,14 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 import { normalizeDownloaderConfig } from "../../../../src/core/download/config";
 import { DownloadHttpClient } from "../../../../src/core/download/infrastructure/http_client";
 import { KeyStore } from "../../../../src/core/download/infrastructure/key_store";
 import { HLSMediaPlaylistCursor } from "../../../../src/core/source/hls/media_playlist_cursor";
-import { HLSMediaPlaylist, HLSPlaylistKind, HLSSegmentKind } from "../../../../src/core/source/hls/parser";
+import {
+    HLSKeyReferenceKind,
+    HLSMediaPlaylist,
+    HLSPlaylistKind,
+    HLSSegmentKind,
+} from "../../../../src/core/source/hls/parser";
 import { PlaylistLoader } from "../../../../src/core/source/hls/playlist_loader";
 import { DownloadSourceContext, SourceBatch } from "../../../../src/core/source/types";
 
@@ -102,6 +107,50 @@ describe("HLSMediaPlaylistCursor", () => {
                 byteRange: { offset: 300, length: 100 },
             },
         ]);
+    });
+
+    test("rejects SAMPLE-AES first observed by a live refresh when no manual key was supplied", async () => {
+        const context = createContext();
+        const initial = { ...createPlaylist(), hasEndList: false, averageSegmentDuration: 0.001 };
+        const key = {
+            kind: HLSKeyReferenceKind.External,
+            id: "skd://live-asset",
+            uri: "skd://live-asset",
+        } as const;
+        const protectedPlaylist: HLSMediaPlaylist = {
+            kind: HLSPlaylistKind.Media,
+            segments: [
+                {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/protected.ts",
+                    duration: 1,
+                    sequenceId: 8,
+                    encryption: {
+                        method: "SAMPLE-AES",
+                        key,
+                        iv: "01",
+                        keyFormat: "com.apple.streamingkeydelivery",
+                    },
+                },
+            ],
+            keys: [key],
+            hasEndList: true,
+            totalDuration: 1,
+            averageSegmentDuration: 1,
+        };
+        const load = jest.spyOn(PlaylistLoader.prototype, "load").mockResolvedValue(protectedPlaylist);
+
+        try {
+            const cursor = createCursor("video", initial, context, "follow");
+            await cursor.prepare(context, new AbortController().signal);
+
+            await expect(collect(cursor.discover(context, new AbortController().signal))).rejects.toThrow(
+                "Exactly one explicit decryption key is required for SAMPLE-AES HLS."
+            );
+            expect(load).toHaveBeenCalledTimes(1);
+        } finally {
+            load.mockRestore();
+        }
     });
 });
 
