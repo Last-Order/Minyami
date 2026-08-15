@@ -96,6 +96,7 @@ export class HLSMediaPlaylistCursor {
             // Snapshot cursors know their final per-track total and yield once even when empty.
             const items = sliceItems(this.toItems(this.playlist.segments), this.options.slice);
             this.discoveredItemCount = items.length;
+            this.logDiscovery(items.length);
             yield { trackId: this.options.id, items, totalItemCount: items.length };
             return;
         }
@@ -106,7 +107,7 @@ export class HLSMediaPlaylistCursor {
             const segments = this.takeNewSegments(this.playlist.segments);
             const items = this.toItems(segments);
             this.discoveredItemCount += items.length;
-            logger.debug(`Get ${items.length} new chunk(s) for track ${this.options.id}.`);
+            this.logDiscovery(items.length);
             if (items.length > 0) {
                 yield { trackId: this.options.id, items };
             }
@@ -166,6 +167,10 @@ export class HLSMediaPlaylistCursor {
 
     private get followItemTimeout(): number {
         return Math.min(this.safeChunkLength * 1000 * 20, 60000);
+    }
+
+    private logDiscovery(itemCount: number): void {
+        logger.info(`Discovered ${itemCount} chunk(s) for track ${this.options.id}.`);
     }
 
     private updateFollowTimeouts(): void {

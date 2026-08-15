@@ -24,7 +24,6 @@ export class PlaylistLoader {
             });
         }
 
-        logger.info("Start fetching HLS playlist.");
         let content: string;
         let playlistUrl: string;
         try {
@@ -44,7 +43,6 @@ export class PlaylistLoader {
             logger.warning("Source request attempts exhausted. Abort.");
             throw error;
         }
-        logger.info("HLS playlist fetched.");
         return parseHLSPlaylist({ content, playlistUrl });
     }
 }
