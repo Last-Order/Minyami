@@ -245,7 +245,10 @@ class FileConcentrator {
         let inputEnded = false;
         let writeError: Error | undefined;
         let appendError: Error | undefined;
-        const { promise: writesCompleted, resolve: resolveWritesCompleted } = Promise.withResolvers<void>();
+        let resolveWritesCompleted!: () => void;
+        const writesCompleted = new Promise<void>((resolve) => {
+            resolveWritesCompleted = resolve;
+        });
         const completeWrite = (error?: Error | null) => {
             // Preserve the first write failure while still settling every queued callback.
             if (error && !writeError) {
