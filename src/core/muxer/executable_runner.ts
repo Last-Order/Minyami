@@ -9,7 +9,7 @@ export interface ExecutableRunner {
 export class SystemExecutableRunner implements ExecutableRunner {
     async isAvailable(command: string, versionArguments: readonly string[]): Promise<boolean> {
         return new Promise<boolean>((resolve) => {
-            const child = spawn(command, versionArguments, { stdio: "ignore" });
+            const child = spawn(command, versionArguments, { stdio: "ignore", shell: false });
             let settled = false;
             const settle = (available: boolean) => {
                 if (!settled) {
@@ -27,6 +27,7 @@ export class SystemExecutableRunner implements ExecutableRunner {
             const child = spawn(command, [...arguments_], {
                 stdio: ["ignore", "ignore", "pipe"],
                 windowsHide: true,
+                shell: false,
             });
             const stderr: Buffer[] = [];
             child.stderr.on("data", (chunk: Buffer | string) => stderr.push(Buffer.from(chunk)));
