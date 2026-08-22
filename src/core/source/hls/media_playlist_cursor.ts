@@ -8,7 +8,7 @@ import {
     SourceTrack,
 } from "../types";
 import { MediaTrack } from "../stream_selection";
-import { SiteAdapterMode, SiteAdapterResult } from "./adapters/types";
+import { SiteAdapterResult } from "./adapters/types";
 import { HLSExplicitKey } from "./explicit_key";
 import { HLSInitializationSegment, HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
 import { PlaylistLoader } from "./playlist_loader";
@@ -62,19 +62,12 @@ export class HLSMediaPlaylistCursor {
         this.validateSampleAesKey(this.playlist);
 
         this.sitePlan = await prepareSite({
-            mode: this.parserMode,
-            sourcePath: this.options.sourcePath,
             playlist: this.playlist,
             explicitKeys: this.options.explicitKeys,
             http: context.http,
         });
-        if (this.sitePlan.segments) {
-            this.playlist = { ...this.playlist, segments: this.sitePlan.segments };
-            this.validateSampleAesKey(this.playlist);
-        }
-        if (this.sitePlan.encryptionKeys) {
-            context.keys.setMany(this.sitePlan.encryptionKeys);
-        }
+        this.playlist = this.adaptPlaylist(this.playlist);
+        this.validateSampleAesKey(this.playlist);
         // Items may execute as soon as discovery yields, so known keys must be ready first.
         await this.checkKeys(context, signal);
         this.prepared = true;
@@ -83,7 +76,6 @@ export class HLSMediaPlaylistCursor {
             id: this.options.id,
             mediaTrack: this.options.mediaTrack,
             sourcePath: this.options.sourcePath,
-            itemNamer: this.sitePlan.itemNamer,
             itemTimeout: this.continuous ? this.followItemTimeout : undefined,
         };
     }
@@ -125,7 +117,7 @@ export class HLSMediaPlaylistCursor {
             }
 
             try {
-                this.playlist = await this.loadMediaPlaylist(signal);
+                this.playlist = this.adaptPlaylist(await this.loadMediaPlaylist(signal));
                 // A live playlist may switch encryption methods after preparation. Never let a newly observed
                 // SAMPLE-AES key identity fall through to an adapter's network key resolver.
                 this.validateSampleAesKey(this.playlist);
@@ -157,10 +149,6 @@ export class HLSMediaPlaylistCursor {
         return this.options.mode === "follow";
     }
 
-    private get parserMode(): SiteAdapterMode {
-        return this.continuous ? "live" : "archive";
-    }
-
     private get safeChunkLength(): number {
         const chunkLength = this.playlist.averageSegmentDuration;
         return Number.isFinite(chunkLength) && chunkLength > 0 ? chunkLength : 5;
@@ -187,6 +175,11 @@ export class HLSMediaPlaylistCursor {
             throw new Error("Selected HLS stream points to another master playlist.");
         }
         return loaded;
+    }
+
+    private adaptPlaylist(playlist: HLSMediaPlaylist): HLSMediaPlaylist {
+        const segments = this.sitePlan.adaptSegments?.(playlist.segments);
+        return segments ? { ...playlist, segments } : playlist;
     }
 
     private async checkKeys(context: DownloadSourceContext, signal: AbortSignal): Promise<void> {

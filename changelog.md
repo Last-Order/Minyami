@@ -6,6 +6,10 @@
 
 -   Changed `HLSSourceOptions.explicitKeys`, `ArchiveDownloaderConfig.explicitKeys`, and `LiveDownloaderConfig.explicitKeys` from strings to structured `HLSExplicitKey` values. The CLI continues to accept `key` and now also parses `kid:key`, retaining the optional KID for future per-key selection without changing current adapter resolution. Multiple CLI keys now require repeated `--key` options; comma-separated values are no longer expanded.
 
+### Changed
+
+-   Removed the legacy Hibiki and YouTube HLS adapters and routed all encryption-key resolution through the common HLS adapter. Abema retains only its segment filtering, which now also applies to refreshed live playlists.
+
 ## 6.0.0-beta.2 - 2026-08-14
 
 ### Added

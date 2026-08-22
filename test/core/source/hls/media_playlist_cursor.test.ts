@@ -109,6 +109,60 @@ describe("HLSMediaPlaylistCursor", () => {
         ]);
     });
 
+    test("filters Abema placeholder and advertisement segments after every live refresh", async () => {
+        const context = createContext();
+        const key = {
+            kind: HLSKeyReferenceKind.External,
+            id: "abematv-license://asset",
+            uri: "abematv-license://asset",
+        } as const;
+        const createSegment = (url: string, sequenceId: number) => ({
+            kind: HLSSegmentKind.Media,
+            url,
+            duration: 0.001,
+            sequenceId,
+            encryption: { method: "AES-128" as const, key },
+        });
+        const initial: HLSMediaPlaylist = {
+            kind: HLSPlaylistKind.Media,
+            segments: [
+                createSegment("https://media.example/tspgsl/0.ts", 0),
+                createSegment("https://media.example/content/1.ts", 1),
+            ],
+            keys: [key],
+            hasEndList: false,
+            totalDuration: 0.002,
+            averageSegmentDuration: 0.001,
+        };
+        const refreshed: HLSMediaPlaylist = {
+            kind: HLSPlaylistKind.Media,
+            segments: [
+                createSegment("https://media.example/tsad/2.ts", 2),
+                createSegment("https://media.example/content/3.ts", 3),
+            ],
+            keys: [key],
+            hasEndList: true,
+            totalDuration: 0.002,
+            averageSegmentDuration: 0.001,
+        };
+        const load = jest.spyOn(PlaylistLoader.prototype, "load").mockResolvedValue(refreshed);
+
+        try {
+            const cursor = createCursor("video", initial, context, "follow", [{ key: "00".repeat(16) }]);
+            await cursor.prepare(context, new AbortController().signal);
+
+            const batches = await collect(cursor.discover(context, new AbortController().signal));
+
+            expect(batches.flatMap((batch) => batch.items.map((item) => item.url))).toEqual([
+                "https://media.example/content/1.ts",
+                "https://media.example/content/3.ts",
+            ]);
+            expect(load).toHaveBeenCalledTimes(1);
+        } finally {
+            load.mockRestore();
+        }
+    });
+
     test("rejects SAMPLE-AES first observed by a live refresh when no manual key was supplied", async () => {
         const context = createContext();
         const initial = { ...createPlaylist(), hasEndList: false, averageSegmentDuration: 0.001 };
@@ -163,7 +217,8 @@ function createCursor(
     id: string,
     playlist: HLSMediaPlaylist,
     context: DownloadSourceContext,
-    mode: "snapshot" | "follow" = "snapshot"
+    mode: "snapshot" | "follow" = "snapshot",
+    explicitKeys: readonly { readonly key: string }[] = []
 ): HLSMediaPlaylistCursor {
     return new HLSMediaPlaylistCursor({
         id,
@@ -172,7 +227,7 @@ function createCursor(
         mode,
         initialPlaylist: playlist,
         loader: new PlaylistLoader(context.http),
-        explicitKeys: [],
+        explicitKeys,
     });
 }
 
