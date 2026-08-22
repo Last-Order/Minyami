@@ -4,8 +4,6 @@
 
 [中文说明](readme.zh-cn.md)
 
-> **Deprecation Notice:** Minyami is in maintenance mode. Only bug fixes are planned. We recommend [iori](https://github.com/iori-rs/iori) for new installations.
-
 ## Requirements
 
 - Node.js 24 or newer; an active LTS release is recommended.
