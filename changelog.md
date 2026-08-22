@@ -8,7 +8,7 @@
 
 ### Changed
 
--   Removed the legacy Hibiki and YouTube HLS adapters and routed all encryption-key resolution through the common HLS adapter. Abema retains only its segment filtering, which now also applies to refreshed live playlists.
+-   Split HLS adaptation into a fixed per-media-playlist profile and an independent site-adaptation layer. The built-in profile handles plaintext, AES-128, and MPEG-TS SAMPLE-AES behavior. The legacy Hibiki and YouTube site adapters were removed; Abema retains only its segment filtering, which also applies to refreshed playlists.
 
 ## 6.0.0-beta.2 - 2026-08-14
 

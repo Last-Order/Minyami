@@ -163,22 +163,60 @@ describe("HLSMediaPlaylistCursor", () => {
         }
     });
 
-    test("rejects SAMPLE-AES first observed by a live refresh when no manual key was supplied", async () => {
+    test("does not resolve keys referenced only by filtered site segments", async () => {
         const context = createContext();
-        const initial = { ...createPlaylist(), hasEndList: false, averageSegmentDuration: 0.001 };
+        const request = jest.spyOn(context.http, "request");
+        const key = {
+            kind: HLSKeyReferenceKind.External,
+            id: "abematv-license://advertisement",
+            uri: "abematv-license://advertisement",
+        } as const;
+        const playlist: HLSMediaPlaylist = {
+            kind: HLSPlaylistKind.Media,
+            segments: [
+                {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/tsad/0.ts",
+                    duration: 1,
+                    sequenceId: 0,
+                    encryption: { method: "AES-128", key },
+                },
+                {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/content/1.ts",
+                    duration: 1,
+                    sequenceId: 1,
+                },
+            ],
+            keys: [key],
+            hasEndList: true,
+            totalDuration: 2,
+            averageSegmentDuration: 1,
+        };
+        const cursor = createCursor("video", playlist, context);
+
+        await cursor.prepare(context, new AbortController().signal);
+        const batches = await collect(cursor.discover(context, new AbortController().signal));
+
+        expect(batches[0].items.map((item) => item.url)).toEqual(["https://media.example/content/1.ts"]);
+        expect(request).not.toHaveBeenCalled();
+    });
+
+    test("keeps the selected SAMPLE-AES profile across a clear-only refresh", async () => {
+        const context = createContext();
         const key = {
             kind: HLSKeyReferenceKind.External,
             id: "skd://live-asset",
             uri: "skd://live-asset",
         } as const;
-        const protectedPlaylist: HLSMediaPlaylist = {
+        const initial: HLSMediaPlaylist = {
             kind: HLSPlaylistKind.Media,
             segments: [
                 {
                     kind: HLSSegmentKind.Media,
                     url: "https://media.example/protected.ts",
-                    duration: 1,
-                    sequenceId: 8,
+                    duration: 0.001,
+                    sequenceId: 7,
                     encryption: {
                         method: "SAMPLE-AES",
                         key,
@@ -188,19 +226,37 @@ describe("HLSMediaPlaylistCursor", () => {
                 },
             ],
             keys: [key],
-            hasEndList: true,
-            totalDuration: 1,
-            averageSegmentDuration: 1,
+            hasEndList: false,
+            totalDuration: 0.001,
+            averageSegmentDuration: 0.001,
         };
-        const load = jest.spyOn(PlaylistLoader.prototype, "load").mockResolvedValue(protectedPlaylist);
+        const refreshed: HLSMediaPlaylist = {
+            kind: HLSPlaylistKind.Media,
+            segments: [
+                {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/clear.ts",
+                    duration: 0.001,
+                    sequenceId: 8,
+                },
+            ],
+            keys: [],
+            hasEndList: true,
+            totalDuration: 0.001,
+            averageSegmentDuration: 0.001,
+        };
+        const load = jest.spyOn(PlaylistLoader.prototype, "load").mockResolvedValue(refreshed);
 
         try {
-            const cursor = createCursor("video", initial, context, "follow");
+            const cursor = createCursor("video", initial, context, "follow", [{ key: "00".repeat(16) }]);
             await cursor.prepare(context, new AbortController().signal);
 
-            await expect(collect(cursor.discover(context, new AbortController().signal))).rejects.toThrow(
-                "Exactly one explicit decryption key is required for SAMPLE-AES HLS."
-            );
+            const batches = await collect(cursor.discover(context, new AbortController().signal));
+
+            expect(batches.flatMap((batch) => batch.items.map((item) => item.url))).toEqual([
+                "https://media.example/protected.ts",
+                "https://media.example/clear.ts",
+            ]);
             expect(load).toHaveBeenCalledTimes(1);
         } finally {
             load.mockRestore();

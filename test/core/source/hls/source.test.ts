@@ -324,7 +324,7 @@ describe("HLSSource", () => {
         }
     });
 
-    test("rejects more than one explicit key in the common adapter before requesting remote keys", async () => {
+    test("rejects more than one explicit key in the standard profile before requesting remote keys", async () => {
         let playlistRequestCount = 0;
         let keyRequestCount = 0;
         const server = http.createServer((request, response) => {
@@ -359,7 +359,7 @@ describe("HLSSource", () => {
                 const downloader = createDownloader(source, { tempDir: directory });
 
                 await expect(downloader.download()).rejects.toThrow(
-                    "The common HLS adapter accepts at most one explicit decryption key."
+                    "The standard HLS profile accepts at most one explicit decryption key."
                 );
                 expect(playlistRequestCount).toBe(1);
                 expect(keyRequestCount).toBe(0);
