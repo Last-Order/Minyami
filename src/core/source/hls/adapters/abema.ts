@@ -1,7 +1,7 @@
 import { SiteAdapterOptions, SiteAdapterResult } from "./types";
 
 export function adaptAbema({ explicitKeys, playlist }: SiteAdapterOptions): SiteAdapterResult {
-    const key = explicitKeys[0];
+    const key = explicitKeys[0]?.key;
     if (!key) {
         throw new Error("To download AbemaTV, you need to set a key manually");
     }

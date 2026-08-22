@@ -9,6 +9,7 @@ import {
 } from "../types";
 import { MediaTrack } from "../stream_selection";
 import { SiteAdapterMode, SiteAdapterResult } from "./adapters/types";
+import { HLSExplicitKey } from "./explicit_key";
 import { HLSInitializationSegment, HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
 import { PlaylistLoader } from "./playlist_loader";
 import { prepareSite } from "./site_adapter";
@@ -28,7 +29,7 @@ export interface HLSMediaPlaylistCursorOptions {
     readonly initialPlaylist: HLSMediaPlaylist;
     readonly loader: PlaylistLoader;
     readonly slice?: HLSSlice;
-    readonly explicitKeys: readonly string[];
+    readonly explicitKeys: readonly HLSExplicitKey[];
 }
 
 class HLSSampleAesConfigurationError extends Error {}
@@ -216,7 +217,7 @@ export class HLSMediaPlaylistCursor {
                 "Exactly one explicit decryption key is required for SAMPLE-AES HLS."
             );
         }
-        if (!/^[0-9a-fA-F]{32}$/.test(this.options.explicitKeys[0])) {
+        if (!/^[0-9a-fA-F]{32}$/.test(this.options.explicitKeys[0].key)) {
             throw new HLSSampleAesConfigurationError(
                 "SAMPLE-AES key must contain exactly 16 bytes of hexadecimal data."
             );

@@ -4,6 +4,7 @@ import * as path from "path";
 import { createArchiveDownloader } from "./core/archive";
 import { DownloadController } from "./core/download/downloader";
 import { createLiveDownloader } from "./core/live";
+import { parseHLSExplicitKeyInputs } from "./core/source/hls/explicit_key";
 import { selectStreamInteractively } from "./core/source/stream_selector";
 import { readConfigFile } from "./utils/system";
 import logger from "./utils/log";
@@ -111,7 +112,7 @@ Erii.bind(
             noMerge: !!options.noMerge,
             keepTemporaryFiles: !!options.keep,
             keepEncryptedChunks: !!options.keepEncryptedChunks,
-            explicitKeys: options.key ? String(options.key).split(",") : undefined,
+            explicitKeys: options.key ? parseHLSExplicitKeyInputs(options.key) : undefined,
             streamSelector: selectStreamInteractively,
         };
         if (options.live) {
@@ -197,8 +198,8 @@ Erii.addOption({
     command: "download",
     description: "Set an explicit HLS decryption key",
     argument: {
-        name: "key",
-        description: "The common HLS adapter accepts one hexadecimal key.",
+        name: "key | kid:key",
+        description: "Repeat --key to supply multiple keys; comma-separated keys are not supported.",
     },
 });
 

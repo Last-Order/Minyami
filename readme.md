@@ -63,7 +63,7 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 | `--retries <number>` | Set the maximum attempts for both source requests and download tasks. The default is `5`. |
 | `--output <path>`, `-o <path>` | Set the output basename. The default is `./output`. |
 | `--temp-dir <path>` | Choose the parent directory for temporary files. |
-| `--key <key>` | Supply an explicit HLS decryption key. The common HLS adapter applies it to every key URI and skips remote key downloads. |
+| `--key <key\|kid:key>` | Supply an explicit HLS decryption key, optionally prefixed with its KID. Repeat `--key` to provide multiple keys; comma-separated keys are not supported. The common HLS adapter currently accepts one key, applies it to every key URI, and skips remote key downloads. |
 | `--cookies <cookies>` | Send cookies with download requests. |
 | `--headers <header>`, `-H <header>` | Send a custom HTTP header. Repeat the option to send multiple headers. |
 | `--live` | Follow a live playlist. |
@@ -97,6 +97,9 @@ downloader.on("chunk-downloaded", (chunk) => {
 
 await downloader.download();
 ```
+
+Library callers pass parsed explicit keys as `HLSExplicitKey` objects, for example `explicitKeys: [{ key }]` or
+`explicitKeys: [{ kid, key }]`. The CLI accepts the equivalent compact `key` and `kid:key` forms.
 
 For a live playlist, create a live downloader and call `stop()` when you want to finish:
 

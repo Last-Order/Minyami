@@ -8,7 +8,7 @@ export async function adaptCommon({ explicitKeys, http }: SiteAdapterOptions): P
     if (explicitKeys.length > 1) {
         throw new Error("The common HLS adapter accepts at most one explicit decryption key.");
     }
-    const explicitKey = explicitKeys[0];
+    const explicitKey = explicitKeys[0]?.key;
 
     return {
         keyResolver: async ({ keys, signal }) => {

@@ -61,7 +61,7 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 | `--retries <次数>` | 同时设置来源请求和下载任务的最大尝试次数，默认为 `5`。 |
 | `--output <路径>`、`-o <路径>` | 设置输出文件基名，默认为 `./output`。 |
 | `--temp-dir <路径>` | 设置临时文件所在的父目录。 |
-| `--key <密钥>` | 手动指定 HLS 解密密钥。common HLS adapter 会将它用于所有 key URI，同时跳过远程密钥下载。 |
+| `--key <key\|kid:key>` | 手动指定 HLS 解密密钥，也可在密钥前附加 KID。多个密钥必须重复使用 `--key`，不支持逗号分隔。common HLS adapter 目前仅接受一个密钥，并将它用于所有 key URI，同时跳过远程密钥下载。 |
 | `--cookies <内容>` | 为下载请求添加 Cookie。 |
 | `--headers <请求头>`、`-H <请求头>` | 添加 HTTP 请求头；可重复使用以添加多个请求头。 |
 | `--live` | 持续下载直播播放列表。 |
@@ -95,6 +95,9 @@ downloader.on("chunk-downloaded", (chunk) => {
 
 await downloader.download();
 ```
+
+通过库调用时，需将解析后的显式密钥作为 `HLSExplicitKey` 对象传入，例如 `explicitKeys: [{ key }]` 或
+`explicitKeys: [{ kid, key }]`；CLI 则接受等价的紧凑格式 `key` 和 `kid:key`。
 
 下载直播时使用 `createLiveDownloader`，需要结束下载时调用 `stop()`：
 

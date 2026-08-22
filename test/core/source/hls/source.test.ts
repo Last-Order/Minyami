@@ -44,7 +44,7 @@ describe("HLSSource", () => {
                 "Exactly one explicit decryption key is required for SAMPLE-AES HLS."
             );
 
-            const source = createHLSSource(playlistPath, { mode: "snapshot", explicitKeys: [key] });
+            const source = createHLSSource(playlistPath, { mode: "snapshot", explicitKeys: [{ key }] });
             await source.prepare({ http, keys }, new AbortController().signal);
             const batches: SourceBatch[] = [];
             for await (const batch of source.discover({ http, keys }, new AbortController().signal)) {
@@ -310,7 +310,7 @@ describe("HLSSource", () => {
                 const output = path.join(directory, "explicit-key.ts");
                 const source = createHLSSource(`${baseUrl}/playlist.m3u8`, {
                     mode: "snapshot",
-                    explicitKeys: [key.toString("hex")],
+                    explicitKeys: [{ key: key.toString("hex") }],
                 });
                 const downloader = createDownloader(source, { output, tempDir: directory });
 
@@ -351,7 +351,10 @@ describe("HLSSource", () => {
             await withTempDirectory("minyami-explicit-hls-keys-limit-", async (directory) => {
                 const source = createHLSSource(`${baseUrl}/playlist.m3u8`, {
                     mode: "snapshot",
-                    explicitKeys: ["00000000000000000000000000000000", "11111111111111111111111111111111"],
+                    explicitKeys: [
+                        { key: "00000000000000000000000000000000" },
+                        { key: "11111111111111111111111111111111" },
+                    ],
                 });
                 const downloader = createDownloader(source, { tempDir: directory });
 

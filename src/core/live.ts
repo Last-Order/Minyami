@@ -1,11 +1,11 @@
 import { createDownloader, DownloadController } from "./download/downloader";
 import { DownloaderConfig } from "./download/types";
-import { createHLSSource } from "./source/hls";
+import { createHLSSource, HLSExplicitKey } from "./source/hls";
 import { StreamSelector } from "./source/stream_selection";
 
 export interface LiveDownloaderConfig extends DownloaderConfig {
     streamSelector?: StreamSelector;
-    explicitKeys?: readonly string[];
+    explicitKeys?: readonly HLSExplicitKey[];
 }
 
 export function createLiveDownloader(sourcePath: string, config: LiveDownloaderConfig = {}): DownloadController {

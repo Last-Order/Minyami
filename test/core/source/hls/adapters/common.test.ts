@@ -95,7 +95,7 @@ describe("common HLS adapter key resolution", () => {
             mode: "archive",
             sourcePath: "https://media.example/playlist.m3u8",
             playlist: createPlaylist(key),
-            explicitKeys: [explicitKey],
+            explicitKeys: [{ kid: "asset-id", key: explicitKey }],
             http,
         });
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Breaking changes
+
+-   Changed `HLSSourceOptions.explicitKeys`, `ArchiveDownloaderConfig.explicitKeys`, and `LiveDownloaderConfig.explicitKeys` from strings to structured `HLSExplicitKey` values. The CLI continues to accept `key` and now also parses `kid:key`, retaining the optional KID for future per-key selection without changing current adapter resolution. Multiple CLI keys now require repeated `--key` options; comma-separated values are no longer expanded.
+
 ## 6.0.0-beta.2 - 2026-08-14
 
 ### Added

@@ -1,13 +1,13 @@
 import { timeStringToSeconds } from "../utils/time";
 import { createDownloader, DownloadController } from "./download/downloader";
 import { DownloaderConfig } from "./download/types";
-import { createHLSSource, HLSSourceOptions } from "./source/hls";
+import { createHLSSource, HLSExplicitKey, HLSSourceOptions } from "./source/hls";
 import { StreamSelector } from "./source/stream_selection";
 
 export interface ArchiveDownloaderConfig extends DownloaderConfig {
     slice?: string;
     streamSelector?: StreamSelector;
-    explicitKeys?: readonly string[];
+    explicitKeys?: readonly HLSExplicitKey[];
 }
 
 export function createArchiveDownloader(sourcePath: string, config: ArchiveDownloaderConfig = {}): DownloadController {

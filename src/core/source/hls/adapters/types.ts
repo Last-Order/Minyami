@@ -1,4 +1,5 @@
 import { DownloadItemNamer, DownloadSourceHttpClient } from "../../types";
+import { HLSExplicitKey } from "../explicit_key";
 import { HLSKeyReference, HLSMediaPlaylist, HLSSegment } from "../parser";
 
 export type SiteAdapterMode = "archive" | "live";
@@ -7,7 +8,7 @@ export interface SiteAdapterOptions {
     mode: SiteAdapterMode;
     sourcePath: string;
     playlist: HLSMediaPlaylist;
-    explicitKeys: readonly string[];
+    explicitKeys: readonly HLSExplicitKey[];
     http: DownloadSourceHttpClient;
 }
 

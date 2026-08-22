@@ -5,7 +5,7 @@ export type { LiveDownloaderConfig } from "./core/live";
 export { createDownloader } from "./core/download/downloader";
 export type { DownloadController, SourceDownloadSnapshot } from "./core/download/downloader";
 export { createHLSSource, HLSSource } from "./core/source/hls";
-export type { HLSSourceMode, HLSSourceOptions } from "./core/source/hls";
+export type { HLSExplicitKey, HLSSourceMode, HLSSourceOptions } from "./core/source/hls";
 export type {
     AudioTrack,
     BaseMediaTrack,
