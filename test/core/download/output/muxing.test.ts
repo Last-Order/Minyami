@@ -4,6 +4,7 @@ import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
 import { createDownloader } from "../../../../src/core/download/downloader";
 import {
+    AAC_CONTAINER,
     MATROSKA_CONTAINER,
     MediaContainer,
     MP4_CONTAINER,
@@ -142,6 +143,57 @@ describe("download output muxing", () => {
         }
     });
 
+    test("uses per-track container overrides for retained mixed-container artifacts", async () => {
+        const server = http.createServer((request, response) => response.end(request.url!.slice(1)));
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-mixed-track-containers-", async (directory) => {
+                const downloader = createDownloader(createTwoTrackSource(baseUrl, ["video"], AAC_CONTAINER), {
+                    output: path.join(directory, "media.ts"),
+                    tempDir: directory,
+                    muxers: [],
+                });
+
+                await downloader.download();
+
+                const videoOutput = path.join(directory, "media.video.ts");
+                const audioOutput = path.join(directory, "media.audio.aac");
+                expect(fs.readFileSync(videoOutput, "utf8")).toBe("video");
+                expect(fs.readFileSync(audioOutput, "utf8")).toBe("audio");
+                expect(downloader.getSnapshot().outputPaths).toEqual([videoOutput, audioOutput]);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
+    test("passes correctly typed mixed-container paths to the muxer", async () => {
+        const server = http.createServer((request, response) => response.end(request.url!.slice(1)));
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-mixed-container-muxing-", async (directory) => {
+                const muxer = new TestMuxer("mixed", true);
+                const downloader = createDownloader(createTwoTrackSource(baseUrl, ["video"], AAC_CONTAINER), {
+                    output: path.join(directory, "media.ts"),
+                    tempDir: directory,
+                    muxers: [muxer],
+                });
+
+                await downloader.download();
+
+                expect(muxer.requests[0].inputs).toMatchObject([
+                    { inputPath: path.join(directory, "media.video.ts") },
+                    { inputPath: path.join(directory, "media.audio.aac") },
+                ]);
+                expect(fs.readFileSync(path.join(directory, "media.mkv"), "utf8")).toBe("video+audio");
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test("does not mux a track that was split around a dropped item", async () => {
         const server = http.createServer((request, response) => {
             if (request.url === "/video-failed") {
@@ -181,7 +233,11 @@ describe("download output muxing", () => {
     });
 });
 
-function createTwoTrackSource(baseUrl: string, videoItems: readonly string[] = ["video"]): DownloadSource {
+function createTwoTrackSource(
+    baseUrl: string,
+    videoItems: readonly string[] = ["video"],
+    audioContainer?: MediaContainer
+): DownloadSource {
     return {
         sourcePath: "custom://muxing",
         continuous: false,
@@ -198,6 +254,7 @@ function createTwoTrackSource(baseUrl: string, videoItems: readonly string[] = [
                         id: "audio",
                         mediaTrack: { id: "logical-audio", type: "audio" },
                         sourcePath: `${baseUrl}/audio`,
+                        ...(audioContainer ? { container: audioContainer } : {}),
                     },
                 ],
             };

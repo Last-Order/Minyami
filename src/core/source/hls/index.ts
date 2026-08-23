@@ -74,14 +74,6 @@ export class HLSSource implements DownloadSource {
         // All cursors resolve keys before any track metadata is published to the downloader.
         const preparedTracks = await Promise.all(this.cursors.map((cursor) => cursor.prepare(context, signal)));
         const container = preparedTracks[0].container;
-        if (
-            preparedTracks.some(
-                (prepared) =>
-                    prepared.container.name !== container.name || prepared.container.extension !== container.extension
-            )
-        ) {
-            throw new Error("Selected HLS tracks use incompatible media containers.");
-        }
         this.prepared = true;
         return { container, tracks: preparedTracks.map((prepared) => prepared.track) };
     }

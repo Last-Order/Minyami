@@ -9,10 +9,12 @@
 ### Changed
 
 -   Removed legacy Hibiki and YouTube site-specific behavior. Abema segment filtering now also applies to refreshed live playlists.
+-   Added an optional per-track source container override so mixed-container HLS renditions retain accurate file extensions without breaking existing custom sources.
 
 ### Added
 
 -   Added fMP4/CMAF `SAMPLE-AES` support with progressive output. Bento4 `mp4decrypt` is required.
+-   Added HLS Packed AAC `SAMPLE-AES` decryption, preserving timed ID3 metadata while decrypting ADTS frames and supporting mixed MPEG-TS video plus AAC audio renditions.
 
 ## 6.0.0-beta.2 - 2026-08-14
 

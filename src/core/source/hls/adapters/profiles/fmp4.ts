@@ -31,7 +31,8 @@ interface SampleAesInitializationContext {
 
 export const fmp4HLSProfile: HLSProfileAdapter = {
     id: PROFILE_ID,
-    matches: (playlist) => playlist.segments.some((segment) => segment.kind === HLSSegmentKind.Initialization),
+    matches: (playlist, format) =>
+        format === "iso-bmff" && playlist.segments.some((segment) => segment.kind === HLSSegmentKind.Initialization),
     prepare: (options) => prepareFmp4Profile(options),
 };
 

@@ -1,14 +1,14 @@
-import { MPEG_TS_CONTAINER } from "../../../../media_container";
+import { AAC_CONTAINER } from "../../../../media_container";
 import { HLSSegmentKind } from "../../parser";
 import { prepareSingleFileKeys, toSingleFileDownloadItem } from "./single_file";
 import { HLSProfileAdapter } from "./types";
 
-const PROFILE_ID = "standard";
+const PROFILE_ID = "packed-aac";
 
-export const standardHLSProfile: HLSProfileAdapter = {
+export const packedAacHLSProfile: HLSProfileAdapter = {
     id: PROFILE_ID,
     matches: (playlist, format) =>
-        format === "mpeg-ts" &&
+        format === "packed-aac" &&
         !playlist.segments.some((segment) => segment.kind === HLSSegmentKind.Initialization) &&
         playlist.segments.every(
             (segment) =>
@@ -18,16 +18,16 @@ export const standardHLSProfile: HLSProfileAdapter = {
         ),
     prepare: (options) => ({
         id: PROFILE_ID,
-        container: MPEG_TS_CONTAINER,
+        container: AAC_CONTAINER,
         ensureKeys: prepareSingleFileKeys(
             options,
-            "The standard HLS profile accepts at most one explicit decryption key."
+            "The packed-AAC HLS profile accepts at most one explicit decryption key."
         ),
         toDownloadItem: (segment) =>
             toSingleFileDownloadItem(
                 segment,
-                "mpeg-ts-sample-aes",
-                "An explicit IV is required for MPEG-TS SAMPLE-AES HLS."
+                "packed-aac-sample-aes",
+                "An explicit IV is required for Packed AAC SAMPLE-AES HLS."
             ),
     }),
 };

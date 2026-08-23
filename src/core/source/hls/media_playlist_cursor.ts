@@ -61,6 +61,7 @@ export class HLSMediaPlaylistCursor {
             playlist: this.playlist,
             explicitKeys: this.options.explicitKeys,
             http: context.http,
+            signal,
         });
         this.playlist = adaptation.playlist;
         this.adaptationPlan = adaptation.plan;
@@ -74,6 +75,7 @@ export class HLSMediaPlaylistCursor {
                 id: this.options.id,
                 mediaTrack: this.options.mediaTrack,
                 sourcePath: this.options.sourcePath,
+                container: this.adaptationPlan.container,
                 ...(this.adaptationPlan.itemNamer ? { itemNamer: this.adaptationPlan.itemNamer } : {}),
                 itemTimeout: this.continuous ? this.followItemTimeout : undefined,
             },

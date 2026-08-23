@@ -100,9 +100,6 @@ await downloader.download();
 Library callers pass parsed explicit keys as `HLSExplicitKey` objects, for example `explicitKeys: [{ key }]` or
 `explicitKeys: [{ kid, key }]`. The CLI accepts the equivalent compact `key` and `kid:key` forms.
 
-Minyami supports `SAMPLE-AES` in both MPEG-TS and fMP4/CMAF. fMP4/CMAF downloads are decrypted and written
-progressively. Unsupported variants, invalid keys, or an unavailable or failing `mp4decrypt` are reported as errors.
-
 For a live playlist, create a live downloader and call `stop()` when you want to finish:
 
 ```TypeScript

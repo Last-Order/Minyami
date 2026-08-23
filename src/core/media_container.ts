@@ -7,6 +7,7 @@ export interface MediaContainer {
 }
 
 export const MPEG_TS_CONTAINER = Object.freeze<MediaContainer>({ name: "MPEG-TS", extension: "ts" });
+export const AAC_CONTAINER = Object.freeze<MediaContainer>({ name: "AAC", extension: "aac" });
 export const MATROSKA_CONTAINER = Object.freeze<MediaContainer>({ name: "Matroska", extension: "mkv" });
 export const MP4_CONTAINER = Object.freeze<MediaContainer>({ name: "MP4", extension: "mp4" });
 

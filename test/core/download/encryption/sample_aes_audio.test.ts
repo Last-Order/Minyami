@@ -1,11 +1,11 @@
 import * as crypto from "crypto";
 import { describe, expect, test } from "@jest/globals";
-import { decryptSampleAesAudio } from "../../../../src/core/download/encryption/mpeg_ts_sample_aes/audio";
+import { decryptSampleAesAudio } from "../../../../src/core/download/encryption/sample_aes/audio";
 
 const key = Buffer.from("00112233445566778899aabbccddeeff", "hex");
 const iv = Buffer.from("ffeeddccbbaa99887766554433221100", "hex");
 
-describe("SAMPLE-AES MPEG-TS audio", () => {
+describe("SAMPLE-AES elementary audio", () => {
     test("resets CBC for every AC-3 syncframe", () => {
         const first = createAc3Frame(3);
         const second = createAc3Frame(17);

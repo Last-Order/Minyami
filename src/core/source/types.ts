@@ -29,6 +29,14 @@ export interface MpegTsSampleAesEncryption {
     readonly iv: string;
 }
 
+export interface PackedAacSampleAesEncryption {
+    readonly scheme: "packed-aac-sample-aes";
+    /** Stable key-store identity. FairPlay HLS sources normally use the opaque skd URI. */
+    readonly keyId: string;
+    /** Explicit hexadecimal IV from the playlist; CBC resets for every ADTS frame. */
+    readonly iv: string;
+}
+
 export interface IsoBmffSampleAesKey {
     /** Decimal track id or canonical 128-bit hexadecimal KID accepted by mp4decrypt. */
     readonly selector: string;
@@ -49,7 +57,11 @@ export type IsoBmffSampleAesEncryption =
           readonly fragmentsInfoBase64: string;
       };
 
-export type DownloadEncryption = Aes128CbcEncryption | MpegTsSampleAesEncryption | IsoBmffSampleAesEncryption;
+export type DownloadEncryption =
+    | Aes128CbcEncryption
+    | MpegTsSampleAesEncryption
+    | PackedAacSampleAesEncryption
+    | IsoBmffSampleAesEncryption;
 
 /** Opaque output-prefix identity. Concentrators compare it but never interpret its protocol or format. */
 export interface DownloadOutputPrefix {
@@ -115,6 +127,8 @@ export interface SourceTrack {
     readonly mediaTrack: MediaTrack;
     /** Actual upstream location for this track, which may differ from the source entry point. */
     readonly sourcePath: string;
+    /** Optional per-track override for sources whose selected tracks use different containers. */
+    readonly container?: MediaContainer;
     readonly itemNamer?: DownloadItemNamer;
     readonly itemTimeout?: number;
 }
@@ -126,7 +140,7 @@ export type SourceMetadata =
       }
     | {
           readonly cancelled?: false;
-          /** Container used when concentrated tracks are retained without cross-track muxing. */
+          /** Default container for concentrated tracks; individual tracks may override it. */
           readonly container: MediaContainer;
           /** Track order is stable and also determines output/snapshot order. */
           readonly tracks: readonly SourceTrack[];

@@ -1,4 +1,4 @@
-import { decryptSampleAesAudio, SampleAesAudioCodec } from "./audio";
+import { decryptSampleAesAudio, SampleAesAudioCodec } from "../sample_aes/audio";
 import { decryptSampleAesH264 } from "./h264";
 
 // ITU-T H.222.0 §2.4.3.2/Table 2-2 fixes each transport packet at 188 bytes and sync_byte at 0x47.

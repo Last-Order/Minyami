@@ -100,9 +100,6 @@ await downloader.download();
 通过库调用时，需将解析后的显式密钥作为 `HLSExplicitKey` 对象传入，例如 `explicitKeys: [{ key }]` 或
 `explicitKeys: [{ kid, key }]`；CLI 则接受等价的紧凑格式 `key` 和 `kid:key`。
 
-Minyami 同时支持 MPEG-TS 和 fMP4/CMAF 两种 `SAMPLE-AES`。fMP4/CMAF 下载会渐进解密并写入输出；遇到
-不支持的形态、无效密钥，或者 `mp4decrypt` 不可用或执行失败时，会明确报错。
-
 下载直播时使用 `createLiveDownloader`，需要结束下载时调用 `stop()`：
 
 ```TypeScript

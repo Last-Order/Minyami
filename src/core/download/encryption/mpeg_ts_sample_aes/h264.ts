@@ -1,4 +1,4 @@
-import { CbcDecryptJob, decryptCbcJobs } from "./aes_blocks";
+import { CbcDecryptJob, decryptCbcJobs } from "../sample_aes/aes_blocks";
 
 interface AnnexBNalUnit {
     readonly prefix: Buffer;

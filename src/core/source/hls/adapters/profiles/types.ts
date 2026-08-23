@@ -2,6 +2,7 @@ import { DownloadItem, DownloadSourceContext, DownloadSourceHttpClient } from ".
 import { MediaContainer } from "../../../../media_container";
 import { HLSExplicitKey } from "../../explicit_key";
 import { HLSMediaPlaylist, HLSSegment } from "../../parser";
+import { HLSMediaSegmentFormat } from "../segment_format";
 
 export interface HLSProfilePrepareOptions {
     readonly playlist: HLSMediaPlaylist;
@@ -23,6 +24,6 @@ export interface HLSProfilePlan {
 export interface HLSProfileAdapter {
     readonly id: string;
     /** Selects the profile once from the initial effective media playlist. */
-    matches(playlist: HLSMediaPlaylist): boolean;
+    matches(playlist: HLSMediaPlaylist, format: HLSMediaSegmentFormat): boolean;
     prepare(options: HLSProfilePrepareOptions): HLSProfilePlan | Promise<HLSProfilePlan>;
 }

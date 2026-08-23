@@ -3,6 +3,7 @@ import { normalizeDownloaderConfig } from "../../../../../../src/core/download/c
 import { DownloadHttpClient } from "../../../../../../src/core/download/infrastructure/http_client";
 import { KeyStore } from "../../../../../../src/core/download/infrastructure/key_store";
 import { fmp4HLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/fmp4";
+import { packedAacHLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/packed_aac";
 import { standardHLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/standard";
 import {
     HLSKeyReferenceKind,
@@ -110,6 +111,52 @@ describe("standard HLS profile", () => {
             url: "https://media.example/clear.ts",
             kind: "media",
             duration: 2,
+        });
+    });
+});
+
+describe("Packed AAC HLS profile", () => {
+    test("publishes the Packed AAC SAMPLE-AES scheme and AAC container", async () => {
+        const http = new DownloadHttpClient(normalizeDownloaderConfig());
+        const context = { http, keys: new KeyStore() };
+        const key = {
+            kind: HLSKeyReferenceKind.External,
+            id: "skd://packed-audio",
+            uri: "skd://packed-audio",
+        } as const;
+        const playlist: HLSMediaPlaylist = {
+            kind: HLSPlaylistKind.Media,
+            segments: [
+                {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/protected.aac",
+                    duration: 2,
+                    sequenceId: 1,
+                    encryption: {
+                        method: "SAMPLE-AES",
+                        key,
+                        iv: "01",
+                        keyFormat: "com.apple.streamingkeydelivery",
+                    },
+                },
+            ],
+            keys: [key],
+            hasEndList: true,
+            totalDuration: 2,
+            averageSegmentDuration: 2,
+        };
+        const explicitKey = "33".repeat(16);
+        const plan = await packedAacHLSProfile.prepare({ playlist, explicitKeys: [{ key: explicitKey }], http });
+
+        await plan.ensureKeys(playlist, context, new AbortController().signal);
+
+        expect(plan.container).toMatchObject({ name: "AAC", extension: "aac" });
+        expect(context.keys.get(key.id)).toBe(explicitKey);
+        expect(plan.toDownloadItem(playlist.segments[0])).toEqual({
+            url: "https://media.example/protected.aac",
+            kind: "media",
+            duration: 2,
+            encryption: { scheme: "packed-aac-sample-aes", keyId: key.id, iv: "01" },
         });
     });
 });

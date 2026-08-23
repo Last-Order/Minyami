@@ -346,6 +346,80 @@ describe("HLSMediaPlaylistCursor", () => {
             load.mockRestore();
         }
     });
+
+    test("keeps the Packed AAC profile across a clear-only live refresh", async () => {
+        const context = createContext();
+        const key = {
+            kind: HLSKeyReferenceKind.External,
+            id: "skd://packed-live-asset",
+            uri: "skd://packed-live-asset",
+        } as const;
+        const initial: HLSMediaPlaylist = {
+            kind: HLSPlaylistKind.Media,
+            segments: [
+                {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/protected.aac",
+                    duration: 0.001,
+                    sequenceId: 7,
+                    encryption: {
+                        method: "SAMPLE-AES",
+                        key,
+                        iv: "01",
+                        keyFormat: "com.apple.streamingkeydelivery",
+                    },
+                },
+            ],
+            keys: [key],
+            hasEndList: false,
+            totalDuration: 0.001,
+            averageSegmentDuration: 0.001,
+        };
+        const refreshed: HLSMediaPlaylist = {
+            kind: HLSPlaylistKind.Media,
+            segments: [
+                {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/clear.aac",
+                    duration: 0.001,
+                    sequenceId: 8,
+                },
+            ],
+            keys: [],
+            hasEndList: true,
+            totalDuration: 0.001,
+            averageSegmentDuration: 0.001,
+        };
+        const load = jest.spyOn(PlaylistLoader.prototype, "load").mockResolvedValue(refreshed);
+
+        try {
+            const cursor = createCursor("audio", initial, context, "follow", [{ key: "00".repeat(16) }]);
+            const prepared = await cursor.prepare(context, new AbortController().signal);
+            const batches = await collect(cursor.discover(context, new AbortController().signal));
+
+            expect(prepared.container).toMatchObject({ extension: "aac" });
+            expect(batches.flatMap((batch) => batch.items)).toEqual([
+                {
+                    url: "https://media.example/protected.aac",
+                    kind: "media",
+                    duration: 0.001,
+                    encryption: {
+                        scheme: "packed-aac-sample-aes",
+                        keyId: key.id,
+                        iv: "01",
+                    },
+                },
+                {
+                    url: "https://media.example/clear.aac",
+                    kind: "media",
+                    duration: 0.001,
+                },
+            ]);
+            expect(load).toHaveBeenCalledTimes(1);
+        } finally {
+            load.mockRestore();
+        }
+    });
 });
 
 function createContext(): DownloadSourceContext {

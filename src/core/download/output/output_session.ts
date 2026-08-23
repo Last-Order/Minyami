@@ -65,7 +65,7 @@ export class OutputSession {
 
         for (const track of metadata) {
             const trackTempPath = path.resolve(this.tempPath, track.id);
-            const plannedOutputPath = getAvailableOutputPath(this.createTrackOutputPath(track.id, metadata.length));
+            const plannedOutputPath = getAvailableOutputPath(this.createTrackOutputPath(track, metadata.length));
             this.tracks.set(track.id, {
                 metadata: track,
                 tempPath: trackTempPath,
@@ -181,14 +181,14 @@ export class OutputSession {
         }
     }
 
-    private createTrackOutputPath(trackId: DownloadTrackId, trackCount: number): string {
+    private createTrackOutputPath(track: SourceTrack, trackCount: number): string {
         if (!this.sourceContainer) {
             throw new Error("Download source container has not been configured.");
         }
         return createContainerOutputPath(
             this.outputBasePath,
-            this.sourceContainer,
-            trackCount === 1 ? undefined : trackId
+            track.container ?? this.sourceContainer,
+            trackCount === 1 ? undefined : track.id
         );
     }
 
