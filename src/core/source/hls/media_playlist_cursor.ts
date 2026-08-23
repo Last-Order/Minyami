@@ -5,6 +5,7 @@ import { HLSAdaptationPlan, prepareHLSAdaptation } from "./adapters/prepare";
 import { HLSExplicitKey } from "./explicit_key";
 import { HLSInitializationSegment, HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
 import { PlaylistLoader } from "./playlist_loader";
+import { MediaContainer } from "../../media_container";
 
 export type HLSMediaPlaylistCursorMode = "snapshot" | "follow";
 
@@ -24,13 +25,19 @@ export interface HLSMediaPlaylistCursorOptions {
     readonly explicitKeys: readonly HLSExplicitKey[];
 }
 
+export interface PreparedHLSMediaTrack {
+    readonly track: SourceTrack;
+    readonly container: MediaContainer;
+}
+
 /**
  * Owns the refresh and discovery state for exactly one HLS Media Playlist.
  * Sequence identities are playlist-local, so every future rendition needs its own cursor.
  */
 export class HLSMediaPlaylistCursor {
-    private readonly initialSegmentIdentities = new Set<string>();
     private readonly sequenceIds = new Set<number>();
+    /** Initialization context most recently published for newly discovered media. */
+    private activeInitializationId?: string;
     private playlist: HLSMediaPlaylist;
     private adaptationPlan?: HLSAdaptationPlan;
     private timeout = 60000;
@@ -41,7 +48,7 @@ export class HLSMediaPlaylistCursor {
         this.playlist = options.initialPlaylist;
     }
 
-    async prepare(context: DownloadSourceContext, signal: AbortSignal): Promise<SourceTrack> {
+    async prepare(context: DownloadSourceContext, signal: AbortSignal): Promise<PreparedHLSMediaTrack> {
         if (this.prepared) {
             throw new Error(`HLS media-playlist cursor ${this.options.id} has already been prepared.`);
         }
@@ -62,11 +69,14 @@ export class HLSMediaPlaylistCursor {
         this.prepared = true;
 
         return {
-            id: this.options.id,
-            mediaTrack: this.options.mediaTrack,
-            sourcePath: this.options.sourcePath,
-            ...(this.adaptationPlan.itemNamer ? { itemNamer: this.adaptationPlan.itemNamer } : {}),
-            itemTimeout: this.continuous ? this.followItemTimeout : undefined,
+            container: this.adaptationPlan.container,
+            track: {
+                id: this.options.id,
+                mediaTrack: this.options.mediaTrack,
+                sourcePath: this.options.sourcePath,
+                ...(this.adaptationPlan.itemNamer ? { itemNamer: this.adaptationPlan.itemNamer } : {}),
+                itemTimeout: this.continuous ? this.followItemTimeout : undefined,
+            },
         };
     }
 
@@ -165,22 +175,35 @@ export class HLSMediaPlaylistCursor {
     }
 
     private takeNewSegments(segments: readonly HLSSegment[]): HLSSegment[] {
-        return segments.filter((segment) => {
-            if (segment.kind === HLSSegmentKind.Media) {
-                // Media sequence is canonical only inside this media playlist.
-                if (this.sequenceIds.has(segment.sequenceId)) {
-                    return false;
+        const selected: HLSSegment[] = [];
+        const initializations = new Map<string, HLSInitializationSegment>();
+        for (const segment of segments) {
+            if (segment.kind === HLSSegmentKind.Initialization) {
+                initializations.set(segment.initializationId, segment);
+                continue;
+            }
+            // Media sequence is canonical only inside this media playlist.
+            if (this.sequenceIds.has(segment.sequenceId)) {
+                continue;
+            }
+            this.sequenceIds.add(segment.sequenceId);
+
+            const initializationId = segment.initializationId;
+            if (initializationId !== this.activeInitializationId) {
+                if (initializationId) {
+                    const initialization = initializations.get(initializationId);
+                    if (!initialization) {
+                        throw new Error("HLS media references an unavailable initialization segment.");
+                    }
+                    // Refresh snapshots repeat history. Publish an init only when unseen media changes
+                    // the active context, including returning to an identity used before an intervening one.
+                    selected.push(initialization);
                 }
-                this.sequenceIds.add(segment.sequenceId);
-                return true;
+                this.activeInitializationId = initializationId;
             }
-            const identity = initializationSegmentIdentity(segment);
-            if (this.initialSegmentIdentities.has(identity)) {
-                return false;
-            }
-            this.initialSegmentIdentities.add(identity);
-            return true;
-        });
+            selected.push(segment);
+        }
+        return selected;
     }
 
     private toItems(segments: readonly HLSSegment[]): DownloadItem[] {
@@ -190,10 +213,6 @@ export class HLSMediaPlaylistCursor {
         }
         return segments.map((segment) => plan.toDownloadItem(segment));
     }
-}
-
-function initializationSegmentIdentity(segment: HLSInitializationSegment): string {
-    return JSON.stringify([segment.url, segment.byteRange?.offset, segment.byteRange?.length]);
 }
 
 function sliceItems(items: DownloadItem[], slice?: HLSSlice): DownloadItem[] {

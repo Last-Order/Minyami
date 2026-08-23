@@ -10,9 +10,20 @@ const AES_128_IV = /^[0-9a-fA-F]{1,32}$/;
 export class Aes128CbcHandler implements EncryptionHandler {
     readonly scheme = "aes-128-cbc" as const;
 
-    validate(encryption: DownloadEncryption, key: string): void {
+    keyIds(encryption: DownloadEncryption): readonly string[] {
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
+        }
+        return [encryption.keyId];
+    }
+
+    validate(encryption: DownloadEncryption, keys: ReadonlyMap<string, string>): void {
+        if (encryption.scheme !== this.scheme) {
+            throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
+        }
+        const key = keys.get(encryption.keyId);
+        if (!key) {
+            throw new Error(`Missing encryption key for ${encryption.keyId}`);
         }
         if (!AES_128_KEY.test(key)) {
             throw new Error("AES-128 key must contain exactly 16 bytes of hexadecimal data.");
@@ -23,8 +34,12 @@ export class Aes128CbcHandler implements EncryptionHandler {
     }
 
     async decrypt(request: DecryptionRequest): Promise<void> {
-        const { inputPath, outputPath, encryption, key } = request;
-        this.validate(encryption, key);
+        const { inputPath, outputPath, encryption, keys } = request;
+        this.validate(encryption, keys);
+        if (encryption.scheme !== this.scheme) {
+            throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
+        }
+        const key = keys.get(encryption.keyId)!;
 
         const normalizedIv = encryption.iv.padStart(32, "0");
         const temporaryOutputPath = outputPath + ".t";

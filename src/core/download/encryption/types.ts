@@ -4,7 +4,15 @@ export interface DecryptionRequest {
     readonly inputPath: string;
     readonly outputPath: string;
     readonly encryption: DownloadEncryption;
-    readonly key: string;
+    readonly keys: ReadonlyMap<string, string>;
+    readonly signal: AbortSignal;
+}
+
+export class FatalDecryptionError extends Error {
+    constructor(message: string, options?: ErrorOptions) {
+        super(message, options);
+        this.name = "FatalDecryptionError";
+    }
 }
 
 /**
@@ -14,8 +22,10 @@ export interface DecryptionRequest {
 export interface EncryptionHandler {
     readonly scheme: DownloadEncryption["scheme"];
 
+    keyIds(encryption: DownloadEncryption): readonly string[];
+
     /** Rejects unusable descriptors before their media item is downloaded. */
-    validate(encryption: DownloadEncryption, key: string): void;
+    validate(encryption: DownloadEncryption, keys: ReadonlyMap<string, string>): void;
 
     /** Commits a complete output file or rejects without removing the input. */
     decrypt(request: DecryptionRequest): Promise<void>;

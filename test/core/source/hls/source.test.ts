@@ -100,7 +100,7 @@ describe("HLSSource", () => {
 
         try {
             await withTempDirectory("minyami-ranged-hls-", async (directory) => {
-                const output = path.join(directory, "ranged.ts");
+                const output = path.join(directory, "ranged.mp4");
                 const downloader = createDownloader(createHLSSource(`${baseUrl}/playlist.m3u8`, { mode: "snapshot" }), {
                     output,
                     tempDir: directory,

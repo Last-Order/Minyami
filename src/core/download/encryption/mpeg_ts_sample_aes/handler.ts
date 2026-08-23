@@ -10,9 +10,20 @@ const AES_128_IV = /^[0-9a-fA-F]{1,32}$/;
 export class MpegTsSampleAesHandler implements EncryptionHandler {
     readonly scheme = "mpeg-ts-sample-aes" as const;
 
-    validate(encryption: DownloadEncryption, key: string): void {
+    keyIds(encryption: DownloadEncryption): readonly string[] {
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
+        }
+        return [encryption.keyId];
+    }
+
+    validate(encryption: DownloadEncryption, keys: ReadonlyMap<string, string>): void {
+        if (encryption.scheme !== this.scheme) {
+            throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
+        }
+        const key = keys.get(encryption.keyId);
+        if (!key) {
+            throw new Error(`Missing encryption key for ${encryption.keyId}`);
         }
         if (!AES_128_KEY.test(key)) {
             throw new Error("SAMPLE-AES key must contain exactly 16 bytes of hexadecimal data.");
@@ -23,11 +34,12 @@ export class MpegTsSampleAesHandler implements EncryptionHandler {
     }
 
     async decrypt(request: DecryptionRequest): Promise<void> {
-        const { inputPath, outputPath, encryption, key } = request;
-        this.validate(encryption, key);
+        const { inputPath, outputPath, encryption, keys } = request;
+        this.validate(encryption, keys);
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
         }
+        const key = keys.get(encryption.keyId)!;
         const temporaryOutputPath = `${outputPath}.t-${process.pid}-${randomUUID()}`;
         try {
             const encrypted = await fs.promises.readFile(inputPath);

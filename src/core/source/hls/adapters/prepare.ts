@@ -2,6 +2,7 @@ import { DownloadItem, DownloadItemNamer, DownloadSourceContext, DownloadSourceH
 import { HLSExplicitKey } from "../explicit_key";
 import { HLSMediaPlaylist, HLSSegment } from "../parser";
 import { hlsProfiles } from "./profiles/registry";
+import { HLSProfilePlan } from "./profiles/types";
 import { hlsSiteAdapters } from "./sites/registry";
 
 export interface HLSAdaptationOptions {
@@ -13,6 +14,7 @@ export interface HLSAdaptationOptions {
 
 export interface HLSAdaptationPlan {
     readonly profileId: string;
+    readonly container: HLSProfilePlan["container"];
     readonly siteId?: string;
     readonly itemNamer?: DownloadItemNamer;
     adaptPlaylist(playlist: HLSMediaPlaylist): HLSMediaPlaylist;
@@ -52,6 +54,7 @@ export async function prepareHLSAdaptation(options: HLSAdaptationOptions): Promi
         playlist,
         plan: {
             profileId: profilePlan.id,
+            container: profilePlan.container,
             ...(siteAdapter ? { siteId: siteAdapter.id } : {}),
             ...(sitePlan.itemNamer ? { itemNamer: sitePlan.itemNamer } : {}),
             adaptPlaylist,

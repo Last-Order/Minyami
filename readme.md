@@ -8,6 +8,7 @@
 
 - Node.js 24 or newer; an active LTS release is recommended.
 - `mkvmerge` or `ffmpeg` is optional. Install either one and add it to `PATH` if you need to mux separate audio and video tracks.
+- Bento4 `mp4decrypt` must be available in `PATH` to decrypt fMP4/CMAF `SAMPLE-AES` (`cbcs`) playlists.
 
 ## Installation
 
@@ -98,6 +99,9 @@ await downloader.download();
 
 Library callers pass parsed explicit keys as `HLSExplicitKey` objects, for example `explicitKeys: [{ key }]` or
 `explicitKeys: [{ kid, key }]`. The CLI accepts the equivalent compact `key` and `kid:key` forms.
+
+Minyami supports `SAMPLE-AES` in both MPEG-TS and fMP4/CMAF. fMP4/CMAF downloads are decrypted and written
+progressively. Unsupported variants, invalid keys, or an unavailable or failing `mp4decrypt` are reported as errors.
 
 For a live playlist, create a live downloader and call `stop()` when you want to finish:
 

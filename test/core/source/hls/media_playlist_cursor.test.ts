@@ -22,9 +22,12 @@ describe("HLSMediaPlaylistCursor", () => {
         const batches = await collect(cursor.discover(context, signal));
 
         expect(track).toMatchObject({
-            id: "video",
-            mediaTrack: { id: "logical-video", type: "video" },
-            sourcePath: "https://media.example/video.m3u8",
+            container: { name: "MP4", extension: "mp4" },
+            track: {
+                id: "video",
+                mediaTrack: { id: "logical-video", type: "video" },
+                sourcePath: "https://media.example/video.m3u8",
+            },
         });
         expect(batches).toEqual([
             {
@@ -34,12 +37,17 @@ describe("HLSMediaPlaylistCursor", () => {
                         url: "https://media.example/init.mp4",
                         kind: "init",
                         byteRange: { offset: 0, length: 100 },
+                        output: {
+                            replayablePrefix: { slot: "hls-map", identity: "init-a" },
+                            startsNewRun: true,
+                        },
                     },
                     {
                         url: "https://media.example/segment.m4s",
                         kind: "media",
                         duration: 2,
                         byteRange: { offset: 100, length: 200 },
+                        output: { requiredPrefixes: [{ slot: "hls-map", identity: "init-a" }] },
                     },
                 ],
                 totalItemCount: 2,
@@ -66,47 +74,123 @@ describe("HLSMediaPlaylistCursor", () => {
         expect(audioBatches[0].trackId).toBe("audio");
     });
 
-    test("keeps initialization ranges with the same URL as distinct follow items", async () => {
+    test("re-publishes an earlier initialization range after the active context changes", async () => {
         const context = createContext();
         const playlist: HLSMediaPlaylist = {
             ...createPlaylist(),
             segments: [
                 {
                     kind: HLSSegmentKind.Initialization,
+                    initializationId: "shared-0",
                     url: "https://media.example/shared.mp4",
                     byteRange: { offset: 0, length: 100 },
                 },
                 {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/0.m4s",
+                    duration: 0.001,
+                    sequenceId: 0,
+                    initializationId: "shared-0",
+                },
+                {
                     kind: HLSSegmentKind.Initialization,
+                    initializationId: "shared-300",
                     url: "https://media.example/shared.mp4",
                     byteRange: { offset: 300, length: 100 },
                 },
                 {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/1.m4s",
+                    duration: 0.001,
+                    sequenceId: 1,
+                    initializationId: "shared-300",
+                },
+                {
                     kind: HLSSegmentKind.Initialization,
+                    initializationId: "shared-0",
                     url: "https://media.example/shared.mp4",
                     byteRange: { offset: 0, length: 100 },
                 },
+                {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/2.m4s",
+                    duration: 0.001,
+                    sequenceId: 2,
+                    initializationId: "shared-0",
+                },
             ],
-            totalDuration: 0,
-            averageSegmentDuration: 0,
+            totalDuration: 0.003,
+            averageSegmentDuration: 0.001,
         };
         const cursor = createCursor("video", playlist, context, "follow");
         await cursor.prepare(context, new AbortController().signal);
 
         const batches = await collect(cursor.discover(context, new AbortController().signal));
 
-        expect(batches[0].items).toEqual([
-            {
-                url: "https://media.example/shared.mp4",
-                kind: "init",
-                byteRange: { offset: 0, length: 100 },
-            },
-            {
-                url: "https://media.example/shared.mp4",
-                kind: "init",
-                byteRange: { offset: 300, length: 100 },
-            },
+        expect(outputContexts(batches)).toEqual([
+            [
+                "init:shared-0",
+                "media:shared-0",
+                "init:shared-300",
+                "media:shared-300",
+                "init:shared-0",
+                "media:shared-0",
+            ],
         ]);
+    });
+
+    test("re-publishes A after A to B to A transitions across live refreshes", async () => {
+        const context = createContext();
+        const initA = createInitialization("init-a");
+        const initB = createInitialization("init-b");
+        const mediaA0 = createMedia(0, "init-a");
+        const mediaB1 = createMedia(1, "init-b");
+        const mediaA2 = createMedia(2, "init-a");
+        const initial = createLivePlaylist([initA, mediaA0], false);
+        const refreshedB = createLivePlaylist([initA, mediaA0, initB, mediaB1], false);
+        const refreshedA = createLivePlaylist([initA, mediaA0, initB, mediaB1, initA, mediaA2], true);
+        const load = jest
+            .spyOn(PlaylistLoader.prototype, "load")
+            .mockResolvedValueOnce(refreshedB)
+            .mockResolvedValueOnce(refreshedA);
+
+        try {
+            const cursor = createCursor("video", initial, context, "follow");
+            await cursor.prepare(context, new AbortController().signal);
+
+            const batches = await collect(cursor.discover(context, new AbortController().signal));
+
+            expect(outputContexts(batches)).toEqual([
+                ["init:init-a", "media:init-a"],
+                ["init:init-b", "media:init-b"],
+                ["init:init-a", "media:init-a"],
+            ]);
+            expect(load).toHaveBeenCalledTimes(2);
+        } finally {
+            load.mockRestore();
+        }
+    });
+
+    test("does not re-publish an unchanged initialization context on refresh", async () => {
+        const context = createContext();
+        const initA = createInitialization("init-a");
+        const mediaA0 = createMedia(0, "init-a");
+        const mediaA1 = createMedia(1, "init-a");
+        const initial = createLivePlaylist([initA, mediaA0], false);
+        const refreshed = createLivePlaylist([initA, mediaA0, mediaA1], true);
+        const load = jest.spyOn(PlaylistLoader.prototype, "load").mockResolvedValue(refreshed);
+
+        try {
+            const cursor = createCursor("video", initial, context, "follow");
+            await cursor.prepare(context, new AbortController().signal);
+
+            const batches = await collect(cursor.discover(context, new AbortController().signal));
+
+            expect(outputContexts(batches)).toEqual([["init:init-a", "media:init-a"], ["media:init-a"]]);
+            expect(load).toHaveBeenCalledTimes(1);
+        } finally {
+            load.mockRestore();
+        }
     });
 
     test("filters Abema placeholder and advertisement segments after every live refresh", async () => {
@@ -293,6 +377,7 @@ function createPlaylist(): HLSMediaPlaylist {
         segments: [
             {
                 kind: HLSSegmentKind.Initialization,
+                initializationId: "init-a",
                 url: "https://media.example/init.mp4",
                 byteRange: { offset: 0, length: 100 },
             },
@@ -301,6 +386,7 @@ function createPlaylist(): HLSMediaPlaylist {
                 url: "https://media.example/segment.m4s",
                 duration: 2,
                 sequenceId: 7,
+                initializationId: "init-a",
                 byteRange: { offset: 100, length: 200 },
             },
         ],
@@ -309,6 +395,47 @@ function createPlaylist(): HLSMediaPlaylist {
         totalDuration: 2,
         averageSegmentDuration: 2,
     };
+}
+
+function createInitialization(initializationId: string) {
+    return {
+        kind: HLSSegmentKind.Initialization,
+        initializationId,
+        url: `https://media.example/${initializationId}.mp4`,
+    } as const;
+}
+
+function createMedia(sequenceId: number, initializationId: string) {
+    return {
+        kind: HLSSegmentKind.Media,
+        url: `https://media.example/${sequenceId}.m4s`,
+        duration: 0.001,
+        sequenceId,
+        initializationId,
+    } as const;
+}
+
+function createLivePlaylist(segments: HLSMediaPlaylist["segments"], hasEndList: boolean): HLSMediaPlaylist {
+    const mediaCount = segments.filter((segment) => segment.kind === HLSSegmentKind.Media).length;
+    return {
+        kind: HLSPlaylistKind.Media,
+        segments,
+        keys: [],
+        hasEndList,
+        totalDuration: mediaCount * 0.001,
+        averageSegmentDuration: mediaCount === 0 ? 0 : 0.001,
+    };
+}
+
+function outputContexts(batches: readonly SourceBatch[]): string[][] {
+    return batches.map((batch) =>
+        batch.items.map((item) => {
+            if (item.kind === "init") {
+                return `init:${item.output?.replayablePrefix?.identity}`;
+            }
+            return `media:${item.output?.requiredPrefixes?.[0]?.identity}`;
+        })
+    );
 }
 
 async function collect(iterable: AsyncIterable<SourceBatch>): Promise<SourceBatch[]> {

@@ -8,6 +8,7 @@
 
 - Node.js 24 或更高版本，推荐使用活跃的 LTS 版本。
 - `mkvmerge` 或 `ffmpeg` 为可选依赖。如需混流独立音视频轨道，请安装其中一个并将其加入 `PATH`。
+- 解密 fMP4/CMAF `SAMPLE-AES`（`cbcs`）播放列表时，需确保 Bento4 `mp4decrypt` 位于 `PATH` 中。
 
 ## 安装
 
@@ -98,6 +99,9 @@ await downloader.download();
 
 通过库调用时，需将解析后的显式密钥作为 `HLSExplicitKey` 对象传入，例如 `explicitKeys: [{ key }]` 或
 `explicitKeys: [{ kid, key }]`；CLI 则接受等价的紧凑格式 `key` 和 `kid:key`。
+
+Minyami 同时支持 MPEG-TS 和 fMP4/CMAF 两种 `SAMPLE-AES`。fMP4/CMAF 下载会渐进解密并写入输出；遇到
+不支持的形态、无效密钥，或者 `mp4decrypt` 不可用或执行失败时，会明确报错。
 
 下载直播时使用 `createLiveDownloader`，需要结束下载时调用 `stop()`：
 

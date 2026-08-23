@@ -1,4 +1,5 @@
 import logger from "../../../../../utils/log";
+import { MPEG_TS_CONTAINER } from "../../../../media_container";
 import { HLSKeyReferenceKind, HLSSegmentKind } from "../../parser";
 import { toDownloadItem } from "./shared";
 import { HLSProfileAdapter } from "./types";
@@ -8,6 +9,7 @@ const PROFILE_ID = "standard";
 export const standardHLSProfile: HLSProfileAdapter = {
     id: PROFILE_ID,
     matches: (playlist) =>
+        !playlist.segments.some((segment) => segment.kind === HLSSegmentKind.Initialization) &&
         playlist.segments.every(
             (segment) =>
                 segment.encryption === undefined ||
@@ -30,6 +32,7 @@ export const standardHLSProfile: HLSProfileAdapter = {
 
         return {
             id: PROFILE_ID,
+            container: MPEG_TS_CONTAINER,
             ensureKeys: async (candidate, context, signal) => {
                 const referencedKeys = new Map(
                     candidate.segments.flatMap((segment) =>
@@ -79,20 +82,24 @@ export const standardHLSProfile: HLSProfileAdapter = {
                     return toDownloadItem(segment);
                 }
                 if (segment.encryption.method === "SAMPLE-AES") {
+                    if (!segment.encryption.iv) {
+                        throw new Error("An explicit IV is required for MPEG-TS SAMPLE-AES HLS.");
+                    }
                     return toDownloadItem(segment, {
                         scheme: "mpeg-ts-sample-aes",
                         keyId: segment.encryption.key.id,
                         iv: segment.encryption.iv,
                     });
                 }
+                const iv = segment.encryption.iv;
+                if (segment.kind === HLSSegmentKind.Initialization && !iv) {
+                    throw new Error("An explicit IV is required for an encrypted initialization segment.");
+                }
                 return toDownloadItem(segment, {
                     scheme: "aes-128-cbc",
                     keyId: segment.encryption.key.id,
                     // Resolve HLS's sequence-derived default before crossing the protocol-neutral boundary.
-                    iv:
-                        segment.kind === HLSSegmentKind.Initialization
-                            ? segment.encryption.iv
-                            : segment.encryption.iv || segment.sequenceId.toString(16),
+                    iv: segment.kind === HLSSegmentKind.Initialization ? iv! : iv || segment.sequenceId.toString(16),
                 });
             },
         };

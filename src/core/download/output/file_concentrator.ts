@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import logger from "../../../utils/log";
+import { DownloadOutputLayout, DownloadOutputPrefix } from "../../source/types";
 
 // Read streams produce 64 KiB chunks by default. A larger, finite output buffer
 // preserves read/write overlap and writev opportunities without unbounded queueing.
@@ -19,16 +20,20 @@ interface FileConcentratorParams {
 interface ReadyTask {
     filePath: string;
     index: number;
+    output?: DownloadOutputLayout;
 }
 
 type ConcentrationOutcome =
     | {
           kind: "file";
           filePath: string;
+          output?: DownloadOutputLayout;
       }
-    | {
-          kind: "dropped";
-      };
+    | { kind: "dropped" };
+
+function prefixKey(prefix: DownloadOutputPrefix): string {
+    return JSON.stringify([prefix.slot, prefix.identity]);
+}
 
 function toError(error: unknown): Error {
     // Jest and stream internals may surface errors from another realm, where instanceof is false.
@@ -88,11 +93,17 @@ class FileConcentrator {
     /** At most one output run is open, and only the drain may replace it. */
     private writeStream?: fs.WriteStream;
 
-    /** Distinguishes leading drops from a gap after real output data. */
-    private hasWrittenFile = false;
-
     /** Multiple consecutive drops collapse into one lazy split before the next file. */
     private splitBeforeNextFile = false;
+
+    /** One opaque replayable prefix is retained per source-defined slot. */
+    private readonly replayablePrefixes = new Map<string, { readonly identity: string; readonly data: Buffer }>();
+
+    /** Prefix identities already present in the currently open output run. */
+    private readonly emittedPrefixes = new Set<string>();
+
+    /** Distinguishes leading drops from a gap after real output data. */
+    private hasWrittenFile = false;
 
     /** Finalization closes outcome admission before validating the complete sequence. */
     private acceptingOutcomes = true;
@@ -121,7 +132,11 @@ class FileConcentrator {
 
     public markTaskReady(task: ReadyTask): void {
         // Recording the path transfers no file ownership until the drain writes it successfully.
-        this.recordOutcome(task.index, { kind: "file", filePath: task.filePath });
+        this.recordOutcome(task.index, {
+            kind: "file",
+            filePath: task.filePath,
+            ...(task.output ? { output: task.output } : {}),
+        });
         this.scheduleDrain();
     }
 
@@ -207,7 +222,7 @@ class FileConcentrator {
                     this.splitBeforeNextFile = true;
                 }
             } else {
-                await this.writeFile(outcome.filePath, index);
+                await this.writeFile(outcome, index);
             }
             this.pendingOutcomes.delete(index);
             // Delete before advancing so the Map never retains successfully consumed file paths.
@@ -216,7 +231,20 @@ class FileConcentrator {
         }
     }
 
-    private async writeFile(filePath: string, index: number): Promise<void> {
+    private async writeFile(outcome: Extract<ConcentrationOutcome, { kind: "file" }>, index: number): Promise<void> {
+        const { filePath, output: layout } = outcome;
+        const replayablePrefix = layout?.replayablePrefix;
+        if (replayablePrefix) {
+            const data = await fs.promises.readFile(filePath);
+            this.replayablePrefixes.set(replayablePrefix.slot, {
+                identity: replayablePrefix.identity,
+                data,
+            });
+        }
+        if (layout?.startsNewRun && this.writeStream) {
+            await this.closeWriteStream();
+            this.splitBeforeNextFile = false;
+        }
         if (this.splitBeforeNextFile) {
             // Rotation is lazy: trailing drops must not create an empty final output.
             logger.debug(`Create a new output after the gap before task ${index}.`);
@@ -225,7 +253,11 @@ class FileConcentrator {
         }
         // Leading drops likewise produce no empty numbered staging files.
         const output = this.writeStream ?? (await this.createNextWriteStream());
+        await this.appendRequiredPrefixes(layout?.requiredPrefixes ?? [], output);
         await this.appendFile(filePath, output);
+        if (replayablePrefix) {
+            this.emittedPrefixes.add(prefixKey(replayablePrefix));
+        }
         this.hasWrittenFile = true;
 
         if (this.deleteAfterWritten) {
@@ -235,6 +267,30 @@ class FileConcentrator {
                 // The stream completed this input; cleanup failure must not invalidate the output.
                 logger.warning(`Failed to delete temporary file [${filePath}].`);
             }
+        }
+    }
+
+    private appendBuffer(data: Buffer, output: fs.WriteStream): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            output.write(data, (error) => (error ? reject(error) : resolve()));
+        });
+    }
+
+    private async appendRequiredPrefixes(
+        prefixes: readonly DownloadOutputPrefix[],
+        output: fs.WriteStream
+    ): Promise<void> {
+        const missing = prefixes.filter((prefix) => !this.emittedPrefixes.has(prefixKey(prefix)));
+        if (missing.length > 0 && output.bytesWritten !== 0) {
+            throw new Error("Required output prefixes are not present in the current output run.");
+        }
+        for (const prefix of missing) {
+            const cached = this.replayablePrefixes.get(prefix.slot);
+            if (!cached || cached.identity !== prefix.identity) {
+                throw new Error(`Required output prefix is unavailable for slot ${prefix.slot}.`);
+            }
+            await this.appendBuffer(cached.data, output);
+            this.emittedPrefixes.add(prefixKey(prefix));
         }
     }
 
@@ -368,6 +424,7 @@ class FileConcentrator {
             return;
         }
         this.writeStream = undefined;
+        this.emittedPrefixes.clear();
         await new Promise<void>((resolve, reject) => {
             // `finish`, not merely `end()`, confirms all queued writes completed.
             const onError = (error: Error) => {

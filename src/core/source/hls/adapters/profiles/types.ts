@@ -1,4 +1,5 @@
 import { DownloadItem, DownloadSourceContext, DownloadSourceHttpClient } from "../../../types";
+import { MediaContainer } from "../../../../media_container";
 import { HLSExplicitKey } from "../../explicit_key";
 import { HLSMediaPlaylist, HLSSegment } from "../../parser";
 
@@ -10,6 +11,7 @@ export interface HLSProfilePrepareOptions {
 
 export interface HLSProfilePlan {
     readonly id: string;
+    readonly container: MediaContainer;
 
     /** Registers every key referenced by the effective snapshot before any corresponding item is yielded. */
     ensureKeys(playlist: HLSMediaPlaylist, context: DownloadSourceContext, signal: AbortSignal): Promise<void>;

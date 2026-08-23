@@ -90,7 +90,11 @@ export class OutputSession {
     }
 
     markTaskReady(task: DownloadTask, outputPath: string): void {
-        this.requireTrack(task.trackId).writer?.markTaskReady({ filePath: outputPath, index: task.trackIndex });
+        this.requireTrack(task.trackId).writer?.markTaskReady({
+            filePath: outputPath,
+            index: task.trackIndex,
+            output: task.item.output,
+        });
     }
 
     markTaskDropped(task: DownloadTask): void {

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 6.0.0-beta.3 - 2026-08-23
 
 ### Breaking changes
 
@@ -8,7 +8,11 @@
 
 ### Changed
 
--   Split HLS adaptation into a fixed per-media-playlist profile and an independent site-adaptation layer. The built-in profile handles plaintext, AES-128, and MPEG-TS SAMPLE-AES behavior. The legacy Hibiki and YouTube site adapters were removed; Abema retains only its segment filtering, which also applies to refreshed playlists.
+-   Removed legacy Hibiki and YouTube site-specific behavior. Abema segment filtering now also applies to refreshed live playlists.
+
+### Added
+
+-   Added fMP4/CMAF `SAMPLE-AES` support with progressive output. Bento4 `mp4decrypt` is required.
 
 ## 6.0.0-beta.2 - 2026-08-14
 

@@ -1,5 +1,4 @@
 import logger from "../../../utils/log";
-import { MPEG_TS_CONTAINER } from "../../media_container";
 import { mergeAsyncIterables } from "../merge_async_iterables";
 import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } from "../stream_selection";
 import { selectDefaultStream } from "../stream_selector";
@@ -73,9 +72,18 @@ export class HLSSource implements DownloadSource {
             })
         );
         // All cursors resolve keys before any track metadata is published to the downloader.
-        const tracks = await Promise.all(this.cursors.map((cursor) => cursor.prepare(context, signal)));
+        const preparedTracks = await Promise.all(this.cursors.map((cursor) => cursor.prepare(context, signal)));
+        const container = preparedTracks[0].container;
+        if (
+            preparedTracks.some(
+                (prepared) =>
+                    prepared.container.name !== container.name || prepared.container.extension !== container.extension
+            )
+        ) {
+            throw new Error("Selected HLS tracks use incompatible media containers.");
+        }
         this.prepared = true;
-        return { container: MPEG_TS_CONTAINER, tracks };
+        return { container, tracks: preparedTracks.map((prepared) => prepared.track) };
     }
 
     async *discover(context: DownloadSourceContext, signal: AbortSignal): AsyncIterable<SourceBatch> {

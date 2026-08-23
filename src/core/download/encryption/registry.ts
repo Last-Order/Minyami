@@ -1,3 +1,6 @@
+import { Aes128CbcHandler } from "./aes_128_cbc";
+import { IsoBmffSampleAesHandler } from "./iso_bmff_sample_aes/handler";
+import { MpegTsSampleAesHandler } from "./mpeg_ts_sample_aes/handler";
 import { EncryptionHandler } from "./types";
 
 export class EncryptionHandlerRegistry {
@@ -19,4 +22,12 @@ export class EncryptionHandlerRegistry {
         }
         return handler;
     }
+}
+
+export function createDefaultEncryptionHandlerRegistry(): EncryptionHandlerRegistry {
+    return new EncryptionHandlerRegistry([
+        new Aes128CbcHandler(),
+        new MpegTsSampleAesHandler(),
+        new IsoBmffSampleAesHandler(),
+    ]);
 }

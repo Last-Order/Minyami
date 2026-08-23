@@ -29,12 +29,50 @@ export interface MpegTsSampleAesEncryption {
     readonly iv: string;
 }
 
-export type DownloadEncryption = Aes128CbcEncryption | MpegTsSampleAesEncryption;
+export interface IsoBmffSampleAesKey {
+    /** Decimal track id or canonical 128-bit hexadecimal KID accepted by mp4decrypt. */
+    readonly selector: string;
+    readonly keyId: string;
+}
+
+export type IsoBmffSampleAesEncryption =
+    | {
+          readonly scheme: "iso-bmff-sample-aes";
+          readonly operation: "initialization";
+          readonly keys: readonly IsoBmffSampleAesKey[];
+      }
+    | {
+          readonly scheme: "iso-bmff-sample-aes";
+          readonly operation: "fragment";
+          readonly keys: readonly IsoBmffSampleAesKey[];
+          /** Encrypted initialization metadata passed to mp4decrypt as --fragments-info. */
+          readonly fragmentsInfoBase64: string;
+      };
+
+export type DownloadEncryption = Aes128CbcEncryption | MpegTsSampleAesEncryption | IsoBmffSampleAesEncryption;
+
+/** Opaque output-prefix identity. Concentrators compare it but never interpret its protocol or format. */
+export interface DownloadOutputPrefix {
+    readonly slot: string;
+    readonly identity: string;
+}
+
+/**
+ * Protocol-neutral ordered-output semantics published by a source.
+ * A replayable prefix replaces the cached value in its slot. Required prefixes
+ * are prepended only when a later item begins a fresh output run.
+ */
+export interface DownloadOutputLayout {
+    readonly replayablePrefix?: DownloadOutputPrefix;
+    readonly requiredPrefixes?: readonly DownloadOutputPrefix[];
+    readonly startsNewRun?: boolean;
+}
 
 interface BaseDownloadItem {
     readonly url: string;
     readonly byteRange?: DownloadByteRange;
     readonly encryption?: DownloadEncryption;
+    readonly output?: DownloadOutputLayout;
 }
 
 export interface InitialDownloadItem extends BaseDownloadItem {

@@ -94,7 +94,8 @@ describe("MpegTsSampleAesHandler", () => {
                     keyId: "skd://fixture",
                     iv: iv.toString("hex"),
                 },
-                key: key.toString("hex"),
+                keys: new Map([["skd://fixture", key.toString("hex")]]),
+                signal: new AbortController().signal,
             });
 
             expect(readPesPayload(fs.readFileSync(outputPath), 0x100)).toEqual(fixture.video);
@@ -119,7 +120,8 @@ describe("MpegTsSampleAesHandler", () => {
                         keyId: "skd://fixture",
                         iv: iv.toString("hex"),
                     },
-                    key: key.toString("hex"),
+                    keys: new Map([["skd://fixture", key.toString("hex")]]),
+                    signal: new AbortController().signal,
                 })
             ).rejects.toThrow("188-byte MPEG transport stream");
 
@@ -135,7 +137,10 @@ describe("MpegTsSampleAesHandler", () => {
     ])("rejects an %s", (_name, invalidKey, invalidIv, message) => {
         const handler = new MpegTsSampleAesHandler();
         expect(() =>
-            handler.validate({ scheme: "mpeg-ts-sample-aes", keyId: "skd://fixture", iv: invalidIv }, invalidKey)
+            handler.validate(
+                { scheme: "mpeg-ts-sample-aes", keyId: "skd://fixture", iv: invalidIv },
+                new Map([["skd://fixture", invalidKey]])
+            )
         ).toThrow(message);
     });
 });

@@ -9,6 +9,7 @@ import {
 
 describe("parseMediaPlaylist", () => {
     test("parses sequence, initialization, segment, end, and duration metadata", () => {
+        const initializationId = '["https://cdn.example/live/init.mp4",null,null]';
         const playlist = parseMediaPlaylist({
             content: [
                 "#EXTM3U",
@@ -31,12 +32,17 @@ describe("parseMediaPlaylist", () => {
         expect(playlist).toEqual({
             kind: HLSPlaylistKind.Media,
             segments: [
-                { kind: HLSSegmentKind.Initialization, url: "https://cdn.example/live/init.mp4" },
+                {
+                    kind: HLSSegmentKind.Initialization,
+                    initializationId,
+                    url: "https://cdn.example/live/init.mp4",
+                },
                 {
                     kind: HLSSegmentKind.Media,
                     url: "https://cdn.example/live/segments/41.m4s",
                     duration: 4.25,
                     sequenceId: 41,
+                    initializationId,
                     byteRange: { offset: 0, length: 1000 },
                 },
                 {
@@ -44,6 +50,7 @@ describe("parseMediaPlaylist", () => {
                     url: "https://cdn.example/42.m4s",
                     duration: 5.75,
                     sequenceId: 42,
+                    initializationId,
                 },
             ],
             keys: [],
@@ -54,6 +61,7 @@ describe("parseMediaPlaylist", () => {
     });
 
     test("resolves initialization and explicit or implicit media byte ranges", () => {
+        const initializationId = '["https://cdn.example/media.mp4",0,20]';
         const playlist = parseMediaPlaylist({
             content: [
                 "#EXTM3U",
@@ -71,6 +79,7 @@ describe("parseMediaPlaylist", () => {
         expect(playlist.segments).toEqual([
             {
                 kind: HLSSegmentKind.Initialization,
+                initializationId,
                 url: "https://cdn.example/media.mp4",
                 byteRange: { offset: 0, length: 20 },
             },
@@ -79,6 +88,7 @@ describe("parseMediaPlaylist", () => {
                 url: "https://cdn.example/media.mp4",
                 duration: 1,
                 sequenceId: 0,
+                initializationId,
                 byteRange: { offset: 20, length: 4 },
             },
             {
@@ -86,6 +96,7 @@ describe("parseMediaPlaylist", () => {
                 url: "https://cdn.example/media.mp4",
                 duration: 1,
                 sequenceId: 1,
+                initializationId,
                 byteRange: { offset: 24, length: 5 },
             },
         ]);
@@ -185,10 +196,12 @@ describe("parseMediaPlaylist", () => {
         });
 
         const key = { kind: HLSKeyReferenceKind.Http, id: keyUrl, url: keyUrl } as const;
+        const initializationId = '["https://cdn.example/live/init.mp4",null,null]';
         expect(playlist.keys).toEqual([key]);
         expect(playlist.segments).toEqual([
             {
                 kind: HLSSegmentKind.Initialization,
+                initializationId,
                 url: "https://cdn.example/live/init.mp4",
                 encryption: { method: "AES-128", key, iv },
             },
@@ -197,6 +210,7 @@ describe("parseMediaPlaylist", () => {
                 url: "https://cdn.example/live/10.m4s",
                 duration: 1.5,
                 sequenceId: 10,
+                initializationId,
                 encryption: { method: "AES-128", key, iv },
             },
             {
@@ -204,6 +218,7 @@ describe("parseMediaPlaylist", () => {
                 url: "https://cdn.example/live/11.m4s",
                 duration: 2,
                 sequenceId: 11,
+                initializationId,
             },
         ]);
     });
@@ -356,30 +371,58 @@ describe("parseMediaPlaylist", () => {
         });
     });
 
+    test("allows SAMPLE-AES without a playlist IV", () => {
+        const playlist = parseMediaPlaylist({
+            content: [
+                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="com.apple.streamingkeydelivery"',
+                "#EXTINF:1,",
+                "https://cdn.example/0.ts",
+            ].join("\n"),
+        });
+
+        expect(playlist.segments[0]).toMatchObject({
+            encryption: { method: "SAMPLE-AES", keyFormat: "com.apple.streamingkeydelivery" },
+        });
+    });
+
     test.each([
-        [
-            "a missing SAMPLE-AES IV",
-            '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="com.apple.streamingkeydelivery"',
-            "Missing IV for SAMPLE-AES encryption key",
-        ],
         [
             "an unsupported SAMPLE-AES key format",
             '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="unsupported",IV=0x01',
             'Unsupported SAMPLE-AES key format: "unsupported"',
         ],
-        [
-            "a SAMPLE-AES initialization segment",
-            [
-                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="com.apple.streamingkeydelivery",IV=0x01',
-                '#EXT-X-MAP:URI="https://cdn.example/init.mp4"',
-            ].join("\n"),
-            "SAMPLE-AES initialization segments are not supported",
-        ],
     ])("rejects %s", (_name, keyTag, message) => {
-        const content = keyTag.includes("#EXT-X-MAP")
-            ? keyTag
-            : [keyTag, "#EXTINF:1,", "https://cdn.example/0.ts"].join("\n");
+        const content = [keyTag, "#EXTINF:1,", "https://cdn.example/0.ts"].join("\n");
         expect(() => parseMediaPlaylist({ content })).toThrow(new HLSParseError(message));
+    });
+
+    test("associates SAMPLE-AES fMP4 media with its initialization segment", () => {
+        const playlist = parseMediaPlaylist({
+            content: [
+                '#EXT-X-MAP:URI="https://cdn.example/init.mp4"',
+                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="com.apple.streamingkeydelivery"',
+                "#EXTINF:1,",
+                "https://cdn.example/0.m4s",
+            ].join("\n"),
+        });
+
+        expect(playlist.segments).toHaveLength(2);
+        expect(playlist.segments[1]).toMatchObject({
+            initializationId: playlist.segments[0].initializationId,
+            encryption: { method: "SAMPLE-AES" },
+        });
+    });
+
+    test("rejects SAMPLE-AES-CTR explicitly", () => {
+        expect(() =>
+            parseMediaPlaylist({
+                content: [
+                    '#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI="skd://asset"',
+                    "#EXTINF:1,",
+                    "https://cdn.example/0.m4s",
+                ].join("\n"),
+            })
+        ).toThrow(new HLSParseError("SAMPLE-AES-CTR encryption is not supported"));
     });
 
     test.each([

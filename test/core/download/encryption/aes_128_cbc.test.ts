@@ -28,7 +28,8 @@ describe("Aes128CbcHandler", () => {
                 inputPath,
                 outputPath,
                 encryption: { scheme: "aes-128-cbc", keyId: "test:key", iv: "1" },
-                key: keyHex,
+                keys: new Map([["test:key", keyHex]]),
+                signal: new AbortController().signal,
             });
 
             expect(fs.readFileSync(outputPath)).toEqual(plaintext);
@@ -45,7 +46,9 @@ describe("Aes128CbcHandler", () => {
     ])("rejects %s", (_name, invalidKey, iv, message) => {
         const handler = new Aes128CbcHandler();
 
-        expect(() => handler.validate({ scheme: "aes-128-cbc", keyId: "test:key", iv }, invalidKey)).toThrow(message);
+        expect(() =>
+            handler.validate({ scheme: "aes-128-cbc", keyId: "test:key", iv }, new Map([["test:key", invalidKey]]))
+        ).toThrow(message);
     });
 
     test("removes a partial output after a stream failure", async () => {
@@ -60,7 +63,8 @@ describe("Aes128CbcHandler", () => {
                     inputPath,
                     outputPath,
                     encryption: { scheme: "aes-128-cbc", keyId: "test:key", iv: "1" },
-                    key: keyHex,
+                    keys: new Map([["test:key", keyHex]]),
+                    signal: new AbortController().signal,
                 })
             ).rejects.toThrow();
 

@@ -88,21 +88,19 @@ export interface HLSAes128Encryption {
 export interface HLSSampleAesEncryption {
     readonly method: "SAMPLE-AES";
     readonly key: HLSKeyReference;
-    readonly iv: string;
+    readonly iv?: string;
     readonly keyFormat: "identity" | "com.apple.streamingkeydelivery";
 }
 
 export type HLSMediaEncryption = HLSAes128Encryption | HLSSampleAesEncryption;
 
-export interface HLSInitializationEncryption extends HLSAes128Encryption {
-    readonly iv: string;
-}
-
 export interface HLSInitializationSegment {
     readonly kind: HLSSegmentKind.Initialization;
+    /** Stable within one media playlist and shared by every media segment that uses this map. */
+    readonly initializationId: string;
     readonly url: string;
     readonly byteRange?: HLSByteRange;
-    readonly encryption?: HLSInitializationEncryption;
+    readonly encryption?: HLSMediaEncryption;
 }
 
 export interface HLSMediaSegment {
@@ -110,6 +108,7 @@ export interface HLSMediaSegment {
     readonly url: string;
     readonly duration: number;
     readonly sequenceId: number;
+    readonly initializationId?: string;
     readonly byteRange?: HLSByteRange;
     readonly encryption?: HLSMediaEncryption;
 }

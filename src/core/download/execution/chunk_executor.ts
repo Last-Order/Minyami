@@ -4,6 +4,7 @@ import logger from "../../../utils/log";
 import { EncryptionHandlerRegistry } from "../encryption/registry";
 import { DownloadHttpClient } from "../infrastructure/http_client";
 import { KeyStore } from "../infrastructure/key_store";
+import { FatalDecryptionError } from "../encryption/types";
 import { DownloadTask } from "./task";
 
 export interface ExecuteChunkOptions {
@@ -47,16 +48,21 @@ export class ChunkExecutor {
 
             // Decrypt beside the encrypted input so a failed transform never replaces recoverable source bytes.
             const handler = this.encryptionHandlers.require(item.encryption.scheme);
-            const key = this.keys.get(item.encryption.keyId);
-            if (!key) {
-                throw new Error(`Missing encryption key for ${item.encryption.keyId}`);
+            const keys = new Map<string, string>();
+            for (const keyId of handler.keyIds(item.encryption)) {
+                const key = this.keys.get(keyId);
+                if (!key) {
+                    throw new Error(`Missing encryption key for ${keyId}`);
+                }
+                keys.set(keyId, key);
             }
             const decryptedPath = downloadedPath + ".decrypt";
             await handler.decrypt({
                 inputPath: downloadedPath,
                 outputPath: decryptedPath,
                 encryption: item.encryption,
-                key,
+                keys,
+                signal: options.signal,
             });
             if (!options.keepEncryptedChunks) {
                 try {
@@ -76,7 +82,11 @@ export class ChunkExecutor {
                 throw error;
             }
             const reason = describeFailure(error);
-            logger.warning(`Downloading or decrypting ${task.filename} failed. Retry later. [${reason}]`);
+            logger.warning(
+                `Downloading or decrypting ${task.filename} failed.${
+                    error instanceof FatalDecryptionError ? "" : " Retry later."
+                } [${reason}]`
+            );
             logger.debug(error);
             throw error;
         }

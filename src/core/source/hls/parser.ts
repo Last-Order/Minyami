@@ -11,7 +11,6 @@ export type {
     HLSExternalKeyReference,
     HLSHttpKeyReference,
     HLSInlineKeyReference,
-    HLSInitializationEncryption,
     HLSInitializationSegment,
     HLSKeyReference,
     HLSMasterPlaylist,

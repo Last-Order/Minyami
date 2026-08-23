@@ -10,6 +10,16 @@ function createChunk(directory: string, filename: string, content: string): stri
     return filePath;
 }
 
+async function waitForContents(filePath: string, expected: string): Promise<void> {
+    for (let attempt = 0; attempt < 100; attempt++) {
+        if (fs.existsSync(filePath) && fs.readFileSync(filePath, "utf8") === expected) {
+            return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    throw new Error(`Timed out waiting for output contents at ${filePath}.`);
+}
+
 describe("FileConcentrator", () => {
     test("writes out-of-order results in discovery order", async () => {
         await withTempDirectory("minyami-concentrator-order-", async (directory) => {
@@ -24,6 +34,124 @@ describe("FileConcentrator", () => {
 
             expect(fs.readFileSync(output, "utf8")).toBe("firstsecond");
             expect(concentrator.getOutputFilePaths()).toEqual([output]);
+        });
+    });
+
+    test("streams a replayable prefix and ready payload before finalization", async () => {
+        await withTempDirectory("minyami-concentrator-fmp4-live-", async (directory) => {
+            const initialization = createChunk(directory, "init.mp4", "init");
+            const media = createChunk(directory, "0.m4s", "media");
+            const output = path.join(directory, "live.mp4");
+            const stagingOutput = path.join(directory, "live_0.mp4");
+            const concentrator = new FileConcentrator({ outputPath: output });
+            const prefix = { slot: "fixture-prefix", identity: "a" } as const;
+
+            concentrator.markTaskReady({
+                filePath: initialization,
+                index: 0,
+                output: { replayablePrefix: prefix, startsNewRun: true },
+            });
+            concentrator.markTaskReady({
+                filePath: media,
+                index: 1,
+                output: { requiredPrefixes: [prefix] },
+            });
+
+            await waitForContents(stagingOutput, "initmedia");
+            expect(fs.existsSync(output)).toBe(false);
+
+            await concentrator.waitAllFilesWritten(2);
+            expect(fs.readFileSync(output, "utf8")).toBe("initmedia");
+        });
+    });
+
+    test("replays the required prefix when a dropped item starts a new run", async () => {
+        await withTempDirectory("minyami-concentrator-fmp4-gap-", async (directory) => {
+            const initialization = createChunk(directory, "init.mp4", "init");
+            const first = createChunk(directory, "0.m4s", "first");
+            const second = createChunk(directory, "2.m4s", "second");
+            const output = path.join(directory, "gapped.mp4");
+            const concentrator = new FileConcentrator({ outputPath: output });
+            const prefix = { slot: "fixture-prefix", identity: "a" } as const;
+
+            concentrator.markTaskReady({
+                filePath: initialization,
+                index: 0,
+                output: { replayablePrefix: prefix, startsNewRun: true },
+            });
+            concentrator.markTaskReady({ filePath: first, index: 1, output: { requiredPrefixes: [prefix] } });
+            concentrator.markTaskDropped(2);
+            concentrator.markTaskReady({ filePath: second, index: 3, output: { requiredPrefixes: [prefix] } });
+            await concentrator.waitAllFilesWritten(4);
+
+            const outputPaths = [path.join(directory, "gapped_0.mp4"), path.join(directory, "gapped_1.mp4")];
+            expect(concentrator.getOutputFilePaths()).toEqual(outputPaths);
+            expect(fs.readFileSync(outputPaths[0], "utf8")).toBe("initfirst");
+            expect(fs.readFileSync(outputPaths[1], "utf8")).toBe("initsecond");
+        });
+    });
+
+    test("starts a new run when a replayable prefix changes and supports returning to an earlier identity", async () => {
+        await withTempDirectory("minyami-concentrator-fmp4-map-change-", async (directory) => {
+            const initA = createChunk(directory, "init-a.mp4", "init-a");
+            const mediaA = createChunk(directory, "a.m4s", "media-a");
+            const initB = createChunk(directory, "init-b.mp4", "init-b");
+            const mediaB = createChunk(directory, "b.m4s", "media-b");
+            const initAAgain = createChunk(directory, "init-a-again.mp4", "init-a");
+            const mediaAAgain = createChunk(directory, "a-again.m4s", "media-a-again");
+            const output = path.join(directory, "rotated.mp4");
+            const concentrator = new FileConcentrator({ outputPath: output });
+            const prefixA = { slot: "fixture-prefix", identity: "a" } as const;
+            const prefixB = { slot: "fixture-prefix", identity: "b" } as const;
+
+            concentrator.markTaskReady({
+                filePath: initA,
+                index: 0,
+                output: { replayablePrefix: prefixA, startsNewRun: true },
+            });
+            concentrator.markTaskReady({ filePath: mediaA, index: 1, output: { requiredPrefixes: [prefixA] } });
+            concentrator.markTaskReady({
+                filePath: initB,
+                index: 2,
+                output: { replayablePrefix: prefixB, startsNewRun: true },
+            });
+            concentrator.markTaskReady({ filePath: mediaB, index: 3, output: { requiredPrefixes: [prefixB] } });
+            concentrator.markTaskReady({
+                filePath: initAAgain,
+                index: 4,
+                output: { replayablePrefix: prefixA, startsNewRun: true },
+            });
+            concentrator.markTaskReady({
+                filePath: mediaAAgain,
+                index: 5,
+                output: { requiredPrefixes: [prefixA] },
+            });
+            await concentrator.waitAllFilesWritten(6);
+
+            const outputPaths = [
+                path.join(directory, "rotated_0.mp4"),
+                path.join(directory, "rotated_1.mp4"),
+                path.join(directory, "rotated_2.mp4"),
+            ];
+            expect(concentrator.getOutputFilePaths()).toEqual(outputPaths);
+            expect(fs.readFileSync(outputPaths[0], "utf8")).toBe("init-amedia-a");
+            expect(fs.readFileSync(outputPaths[1], "utf8")).toBe("init-bmedia-b");
+            expect(fs.readFileSync(outputPaths[2], "utf8")).toBe("init-amedia-a-again");
+        });
+    });
+
+    test("fails finalization when a required prefix was never published", async () => {
+        await withTempDirectory("minyami-concentrator-missing-prefix-", async (directory) => {
+            const media = createChunk(directory, "payload.chunk", "payload");
+            const concentrator = new FileConcentrator({ outputPath: path.join(directory, "missing.bin") });
+
+            concentrator.markTaskReady({
+                filePath: media,
+                index: 0,
+                output: { requiredPrefixes: [{ slot: "fixture-prefix", identity: "missing" }] },
+            });
+
+            await expect(concentrator.waitAllFilesWritten(1)).rejects.toThrow("Required output prefix is unavailable");
         });
     });
 

@@ -12,9 +12,8 @@ import { ChunkExecutor, ChunkResult } from "../execution/chunk_executor";
 import { DownloadTask } from "../execution/task";
 import { TaskScheduler } from "../execution/task_scheduler";
 import { normalizeDownloaderConfig, NormalizedDownloaderConfig } from "../config";
-import { Aes128CbcHandler } from "../encryption/aes_128_cbc";
-import { MpegTsSampleAesHandler } from "../encryption/mpeg_ts_sample_aes/handler";
-import { EncryptionHandlerRegistry } from "../encryption/registry";
+import { createDefaultEncryptionHandlerRegistry } from "../encryption/registry";
+import { FatalDecryptionError } from "../encryption/types";
 import { DownloadEventHub } from "./event_hub";
 import { DownloadHttpClient } from "../infrastructure/http_client";
 import { KeyStore } from "../infrastructure/key_store";
@@ -43,10 +42,7 @@ export class DownloadSession {
     private readonly config: NormalizedDownloaderConfig;
     private readonly http: DownloadHttpClient;
     private readonly keys = new KeyStore();
-    private readonly encryptionHandlers = new EncryptionHandlerRegistry([
-        new Aes128CbcHandler(),
-        new MpegTsSampleAesHandler(),
-    ]);
+    private readonly encryptionHandlers = createDefaultEncryptionHandlerRegistry();
     private readonly executor: ChunkExecutor;
     private readonly manifest = new DownloadManifest();
     private readonly output: OutputSession;
@@ -309,6 +305,9 @@ export class DownloadSession {
             return false;
         }
         this.events.emit("chunk-error", error, task.filename, task.trackId);
+        if (error instanceof FatalDecryptionError) {
+            throw error;
+        }
         if (attempt < this.config.taskAttempts) {
             logger.warning(`Processing ${task.filename} failed, retry later.`);
             return true;
@@ -333,16 +332,50 @@ export class DownloadSession {
                 throw new Error("Download byte range must have a safe non-negative offset and positive length.");
             }
         }
+        this.validateOutputLayout(item);
         if (!item.encryption) {
             return;
         }
         const handler = this.encryptionHandlers.require(item.encryption.scheme);
-        const key = this.keys.get(item.encryption.keyId);
-        if (!key) {
-            throw new Error(`Encryption key is not registered: ${item.encryption.keyId}`);
+        const keys = new Map<string, string>();
+        for (const keyId of handler.keyIds(item.encryption)) {
+            const key = this.keys.get(keyId);
+            if (!key) {
+                throw new Error(`Encryption key is not registered: ${keyId}`);
+            }
+            keys.set(keyId, key);
         }
         // Algorithm validation happens before a broken item can consume execution attempts.
-        handler.validate(item.encryption, key);
+        handler.validate(item.encryption, keys);
+    }
+
+    private validateOutputLayout(item: DownloadItem): void {
+        const layout = item.output;
+        if (!layout) {
+            return;
+        }
+        if (layout.startsNewRun !== undefined && typeof layout.startsNewRun !== "boolean") {
+            throw new Error("Output startsNewRun must be a boolean.");
+        }
+        const validatePrefix = (prefix: { readonly slot: string; readonly identity: string }) => {
+            if (typeof prefix.slot !== "string" || prefix.slot.length === 0) {
+                throw new Error("Output prefix slot must be a non-empty string.");
+            }
+            if (typeof prefix.identity !== "string" || prefix.identity.length === 0) {
+                throw new Error("Output prefix identity must be a non-empty string.");
+            }
+        };
+        if (layout.replayablePrefix) {
+            validatePrefix(layout.replayablePrefix);
+        }
+        const requiredSlots = new Set<string>();
+        for (const prefix of layout.requiredPrefixes ?? []) {
+            validatePrefix(prefix);
+            if (requiredSlots.has(prefix.slot)) {
+                throw new Error(`Output requires multiple prefixes for slot ${prefix.slot}.`);
+            }
+            requiredSlots.add(prefix.slot);
+        }
     }
 
     private async finalize(): Promise<void> {

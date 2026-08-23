@@ -51,6 +51,7 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
     let warnedAboutEncryption = false;
     const pending: PendingMediaSegment = {};
     let previousMediaSegment: HLSMediaSegment | undefined;
+    let initializationId: string | undefined;
 
     for (const currentLine of lines) {
         if (currentLine.startsWith(MEDIA_SEQUENCE_TAG)) {
@@ -67,7 +68,9 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
             continue;
         }
         if (currentLine.startsWith(MAP_TAG)) {
-            segments.push(parseInitializationSegment(getTagBody(currentLine), playlistUrl, encryption));
+            const initialization = parseInitializationSegment(getTagBody(currentLine), playlistUrl, encryption);
+            initializationId = initialization.initializationId;
+            segments.push(initialization);
             continue;
         }
         if (currentLine.startsWith(BYTE_RANGE_TAG)) {
@@ -117,6 +120,7 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
                 url,
                 duration: pending.duration,
                 sequenceId,
+                ...(initializationId ? { initializationId } : {}),
                 ...(byteRange ? { byteRange } : {}),
                 ...(encryption ? { encryption } : {}),
             };
@@ -138,13 +142,6 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
     if (!hasEndList && (pending.duration !== undefined || pending.byteRange !== undefined)) {
         throw new HLSParseError("Invalid HLS playlist.");
     }
-    if (
-        segments.some((segment) => segment.kind === HLSSegmentKind.Initialization) &&
-        segments.some((segment) => segment.encryption?.method === "SAMPLE-AES")
-    ) {
-        throw new HLSParseError("SAMPLE-AES initialization segments are not supported");
-    }
-
     return {
         kind: HLSPlaylistKind.Media,
         segments,
@@ -186,11 +183,7 @@ function parseEncryption(
             throw new HLSParseError("Missing URL for encryption key");
         }
         const key = parseKeyReference(resolvePlaylistUri(playlistUrl, keyUri));
-        const ivAttribute = attributes["IV"];
-        if (!ivAttribute) {
-            throw new HLSParseError("Missing IV for SAMPLE-AES encryption key");
-        }
-        const iv = parseIv(ivAttribute);
+        const iv = attributes["IV"] ? parseIv(attributes["IV"]) : undefined;
         const keyFormat = attributes["KEYFORMAT"] || "identity";
         if (keyFormat !== "identity" && keyFormat !== "com.apple.streamingkeydelivery") {
             throw new HLSParseError(`Unsupported SAMPLE-AES key format: "${keyFormat}"`);
@@ -199,11 +192,15 @@ function parseEncryption(
             encryption: {
                 method,
                 key,
-                iv,
+                ...(iv ? { iv } : {}),
                 keyFormat,
             },
             warned,
         };
+    }
+
+    if (method === "SAMPLE-AES-CTR") {
+        throw new HLSParseError("SAMPLE-AES-CTR encryption is not supported");
     }
 
     if (method === "NONE") {
@@ -267,23 +264,25 @@ function parseInitializationSegment(
     }
     const base = {
         kind: HLSSegmentKind.Initialization,
+        initializationId: initializationSegmentIdentity(resolvePlaylistUri(playlistUrl, uri), byteRange),
         url: resolvePlaylistUri(playlistUrl, uri),
         ...(byteRange ? { byteRange } : {}),
     } as const;
     if (!encryption) {
         return base;
     }
-    if (encryption.method === "SAMPLE-AES") {
-        throw new HLSParseError("SAMPLE-AES initialization segments are not supported");
-    }
-    if (!encryption.iv) {
+    if (encryption.method === "AES-128" && !encryption.iv) {
         // Initialization segments have no media sequence from which an omitted IV could be derived.
         throw new HLSParseError("Missing IV for encrypted initialization segment");
     }
     return {
         ...base,
-        encryption: { ...encryption, iv: encryption.iv },
+        encryption,
     };
+}
+
+function initializationSegmentIdentity(url: string, byteRange?: HLSByteRange): string {
+    return JSON.stringify([url, byteRange?.offset, byteRange?.length]);
 }
 
 function parseByteRange(value: string, kind: HLSSegmentKind): ParsedByteRange {
