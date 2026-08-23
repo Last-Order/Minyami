@@ -1,6 +1,6 @@
 import * as fs from "fs";
-import logger from "../../../utils/log";
-import { DownloadSourceHttpClient } from "../types";
+import logger from "../../../../utils/log";
+import { DownloadSourceHttpClient } from "../../types";
 import { HLSPlaylist, parseHLSPlaylist } from "./parser";
 
 export interface LoadPlaylistOptions {

@@ -1,11 +1,11 @@
-import logger from "../../../utils/log";
-import { DownloadItem, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceTrack } from "../types";
-import { MediaTrack } from "../stream_selection";
-import { HLSAdaptationPlan, prepareHLSAdaptation } from "./adapters/prepare";
-import { HLSExplicitKey } from "./explicit_key";
+import logger from "../../../../utils/log";
+import { DownloadItem, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceTrack } from "../../types";
+import { MediaTrack } from "../../stream_selection";
+import { HLSAdaptationPlan, prepareHLSAdaptation } from "../adapters/adaptation";
+import { HLSExplicitKey } from "../explicit_key";
 import { HLSInitializationSegment, HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
-import { PlaylistLoader } from "./playlist_loader";
-import { MediaContainer } from "../../media_container";
+import { PlaylistLoader } from "./loader";
+import { MediaContainer } from "../../../media_container";
 
 export type HLSMediaPlaylistCursorMode = "snapshot" | "follow";
 

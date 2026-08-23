@@ -1,4 +1,4 @@
-import logger from "../../../utils/log";
+import logger from "../../../../utils/log";
 import {
     HLSByteRange,
     HLSInitializationSegment,
@@ -13,7 +13,7 @@ import {
     HLSSegment,
     HLSSegmentKind,
 } from "./models";
-import { getPlaylistLines, getTagBody, parseAttributeList, resolvePlaylistUri } from "./playlist_syntax";
+import { getPlaylistLines, getTagBody, parseAttributeList, resolvePlaylistUri } from "./syntax";
 
 const MEDIA_SEQUENCE_TAG = "#EXT-X-MEDIA-SEQUENCE";
 const KEY_TAG = "#EXT-X-KEY";

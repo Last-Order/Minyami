@@ -10,6 +10,7 @@
 
 -   Removed legacy Hibiki and YouTube site-specific behavior. Abema segment filtering now also applies to refreshed live playlists.
 -   Added an optional per-track source container override so mixed-container HLS renditions retain accurate file extensions without breaking existing custom sources.
+-   Centralized HLS profile selection and distinguish MPEG-TS `EXT-X-MAP` PAT/PMT initialization sections from fMP4 `ftyp`/`moov` initialization sections instead of treating every map as fMP4.
 
 ### Added
 

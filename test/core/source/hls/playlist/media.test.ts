@@ -1,11 +1,11 @@
 import { describe, expect, test } from "@jest/globals";
-import { parseMediaPlaylist } from "../../../../src/core/source/hls/media_playlist";
+import { parseMediaPlaylist } from "../../../../../src/core/source/hls/playlist/media";
 import {
     HLSKeyReferenceKind,
     HLSParseError,
     HLSPlaylistKind,
     HLSSegmentKind,
-} from "../../../../src/core/source/hls/parser";
+} from "../../../../../src/core/source/hls/playlist/parser";
 
 describe("parseMediaPlaylist", () => {
     test("parses sequence, initialization, segment, end, and duration metadata", () => {

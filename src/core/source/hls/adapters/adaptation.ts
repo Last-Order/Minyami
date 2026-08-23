@@ -1,9 +1,8 @@
 import { DownloadItem, DownloadItemNamer, DownloadSourceContext, DownloadSourceHttpClient } from "../../types";
 import { HLSExplicitKey } from "../explicit_key";
-import { HLSMediaPlaylist, HLSSegment } from "../parser";
-import { hlsProfiles } from "./profiles/registry";
+import { HLSMediaPlaylist, HLSSegment } from "../playlist/parser";
+import { selectHLSProfile } from "./profiles/selector";
 import { HLSProfilePlan } from "./profiles/types";
-import { detectHLSMediaSegmentFormat } from "./segment_format";
 import { hlsSiteAdapters } from "./sites/registry";
 
 export interface HLSAdaptationOptions {
@@ -40,14 +39,10 @@ export async function prepareHLSAdaptation(options: HLSAdaptationOptions): Promi
     const adaptPlaylist = (playlist: HLSMediaPlaylist): HLSMediaPlaylist =>
         sitePlan.adaptSegments ? { ...playlist, segments: sitePlan.adaptSegments(playlist.segments) } : playlist;
     const playlist = adaptPlaylist(options.playlist);
-    const mediaSegmentFormat = await detectHLSMediaSegmentFormat(playlist, options.http, options.signal);
+    const profile = await selectHLSProfile(playlist, options.http, options.signal);
 
-    const matchingProfiles = hlsProfiles.filter((profile) => profile.matches(playlist, mediaSegmentFormat));
-    if (matchingProfiles.length !== 1) {
-        throw new Error(`Expected exactly one HLS profile, but found ${matchingProfiles.length}.`);
-    }
     // The profile plan is immutable for the cursor and owns all later key and item conversion.
-    const profilePlan = await matchingProfiles[0].prepare({
+    const profilePlan = await profile.prepare({
         playlist,
         explicitKeys: options.explicitKeys,
         http: options.http,

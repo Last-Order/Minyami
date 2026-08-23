@@ -1,21 +1,12 @@
 import { MPEG_TS_CONTAINER } from "../../../../media_container";
-import { HLSSegmentKind } from "../../parser";
 import { prepareSingleFileKeys, toSingleFileDownloadItem } from "./single_file";
 import { HLSProfileAdapter } from "./types";
 
+// Keep the established plan id for compatibility; the file and symbol use the precise container name.
 const PROFILE_ID = "standard";
 
-export const standardHLSProfile: HLSProfileAdapter = {
+export const mpegTsHLSProfile: HLSProfileAdapter = {
     id: PROFILE_ID,
-    matches: (playlist, format) =>
-        format === "mpeg-ts" &&
-        !playlist.segments.some((segment) => segment.kind === HLSSegmentKind.Initialization) &&
-        playlist.segments.every(
-            (segment) =>
-                segment.encryption === undefined ||
-                segment.encryption.method === "AES-128" ||
-                segment.encryption.method === "SAMPLE-AES"
-        ),
     prepare: (options) => ({
         id: PROFILE_ID,
         container: MPEG_TS_CONTAINER,

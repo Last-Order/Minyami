@@ -4,17 +4,17 @@ import { DownloadHttpClient } from "../../../../../../src/core/download/infrastr
 import { KeyStore } from "../../../../../../src/core/download/infrastructure/key_store";
 import { fmp4HLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/fmp4";
 import { packedAacHLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/packed_aac";
-import { standardHLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/standard";
+import { mpegTsHLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/mpeg_ts";
 import {
     HLSKeyReferenceKind,
     HLSMediaPlaylist,
     HLSPlaylistKind,
     HLSSegmentKind,
-} from "../../../../../../src/core/source/hls/parser";
+} from "../../../../../../src/core/source/hls/playlist/parser";
 import { createProtectedInitialization } from "../../../../../helpers/isobmff";
 
-describe("standard HLS profile", () => {
-    test("the standard profile resolves AES-128 sequence IVs before publishing items", async () => {
+describe("MPEG-TS HLS profile", () => {
+    test("the MPEG-TS profile resolves AES-128 sequence IVs before publishing items", async () => {
         const http = new DownloadHttpClient(normalizeDownloaderConfig());
         const context = { http, keys: new KeyStore() };
         const key = {
@@ -39,7 +39,7 @@ describe("standard HLS profile", () => {
             averageSegmentDuration: 2,
         };
         const explicitKey = "00".repeat(16);
-        const plan = await standardHLSProfile.prepare({ playlist, explicitKeys: [{ key: explicitKey }], http });
+        const plan = await mpegTsHLSProfile.prepare({ playlist, explicitKeys: [{ key: explicitKey }], http });
 
         await plan.ensureKeys(playlist, context, new AbortController().signal);
 
@@ -82,7 +82,7 @@ describe("standard HLS profile", () => {
             averageSegmentDuration: 2,
         };
         const explicitKey = "11".repeat(16);
-        const plan = await standardHLSProfile.prepare({ playlist, explicitKeys: [{ key: explicitKey }], http });
+        const plan = await mpegTsHLSProfile.prepare({ playlist, explicitKeys: [{ key: explicitKey }], http });
 
         await plan.ensureKeys(playlist, context, new AbortController().signal);
 

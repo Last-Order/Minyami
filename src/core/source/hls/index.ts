@@ -4,9 +4,9 @@ import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } fr
 import { selectDefaultStream } from "../stream_selector";
 import { DownloadSource, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceMetadata } from "../types";
 import { HLSExplicitKey } from "./explicit_key";
-import { HLSMediaPlaylist, HLSPlaylistKind } from "./parser";
-import { PlaylistLoader } from "./playlist_loader";
-import { HLSMediaPlaylistCursor, HLSMediaPlaylistCursorMode, HLSSlice } from "./media_playlist_cursor";
+import { HLSMediaPlaylistCursor, HLSMediaPlaylistCursorMode, HLSSlice } from "./playlist/cursor";
+import { PlaylistLoader } from "./playlist/loader";
+import { HLSMediaPlaylist, HLSPlaylistKind } from "./playlist/parser";
 import { createHLSStreamCatalogPlan, HLSStreamCatalogPlan } from "./stream_catalog";
 
 export type HLSSourceMode = HLSMediaPlaylistCursorMode;

@@ -1,6 +1,6 @@
 import logger from "../../../../../utils/log";
-import { HLSKeyReferenceKind, HLSSegment, HLSSegmentKind } from "../../parser";
-import { toDownloadItem } from "./shared";
+import { HLSKeyReferenceKind, HLSSegment, HLSSegmentKind } from "../../playlist/parser";
+import { toDownloadItem } from "./download_item";
 import { HLSProfilePlan, HLSProfilePrepareOptions } from "./types";
 
 type SingleFileSampleAesScheme = "mpeg-ts-sample-aes" | "packed-aac-sample-aes";

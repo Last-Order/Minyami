@@ -6,7 +6,7 @@ import {
     HLSPlaylistKind,
     HLSVariant,
 } from "./models";
-import { findNextUri, getPlaylistLines, getTagBody, parseAttributeList, resolvePlaylistUri } from "./playlist_syntax";
+import { findNextUri, getPlaylistLines, getTagBody, parseAttributeList, resolvePlaylistUri } from "./syntax";
 
 const STREAM_TAG = "#EXT-X-STREAM-INF";
 const MEDIA_TAG = "#EXT-X-MEDIA:";

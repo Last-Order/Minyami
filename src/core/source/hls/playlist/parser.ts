@@ -1,7 +1,7 @@
-import { parseMasterPlaylist } from "./master_playlist";
-import { parseMediaPlaylist } from "./media_playlist";
+import { parseMasterPlaylist } from "./master";
+import { parseMediaPlaylist } from "./media";
 import { HLSParseOptions, HLSPlaylist } from "./models";
-import { getPlaylistLines } from "./playlist_syntax";
+import { getPlaylistLines } from "./syntax";
 
 export { HLSParseError, HLSPlaylistKind, HLSSegmentKind } from "./models";
 export type {

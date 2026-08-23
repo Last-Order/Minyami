@@ -10,8 +10,8 @@ import {
     HLSMediaPlaylist,
     HLSSegment,
     HLSSegmentKind,
-} from "../../parser";
-import { toDownloadItem } from "./shared";
+} from "../../playlist/parser";
+import { toDownloadItem } from "./download_item";
 import { HLSProfileAdapter, HLSProfilePrepareOptions } from "./types";
 
 const PROFILE_ID = "fmp4";
@@ -31,8 +31,6 @@ interface SampleAesInitializationContext {
 
 export const fmp4HLSProfile: HLSProfileAdapter = {
     id: PROFILE_ID,
-    matches: (playlist, format) =>
-        format === "iso-bmff" && playlist.segments.some((segment) => segment.kind === HLSSegmentKind.Initialization),
     prepare: (options) => prepareFmp4Profile(options),
 };
 

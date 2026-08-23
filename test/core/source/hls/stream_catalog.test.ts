@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { parseMasterPlaylist } from "../../../../src/core/source/hls/master_playlist";
+import { parseMasterPlaylist } from "../../../../src/core/source/hls/playlist/master";
 import { createHLSStreamCatalogPlan } from "../../../../src/core/source/hls/stream_catalog";
 
 describe("HLS stream catalog", () => {

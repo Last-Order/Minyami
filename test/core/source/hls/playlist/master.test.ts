@@ -1,6 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
-import { parseMasterPlaylist } from "../../../../src/core/source/hls/master_playlist";
-import { HLSParseError, HLSPlaylistKind } from "../../../../src/core/source/hls/parser";
+import { parseMasterPlaylist } from "../../../../../src/core/source/hls/playlist/master";
+import { HLSParseError, HLSPlaylistKind } from "../../../../../src/core/source/hls/playlist/parser";
 
 describe("parseMasterPlaylist", () => {
     test("parses variant locations and attributes", () => {

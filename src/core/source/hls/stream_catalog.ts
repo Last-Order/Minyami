@@ -7,7 +7,7 @@ import {
     VideoTrack,
 } from "../stream_selection";
 import { DownloadTrackId } from "../types";
-import { HLSAudioRendition, HLSMasterPlaylist, HLSParseError, HLSVariant } from "./models";
+import { HLSAudioRendition, HLSMasterPlaylist, HLSParseError, HLSVariant } from "./playlist/models";
 
 export interface HLSMediaTrackPlan {
     readonly sourceTrackId: DownloadTrackId;
