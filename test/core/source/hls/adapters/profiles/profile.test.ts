@@ -162,9 +162,9 @@ describe("Packed AAC HLS profile", () => {
 });
 
 describe("fMP4 HLS profile", () => {
-    test("maps one key to every protected track id in a cbcs initialization", async () => {
+    test("maps one key to every protected track id without inspecting unrelated protection metadata", async () => {
         const http = new DownloadHttpClient(normalizeDownloaderConfig());
-        jest.spyOn(http, "request").mockResolvedValue({ data: createProtectedInitialization(7) } as never);
+        jest.spyOn(http, "request").mockResolvedValue({ data: createProtectedInitialization(7, "cenc") } as never);
         const context = { http, keys: new KeyStore() };
         const playlist = createFmp4SampleAesPlaylist();
         const explicitKey = "22".repeat(16);
@@ -199,7 +199,7 @@ describe("fMP4 HLS profile", () => {
 
     test("uses canonical KIDs when multiple fMP4 keys are supplied", async () => {
         const http = new DownloadHttpClient(normalizeDownloaderConfig());
-        jest.spyOn(http, "request").mockResolvedValue({ data: createProtectedInitialization() } as never);
+        jest.spyOn(http, "request").mockResolvedValue({ data: Buffer.from("opaque fragments info") } as never);
         const context = { http, keys: new KeyStore() };
         const playlist = createFmp4SampleAesPlaylist();
         const firstKid = "00112233-4455-6677-8899-aabbccddeeff";
@@ -231,7 +231,7 @@ describe("fMP4 HLS profile", () => {
         });
     });
 
-    test("rejects missing explicit keys and non-cbcs protection before publishing items", async () => {
+    test("rejects missing explicit keys before publishing items", async () => {
         const http = new DownloadHttpClient(normalizeDownloaderConfig());
         const playlist = createFmp4SampleAesPlaylist();
         const context = { http, keys: new KeyStore() };
@@ -239,16 +239,6 @@ describe("fMP4 HLS profile", () => {
 
         await expect(noKeyPlan.ensureKeys(playlist, context, new AbortController().signal)).rejects.toThrow(
             "explicit decryption key"
-        );
-
-        jest.spyOn(http, "request").mockResolvedValue({ data: createProtectedInitialization(1, "cenc") } as never);
-        const wrongSchemePlan = await fmp4HLSProfile.prepare({
-            playlist,
-            explicitKeys: [{ key: "11".repeat(16) }],
-            http,
-        });
-        await expect(wrongSchemePlan.ensureKeys(playlist, context, new AbortController().signal)).rejects.toThrow(
-            "protected cbcs"
         );
     });
 });

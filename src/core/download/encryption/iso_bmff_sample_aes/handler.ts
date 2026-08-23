@@ -1,10 +1,6 @@
 import { randomUUID } from "crypto";
 import * as fs from "fs";
-import {
-    inspectIsoBmffInitialization,
-    validateClearIsoBmffFragment,
-    validateClearIsoBmffInitialization,
-} from "../../../isobmff";
+import { validateClearIsoBmffFragment, validateClearIsoBmffInitialization } from "../../../isobmff";
 import { DownloadEncryption } from "../../../source/types";
 import { DecryptionRequest, EncryptionHandler, FatalDecryptionError } from "../types";
 import { Mp4DecryptRunner, SystemMp4DecryptRunner } from "./runner";
@@ -107,12 +103,8 @@ export class IsoBmffSampleAesHandler implements EncryptionHandler {
             return cached;
         }
         const initialization = Buffer.from(encoded, "base64");
-        if (initialization.length === 0 || initialization.toString("base64") !== encoded) {
+        if (initialization.toString("base64") !== encoded) {
             throw new Error("Invalid base64-encoded fragments-info initialization segment.");
-        }
-        const info = inspectIsoBmffInitialization(initialization);
-        if (info.protectedTrackIds.length === 0 || info.protectionSchemes.some((scheme) => scheme !== "cbcs")) {
-            throw new Error("fMP4 SAMPLE-AES fragments-info must contain protected cbcs sample entries.");
         }
         this.fragmentsInfo.set(encoded, initialization);
         return initialization;

@@ -2,13 +2,11 @@ const ID3_HEADER_SIZE = 10;
 const ID3_FOOTER_SIZE = 10;
 
 export interface LeadingId3Tags {
-    readonly count: number;
     readonly payloadOffset: number;
 }
 
 /** Locates the elementary audio after complete leading ID3v2 tags without interpreting their HLS metadata. */
 export function parseLeadingId3Tags(data: Buffer): LeadingId3Tags {
-    let count = 0;
     let offset = 0;
 
     while (hasId3Signature(data, offset)) {
@@ -30,13 +28,8 @@ export function parseLeadingId3Tags(data: Buffer): LeadingId3Tags {
             throw new Error("Packed Audio contains a truncated ID3 tag.");
         }
         offset += tagSize;
-        count++;
     }
-
-    if (count === 0) {
-        throw new Error("HLS Packed Audio must begin with an ID3 tag.");
-    }
-    return { count, payloadOffset: offset };
+    return { payloadOffset: offset };
 }
 
 /** Checks only the clear ADTS header fields that are available in a bounded source probe. */

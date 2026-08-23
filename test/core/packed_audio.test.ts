@@ -8,12 +8,15 @@ describe("Packed Audio framing", () => {
         const adts = createAdtsHeader(64);
         const data = Buffer.concat([first, second, adts]);
 
-        expect(parseLeadingId3Tags(data)).toEqual({ count: 2, payloadOffset: first.length + second.length });
+        expect(parseLeadingId3Tags(data)).toEqual({ payloadOffset: first.length + second.length });
         expect(hasAdtsHeader(data, first.length + second.length)).toBe(true);
     });
 
+    test("allows elementary audio without an ID3 envelope", () => {
+        expect(parseLeadingId3Tags(Buffer.from("plain audio"))).toEqual({ payloadOffset: 0 });
+    });
+
     test.each([
-        ["missing tag", Buffer.from("plain audio"), "must begin with an ID3 tag"],
         ["truncated tag", Buffer.from([0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 4]), "truncated ID3 tag"],
         ["invalid syncsafe size", Buffer.from([0x49, 0x44, 0x33, 4, 0, 0, 0x80, 0, 0, 0]), "syncsafe"],
     ])("rejects %s", (_name, data, message) => {

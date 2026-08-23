@@ -42,29 +42,29 @@ describe("PackedAacSampleAesHandler", () => {
         });
     });
 
-    test("rejects input without the required Packed Audio ID3 envelope atomically", async () => {
-        await withTempDirectory("minyami-packed-aac-handler-failure-", async (directory) => {
+    test("decrypts ADTS input without requiring an ID3 envelope", async () => {
+        await withTempDirectory("minyami-packed-aac-handler-no-id3-", async (directory) => {
             const inputPath = path.join(directory, "encrypted.aac");
             const outputPath = path.join(directory, "clear.aac");
-            fs.writeFileSync(inputPath, createAdtsFrame(87, 5));
+            const clear = createAdtsFrame(87, 5);
+            const encrypted = encryptAdtsFrame(clear);
+            fs.writeFileSync(inputPath, encrypted);
             const handler = new PackedAacSampleAesHandler();
 
-            await expect(
-                handler.decrypt({
-                    inputPath,
-                    outputPath,
-                    encryption: {
-                        scheme: "packed-aac-sample-aes",
-                        keyId: "skd://fixture",
-                        iv: iv.toString("hex"),
-                    },
-                    keys: new Map([["skd://fixture", key.toString("hex")]]),
-                    signal: new AbortController().signal,
-                })
-            ).rejects.toThrow("must begin with an ID3 tag");
+            await handler.decrypt({
+                inputPath,
+                outputPath,
+                encryption: {
+                    scheme: "packed-aac-sample-aes",
+                    keyId: "skd://fixture",
+                    iv: iv.toString("hex"),
+                },
+                keys: new Map([["skd://fixture", key.toString("hex")]]),
+                signal: new AbortController().signal,
+            });
 
             expect(fs.existsSync(inputPath)).toBe(true);
-            expect(fs.existsSync(outputPath)).toBe(false);
+            expect(fs.readFileSync(outputPath)).toEqual(clear);
             expect(fs.readdirSync(directory).filter((name) => name.startsWith("clear.aac.t-"))).toEqual([]);
         });
     });

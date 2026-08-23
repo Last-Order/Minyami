@@ -63,6 +63,34 @@ export function inspectIsoBmffInitialization(data: Uint8Array): IsoBmffInitializ
     };
 }
 
+/** Reads only the protected track ids needed for mp4decrypt selectors, ignoring unrelated container metadata. */
+export function readIsoBmffDecryptionTrackIds(data: Uint8Array): readonly number[] {
+    const buffer = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+    const movie = readBoxes(buffer, 0, buffer.length).find((box) => box.type === "moov");
+    if (!movie) {
+        throw new Error("ISO-BMFF initialization segment does not contain a moov box.");
+    }
+
+    const protectedTrackIds = new Set<number>();
+    for (const track of childrenOf(buffer, movie).filter((box) => box.type === "trak")) {
+        const sampleDescription = findBoxAtPath(buffer, track, ["mdia", "minf", "stbl", "stsd"]);
+        if (
+            !sampleDescription ||
+            !readSampleEntries(buffer, sampleDescription, false).some(
+                (entry) => entry.type === "encv" || entry.type === "enca"
+            )
+        ) {
+            continue;
+        }
+        const trackHeader = childrenOf(buffer, track).find((box) => box.type === "tkhd");
+        if (!trackHeader) {
+            throw new Error("Protected ISO-BMFF track does not contain a tkhd box.");
+        }
+        protectedTrackIds.add(readTrackId(buffer, trackHeader));
+    }
+    return [...protectedTrackIds];
+}
+
 export function validateClearIsoBmffInitialization(data: Uint8Array): void {
     const info = inspectIsoBmffInitialization(data);
     if (info.protectedTrackIds.length > 0) {
@@ -145,14 +173,14 @@ function readTrackId(buffer: Buffer, trackHeader: IsoBmffBox): number {
     return trackId;
 }
 
-function readSampleEntries(buffer: Buffer, sampleDescription: IsoBmffBox): IsoBmffBox[] {
+function readSampleEntries(buffer: Buffer, sampleDescription: IsoBmffBox, validateEntryCount = true): IsoBmffBox[] {
     const entriesStart = sampleDescription.payloadStart + 8;
     if (entriesStart > sampleDescription.end) {
         throw new Error("Invalid ISO-BMFF stsd box.");
     }
     const entries = readBoxes(buffer, entriesStart, sampleDescription.end);
     const expectedCount = buffer.readUInt32BE(sampleDescription.payloadStart + 4);
-    if (entries.length !== expectedCount) {
+    if (validateEntryCount && entries.length !== expectedCount) {
         throw new Error("ISO-BMFF stsd entry count does not match its contents.");
     }
     return entries;

@@ -1,5 +1,5 @@
 import logger from "../../../../../utils/log";
-import { inspectIsoBmffInitialization } from "../../../../isobmff";
+import { readIsoBmffDecryptionTrackIds } from "../../../../isobmff";
 import { MP4_CONTAINER } from "../../../../media_container";
 import { DownloadSourceContext, IsoBmffSampleAesKey } from "../../../types";
 import { HLSExplicitKey } from "../../explicit_key";
@@ -87,13 +87,12 @@ function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
                     throw new Error("fMP4 SAMPLE-AES media references an unavailable initialization segment.");
                 }
                 const data = await loadInitializationSegment(initialization, http, signal);
-                const info = inspectIsoBmffInitialization(data);
-                if (info.protectedTrackIds.length === 0 || info.protectionSchemes.some((scheme) => scheme !== "cbcs")) {
-                    throw new Error(
-                        "fMP4 SAMPLE-AES requires protected cbcs sample entries in its initialization segment."
-                    );
+                const needsTrackSelectors = preparedKeys.length === 1 && preparedKeys[0].kid === undefined;
+                const trackIds = needsTrackSelectors ? readIsoBmffDecryptionTrackIds(data) : [];
+                if (needsTrackSelectors && trackIds.length === 0) {
+                    throw new Error("fMP4 SAMPLE-AES could not derive a protected track id for the decryption key.");
                 }
-                const keys = registerKeys(preparedKeys, info.protectedTrackIds, initializationId, context);
+                const keys = registerKeys(preparedKeys, trackIds, initializationId, context);
                 sampleAesByInitialization.set(initializationId, {
                     keys,
                     fragmentsInfoBase64: data.toString("base64"),
