@@ -45,14 +45,12 @@
         "erii": "^2.0.6",
         "https-proxy-agent": "^9.1.0",
         "prompts": "^2.4.2",
-        "socks-proxy-agent": "^10.1.0",
-        "winreg": "^1.2.5"
+        "socks-proxy-agent": "^10.1.0"
     },
     "devDependencies": {
         "@types/jest": "^30.0.0",
         "@types/node": "^24.13.3",
         "@types/prompts": "^2.4.9",
-        "@types/winreg": "^1.2.36",
         "husky": "^7.0.2",
         "jest": "^30.4.2",
         "lint-staged": "^11.1.2",

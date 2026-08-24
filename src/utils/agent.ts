@@ -1,18 +1,41 @@
 import { Agent } from "agent-base";
+import { execFile } from "child_process";
 import { HttpsProxyAgent } from "https-proxy-agent";
+import * as path from "path";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import logger from "./log";
-import { default as Registry } from "winreg";
 
-const readRegistryKey = (key: InstanceType<typeof Registry>): Promise<Winreg.RegistryItem[]> => {
+const WINDOWS_INTERNET_SETTINGS_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings";
+const REGISTRY_ITEM_PATTERN = /^(.*?)\s+(REG_(?:SZ|MULTI_SZ|EXPAND_SZ|DWORD|QWORD|BINARY|NONE))\s+([^\s].*)$/;
+
+export function parseWindowsInternetSettings(output: string): ReadonlyMap<string, string> {
+    const values = new Map<string, string>();
+    for (const rawLine of output.split(/\r?\n/)) {
+        const match = REGISTRY_ITEM_PATTERN.exec(rawLine.trim());
+        if (match) {
+            values.set(match[1].trim(), match[3]);
+        }
+    }
+    return values;
+}
+
+const readWindowsInternetSettings = (): Promise<ReadonlyMap<string, string>> => {
+    const windowsDirectory = process.env.SystemRoot || process.env.windir;
+    const executable = windowsDirectory ? path.join(windowsDirectory, "System32", "reg.exe") : "reg.exe";
     return new Promise((resolve, reject) => {
-        key.values((err, items) => {
-            if (err) {
-                reject(err);
-                return;
+        // REG receives the key as one argument; a shell would make spaces in the key and future values unsafe.
+        execFile(
+            executable,
+            ["QUERY", WINDOWS_INTERNET_SETTINGS_KEY],
+            { encoding: "utf8", windowsHide: true },
+            (error, stdout) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                resolve(parseWindowsInternetSettings(stdout));
             }
-            resolve(items);
-        });
+        );
     });
 };
 
@@ -111,21 +134,16 @@ class ProxyAgentHelper {
             // not a windows environment
             return;
         }
-        const key = new Registry({
-            hive: Registry.HKCU,
-            key: "\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
-        });
         try {
-            const items = await readRegistryKey(key);
-            const proxyEnableItem = items.find((item) => item.name === "ProxyEnable");
-            const proxyServerItem = items.find((item) => item.name === "ProxyServer");
-            const isProxyEnable = proxyEnableItem?.value === "0x1";
-            if (isProxyEnable && proxyServerItem && proxyServerItem.value !== "") {
-                if (proxyServerItem.value.startsWith("socks=")) {
+            const values = await readWindowsInternetSettings();
+            const proxyServer = values.get("ProxyServer");
+            const isProxyEnable = values.get("ProxyEnable") === "0x1";
+            if (isProxyEnable && proxyServer) {
+                if (proxyServer.startsWith("socks=")) {
                     // socks proxy
-                    this.setProxy(proxyServerItem.value.replace("socks=", "socks5://"));
+                    this.setProxy(proxyServer.replace("socks=", "socks5://"));
                 } else {
-                    this.setProxy(`http://${proxyServerItem.value}`);
+                    this.setProxy(`http://${proxyServer}`);
                 }
             }
         } catch {

@@ -15,8 +15,7 @@
                 "erii": "^2.0.6",
                 "https-proxy-agent": "^9.1.0",
                 "prompts": "^2.4.2",
-                "socks-proxy-agent": "^10.1.0",
-                "winreg": "^1.2.5"
+                "socks-proxy-agent": "^10.1.0"
             },
             "bin": {
                 "minyami": "dist/index.mjs"
@@ -25,7 +24,6 @@
                 "@types/jest": "^30.0.0",
                 "@types/node": "^24.13.3",
                 "@types/prompts": "^2.4.9",
-                "@types/winreg": "^1.2.36",
                 "husky": "^7.0.2",
                 "jest": "^30.4.2",
                 "lint-staged": "^11.1.2",
@@ -2071,13 +2069,6 @@
             "version": "2.0.3",
             "resolved": "https://registry.npmjs.org/@types/stack-utils/-/stack-utils-2.0.3.tgz",
             "integrity": "sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==",
-            "dev": true,
-            "license": "MIT"
-        },
-        "node_modules/@types/winreg": {
-            "version": "1.2.36",
-            "resolved": "https://registry.npmjs.org/@types/winreg/-/winreg-1.2.36.tgz",
-            "integrity": "sha512-DtafHy5A8hbaosXrbr7YdjQZaqVewXmiasRS5J4tYMzt3s1gkh40ixpxgVFfKiQ0JIYetTJABat47v9cpr/sQg==",
             "dev": true,
             "license": "MIT"
         },
@@ -8287,11 +8278,6 @@
                 "node": ">= 8"
             }
         },
-        "node_modules/winreg": {
-            "version": "1.2.5",
-            "resolved": "https://registry.npmjs.org/winreg/-/winreg-1.2.5.tgz",
-            "integrity": "sha512-uf7tHf+tw0B1y+x+mKTLHkykBgK2KMs3g+KlzmyMbLvICSHQyB/xOFjTT8qZ3oeTFyU7Bbj4FzXitGG6jvKhYw=="
-        },
         "node_modules/wordwrap": {
             "version": "1.0.0",
             "resolved": "https://registry.npmjs.org/wordwrap/-/wordwrap-1.0.0.tgz",
@@ -9936,12 +9922,6 @@
             "version": "2.0.3",
             "resolved": "https://registry.npmjs.org/@types/stack-utils/-/stack-utils-2.0.3.tgz",
             "integrity": "sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==",
-            "dev": true
-        },
-        "@types/winreg": {
-            "version": "1.2.36",
-            "resolved": "https://registry.npmjs.org/@types/winreg/-/winreg-1.2.36.tgz",
-            "integrity": "sha512-DtafHy5A8hbaosXrbr7YdjQZaqVewXmiasRS5J4tYMzt3s1gkh40ixpxgVFfKiQ0JIYetTJABat47v9cpr/sQg==",
             "dev": true
         },
         "@types/yargs": {
@@ -13996,11 +13976,6 @@
             "requires": {
                 "isexe": "^2.0.0"
             }
-        },
-        "winreg": {
-            "version": "1.2.5",
-            "resolved": "https://registry.npmjs.org/winreg/-/winreg-1.2.5.tgz",
-            "integrity": "sha512-uf7tHf+tw0B1y+x+mKTLHkykBgK2KMs3g+KlzmyMbLvICSHQyB/xOFjTT8qZ3oeTFyU7Bbj4FzXitGG6jvKhYw=="
         },
         "wordwrap": {
             "version": "1.0.0",
