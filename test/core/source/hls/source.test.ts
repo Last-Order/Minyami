@@ -41,7 +41,7 @@ describe("HLSSource", () => {
             const keys = new KeyStore();
             const missingKeySource = createHLSSource(playlistPath, { mode: "snapshot" });
             await expect(missingKeySource.prepare({ http, keys }, new AbortController().signal)).rejects.toThrow(
-                "Exactly one explicit decryption key is required for SAMPLE-AES HLS."
+                "This HLS content is protected. Provide an explicit decryption key."
             );
 
             const source = createHLSSource(playlistPath, { mode: "snapshot", explicitKeys: [{ key }] });

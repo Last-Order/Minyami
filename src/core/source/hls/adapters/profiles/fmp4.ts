@@ -12,7 +12,7 @@ import {
     HLSSegmentKind,
 } from "../../playlist/parser";
 import { toDownloadItem } from "./download_item";
-import { HLSProfileAdapter, HLSProfilePrepareOptions } from "./types";
+import { HLSProfileAdapter, HLSProfilePrepareOptions, SAMPLE_AES_EXPLICIT_KEY_REQUIRED } from "./types";
 
 const PROFILE_ID = "fmp4";
 const AES_128_KEY = /^[0-9a-fA-F]{32}$/;
@@ -66,7 +66,7 @@ function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
                 )
             );
             if (preparedKeys.length === 0) {
-                throw new Error("At least one explicit decryption key is required for fMP4 SAMPLE-AES HLS.");
+                throw new Error(SAMPLE_AES_EXPLICIT_KEY_REQUIRED);
             }
 
             const initializationSegments = new Map(

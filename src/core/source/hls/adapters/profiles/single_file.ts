@@ -1,7 +1,7 @@
 import logger from "../../../../../utils/log";
 import { HLSKeyReferenceKind, HLSSegment, HLSSegmentKind } from "../../playlist/parser";
 import { toDownloadItem } from "./download_item";
-import { HLSProfilePlan, HLSProfilePrepareOptions } from "./types";
+import { HLSProfilePlan, HLSProfilePrepareOptions, SAMPLE_AES_EXPLICIT_KEY_REQUIRED } from "./types";
 
 type SingleFileSampleAesScheme = "mpeg-ts-sample-aes" | "packed-aac-sample-aes";
 
@@ -10,7 +10,10 @@ export function prepareSingleFileKeys(
     tooManyKeysMessage: string
 ): HLSProfilePlan["ensureKeys"] {
     if (playlist.segments.some((segment) => segment.encryption?.method === "SAMPLE-AES")) {
-        if (explicitKeys.length !== 1) {
+        if (explicitKeys.length === 0) {
+            throw new Error(SAMPLE_AES_EXPLICIT_KEY_REQUIRED);
+        }
+        if (explicitKeys.length > 1) {
             throw new Error("Exactly one explicit decryption key is required for SAMPLE-AES HLS.");
         }
         if (!/^[0-9a-fA-F]{32}$/.test(explicitKeys[0].key)) {

@@ -89,7 +89,8 @@ export interface HLSSampleAesEncryption {
     readonly method: "SAMPLE-AES";
     readonly key: HLSKeyReference;
     readonly iv?: string;
-    readonly keyFormat: "identity" | "com.apple.streamingkeydelivery";
+    /** Opaque key-acquisition metadata; explicit raw keys keep DRM handling outside Minyami. */
+    readonly keyFormat: string;
 }
 
 export type HLSMediaEncryption = HLSAes128Encryption | HLSSampleAesEncryption;

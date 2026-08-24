@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.0.0-beta.4 - 2026-08-25
+
+### Changed
+
+-   Accepted opaque and parallel DRM `KEYFORMAT` metadata for `SAMPLE-AES` HLS while continuing to use only explicit
+    raw decryption keys. Missing keys now report that the content is protected before media downloads begin.
+
 ## 6.0.0-beta.3 - 2026-08-23
 
 ### Breaking changes

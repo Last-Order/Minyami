@@ -3,6 +3,8 @@ import { MediaContainer } from "../../../../media_container";
 import { HLSExplicitKey } from "../../explicit_key";
 import { HLSMediaPlaylist, HLSSegment } from "../../playlist/parser";
 
+export const SAMPLE_AES_EXPLICIT_KEY_REQUIRED = "This HLS content is protected. Provide an explicit decryption key.";
+
 export interface HLSProfilePrepareOptions {
     readonly playlist: HLSMediaPlaylist;
     readonly explicitKeys: readonly HLSExplicitKey[];

@@ -185,9 +185,6 @@ function parseEncryption(
         const key = parseKeyReference(resolvePlaylistUri(playlistUrl, keyUri));
         const iv = attributes["IV"] ? parseIv(attributes["IV"]) : undefined;
         const keyFormat = attributes["KEYFORMAT"] || "identity";
-        if (keyFormat !== "identity" && keyFormat !== "com.apple.streamingkeydelivery") {
-            throw new HLSParseError(`Unsupported SAMPLE-AES key format: "${keyFormat}"`);
-        }
         return {
             encryption: {
                 method,

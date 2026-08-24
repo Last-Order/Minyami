@@ -14,6 +14,56 @@ import {
 } from "../../../helpers/isobmff";
 
 describe("fMP4 SAMPLE-AES HLS", () => {
+    test("reports protected multi-DRM content when no explicit key is provided", async () => {
+        await withTempDirectory("minyami-fmp4-sample-aes-protected-", async (directory) => {
+            const protectedInitialization = createProtectedInitialization();
+            let mediaRequestCount = 0;
+            const server = http.createServer((request, response) => {
+                switch (request.url) {
+                    case "/playlist.m3u8":
+                        response.end(
+                            [
+                                "#EXTM3U",
+                                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="com.apple.streamingkeydelivery"',
+                                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,cGxheXJlYWR5",KEYFORMAT="com.microsoft.playready"',
+                                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,d2lkZXZpbmU=",KEYFORMAT="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"',
+                                '#EXT-X-MAP:URI="/init.mp4"',
+                                "#EXTINF:1,",
+                                "/0.m4s",
+                                "#EXT-X-ENDLIST",
+                            ].join("\n")
+                        );
+                        break;
+                    case "/init.mp4":
+                        response.end(protectedInitialization);
+                        break;
+                    case "/0.m4s":
+                        mediaRequestCount++;
+                        response.end(createMediaFragment("protected"));
+                        break;
+                    default:
+                        response.writeHead(404).end();
+                }
+            });
+            const baseUrl = await listen(server);
+
+            try {
+                const source = createHLSSource(`${baseUrl}/playlist.m3u8`, { mode: "snapshot" });
+                const downloader = createDownloader(source, {
+                    output: path.join(directory, "media.mp4"),
+                    tempDir: directory,
+                });
+
+                await expect(downloader.download()).rejects.toThrow(
+                    "This HLS content is protected. Provide an explicit decryption key."
+                );
+                expect(mediaRequestCount).toBe(0);
+            } finally {
+                await close(server);
+            }
+        });
+    });
+
     test("decrypts fragments concurrently and writes their clear bytes in playlist order", async () => {
         await withTempDirectory("minyami-fmp4-sample-aes-", async (directory) => {
             const protectedInitialization = createProtectedInitialization();
@@ -52,8 +102,10 @@ describe("fMP4 SAMPLE-AES HLS", () => {
                         response.end(
                             [
                                 "#EXTM3U",
-                                '#EXT-X-MAP:URI="/init.mp4"',
                                 '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="com.apple.streamingkeydelivery"',
+                                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,cGxheXJlYWR5",KEYFORMAT="com.microsoft.playready"',
+                                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,d2lkZXZpbmU=",KEYFORMAT="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"',
+                                '#EXT-X-MAP:URI="/init.mp4"',
                                 "#EXTINF:1,",
                                 "/0.m4s",
                                 "#EXTINF:1,",

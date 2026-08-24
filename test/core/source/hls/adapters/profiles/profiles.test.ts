@@ -238,7 +238,7 @@ describe("fMP4 HLS profile", () => {
         const noKeyPlan = await fmp4HLSProfile.prepare({ playlist, explicitKeys: [], http });
 
         await expect(noKeyPlan.ensureKeys(playlist, context, new AbortController().signal)).rejects.toThrow(
-            "explicit decryption key"
+            "This HLS content is protected. Provide an explicit decryption key."
         );
     });
 });

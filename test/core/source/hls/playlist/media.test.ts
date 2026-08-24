@@ -385,15 +385,40 @@ describe("parseMediaPlaylist", () => {
         });
     });
 
-    test.each([
-        [
-            "an unsupported SAMPLE-AES key format",
-            '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="unsupported",IV=0x01',
-            'Unsupported SAMPLE-AES key format: "unsupported"',
-        ],
-    ])("rejects %s", (_name, keyTag, message) => {
-        const content = [keyTag, "#EXTINF:1,", "https://cdn.example/0.ts"].join("\n");
-        expect(() => parseMediaPlaylist({ content })).toThrow(new HLSParseError(message));
+    test("preserves opaque SAMPLE-AES key formats without implementing their DRM protocol", () => {
+        const playlist = parseMediaPlaylist({
+            content: [
+                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,dGVzdA==",KEYFORMAT="vendor.example"',
+                "#EXTINF:1,",
+                "https://cdn.example/0.m4s",
+            ].join("\n"),
+        });
+
+        expect(playlist.segments[0]).toMatchObject({
+            encryption: { method: "SAMPLE-AES", keyFormat: "vendor.example" },
+        });
+    });
+
+    test("accepts parallel FairPlay, PlayReady, and Widevine SAMPLE-AES declarations", () => {
+        const playlist = parseMediaPlaylist({
+            content: [
+                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="com.apple.streamingkeydelivery"',
+                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,cGxheXJlYWR5",KEYFORMAT="com.microsoft.playready"',
+                '#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,d2lkZXZpbmU=",KEYFORMAT="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"',
+                '#EXT-X-MAP:URI="https://cdn.example/init.mp4"',
+                "#EXTINF:1,",
+                "https://cdn.example/0.m4s",
+            ].join("\n"),
+        });
+
+        expect(playlist.keys).toHaveLength(3);
+        expect(playlist.segments).toHaveLength(2);
+        expect(playlist.segments[1]).toMatchObject({
+            encryption: {
+                method: "SAMPLE-AES",
+                keyFormat: "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed",
+            },
+        });
     });
 
     test("associates SAMPLE-AES fMP4 media with its initialization segment", () => {
