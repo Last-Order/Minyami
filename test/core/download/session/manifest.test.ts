@@ -1,5 +1,5 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { DownloadManifest } from "../../../../src/core/download/session/manifest";
+import { DownloadManifest } from "@/core/download/session/manifest";
 
 describe("DownloadManifest", () => {
     test("owns discovery order, totals, and terminal progress for every track", () => {

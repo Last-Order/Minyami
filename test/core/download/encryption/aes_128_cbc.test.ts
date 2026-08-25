@@ -2,7 +2,7 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { Aes128CbcHandler } from "../../../../src/core/download/encryption/aes_128_cbc";
+import { Aes128CbcHandler } from "@/core/download/encryption/aes_128_cbc/handler";
 import { withTempDirectory } from "../../../helpers/filesystem";
 
 const key = Buffer.from("0123456789abcdef");

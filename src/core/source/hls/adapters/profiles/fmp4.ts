@@ -1,8 +1,8 @@
-import logger from "../../../../../utils/log";
-import { readIsoBmffDecryptionTrackIds } from "../../../../isobmff";
-import { MP4_CONTAINER } from "../../../../media_container";
-import { DownloadSourceContext, IsoBmffSampleAesKey } from "../../../types";
-import { HLSExplicitKey } from "../../explicit_key";
+import logger from "@/utils/log";
+import { readIsoBmffDecryptionTrackIds } from "@/core/isobmff";
+import { MP4_CONTAINER } from "@/core/media_container";
+import { DownloadSourceContext, IsoBmffSampleAesKey } from "@/core/source/types";
+import { HLSExplicitKey } from "@/core/source/hls/explicit_key";
 import {
     HLSByteRange,
     HLSInitializationSegment,
@@ -10,7 +10,7 @@ import {
     HLSMediaPlaylist,
     HLSSegment,
     HLSSegmentKind,
-} from "../../playlist/parser";
+} from "@/core/source/hls/playlist/parser";
 import { toDownloadItem } from "./download_item";
 import { HLSProfileAdapter, HLSProfilePrepareOptions, SAMPLE_AES_EXPLICIT_KEY_REQUIRED } from "./types";
 

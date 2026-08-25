@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { HLSPlaylistKind, parseHLSPlaylist } from "../../../../../src/core/source/hls/playlist/parser";
+import { HLSPlaylistKind, parseHLSPlaylist } from "@/core/source/hls/playlist/parser";
 
 describe("parseHLSPlaylist", () => {
     test("returns a master playlist for a variant tag", () => {

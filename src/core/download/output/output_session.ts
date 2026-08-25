@@ -1,12 +1,12 @@
 import { randomBytes } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
-import { getAvailableOutputPath } from "../../../utils/common";
-import logger from "../../../utils/log";
-import { createContainerOutputPath, MediaContainer } from "../../media_container";
-import { Muxer, MuxInput, selectAvailableMuxer } from "../../muxer";
-import { MediaTrack } from "../../source/stream_selection";
-import { DownloadTrackId, SourceTrack } from "../../source/types";
+import { getAvailableOutputPath } from "@/utils/common";
+import logger from "@/utils/log";
+import { createContainerOutputPath, MediaContainer } from "@/core/media_container";
+import { Muxer, MuxInput, selectAvailableMuxer } from "@/core/muxer";
+import { MediaTrack } from "@/core/source/stream_selection";
+import { DownloadTrackId, SourceTrack } from "@/core/source/types";
 import { TrackArtifact } from "../controller";
 import { DownloadTask } from "../execution/task";
 import FileConcentrator from "./file_concentrator";

@@ -1,7 +1,7 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { normalizeDownloaderConfig } from "../../../../src/core/download/config";
-import { DownloadHttpClient } from "../../../../src/core/download/infrastructure/http_client";
-import { RetryingSourceHttpClient } from "../../../../src/core/download/infrastructure/source_http_client";
+import { normalizeDownloaderConfig } from "@/core/download/config";
+import { DownloadHttpClient } from "@/core/download/infrastructure/http_client";
+import { RetryingSourceHttpClient } from "@/core/download/infrastructure/source_http_client";
 
 describe("RetryingSourceHttpClient", () => {
     test("applies one consistent maximum-attempt policy outside sources", async () => {

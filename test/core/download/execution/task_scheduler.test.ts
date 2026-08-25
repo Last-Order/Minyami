@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { TaskScheduler } from "../../../../src/core/download/execution/task_scheduler";
+import { TaskScheduler } from "@/core/download/execution/task_scheduler";
 
 describe("TaskScheduler", () => {
     test("accepts batches while running and drains them after close", async () => {

@@ -1,4 +1,4 @@
-import { MPEG_TS_CONTAINER } from "../../../../media_container";
+import { MPEG_TS_CONTAINER } from "@/core/media_container";
 import { prepareSingleFileKeys, toSingleFileDownloadItem } from "./single_file";
 import { HLSProfileAdapter } from "./types";
 

@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import logger from "../../../utils/log";
+import logger from "@/utils/log";
 import { EncryptionHandlerRegistry } from "../encryption/registry";
 import { DownloadHttpClient } from "../infrastructure/http_client";
 import { KeyStore } from "../infrastructure/key_store";

@@ -1,6 +1,6 @@
 import * as path from "path";
-import logger from "../../../utils/log";
-import { DownloadItem, DownloadSource, DownloadSourceContext } from "../../source/types";
+import logger from "@/utils/log";
+import { DownloadItem, DownloadSource, DownloadSourceContext } from "@/core/source/types";
 import {
     ChunkDownloadedInfo,
     DownloadEvent,

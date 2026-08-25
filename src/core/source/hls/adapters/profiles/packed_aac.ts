@@ -1,4 +1,4 @@
-import { AAC_CONTAINER } from "../../../../media_container";
+import { AAC_CONTAINER } from "@/core/media_container";
 import { prepareSingleFileKeys, toSingleFileDownloadItem } from "./single_file";
 import { HLSProfileAdapter } from "./types";
 

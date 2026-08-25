@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { parseHLSExplicitKey, parseHLSExplicitKeyInputs } from "../../../../src/core/source/hls/explicit_key";
+import { parseHLSExplicitKey, parseHLSExplicitKeyInputs } from "@/core/source/hls/explicit_key";
 
 describe("parseHLSExplicitKey", () => {
     test("parses a key without a KID", () => {

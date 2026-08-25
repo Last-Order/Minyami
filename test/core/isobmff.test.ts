@@ -3,7 +3,7 @@ import {
     inspectIsoBmffInitialization,
     validateClearIsoBmffFragment,
     validateClearIsoBmffInitialization,
-} from "../../src/core/isobmff";
+} from "@/core/isobmff";
 import { createClearInitialization, createMediaFragment, createProtectedInitialization } from "../helpers/isobmff";
 
 describe("ISO-BMFF inspection", () => {

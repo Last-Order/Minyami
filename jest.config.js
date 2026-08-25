@@ -9,6 +9,9 @@ module.exports = {
     testEnvironment: "node",
     testMatch: ["**/*.test.ts"],
     testTimeout: 10000,
+    moduleNameMapper: {
+        "^@/(.*)$": "<rootDir>/src/$1",
+    },
     transform: {
         "^.+\\.tsx?$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.test.json" }],
         // Tests remain CommonJS, so the ESM-only proxy stack must cross that boundary through ts-jest.

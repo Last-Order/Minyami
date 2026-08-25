@@ -2,12 +2,9 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { MpegTsSampleAesHandler } from "../../../../src/core/download/encryption/mpeg_ts_sample_aes/handler";
-import {
-    decryptMpegTsSampleAes,
-    mpegCrc32,
-} from "../../../../src/core/download/encryption/mpeg_ts_sample_aes/transport_stream";
-import { decryptSampleAesH264 } from "../../../../src/core/download/encryption/mpeg_ts_sample_aes/h264";
+import { MpegTsSampleAesHandler } from "@/core/download/encryption/sample_aes/mpeg_ts/handler";
+import { decryptMpegTsSampleAes, mpegCrc32 } from "@/core/download/encryption/sample_aes/mpeg_ts/transport_stream";
+import { decryptSampleAesH264 } from "@/core/download/encryption/sample_aes/mpeg_ts/h264";
 import { withTempDirectory } from "../../../helpers/filesystem";
 
 const key = Buffer.from("00112233445566778899aabbccddeeff", "hex");

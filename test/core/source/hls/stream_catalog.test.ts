@@ -1,6 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
-import { parseMasterPlaylist } from "../../../../src/core/source/hls/playlist/master";
-import { createHLSStreamCatalogPlan } from "../../../../src/core/source/hls/stream_catalog";
+import { parseMasterPlaylist } from "@/core/source/hls/playlist/master";
+import { createHLSStreamCatalogPlan } from "@/core/source/hls/stream_catalog";
 
 describe("HLS stream catalog", () => {
     test("normalizes compatible tracks while keeping playlist URLs private", () => {

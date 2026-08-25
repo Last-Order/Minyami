@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { timeStringToSeconds } from "../../src/utils/time";
+import { timeStringToSeconds } from "@/utils/time";
 
 describe("timeStringToSeconds", () => {
     test("converts minute and hour timestamps", () => {

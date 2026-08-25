@@ -1,4 +1,4 @@
-import logger from "../../../utils/log";
+import logger from "@/utils/log";
 import { DownloadEvent, DownloadEventListener, DownloadEventMap } from "../controller";
 
 type StoredListener = (...args: any[]) => unknown;

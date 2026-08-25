@@ -1,12 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { IsoBmffSampleAesHandler } from "../../../../src/core/download/encryption/iso_bmff_sample_aes/handler";
-import {
-    Mp4DecryptRunner,
-    Mp4DecryptRunResult,
-} from "../../../../src/core/download/encryption/iso_bmff_sample_aes/runner";
-import { FatalDecryptionError } from "../../../../src/core/download/encryption/types";
+import { IsoBmffSampleAesHandler } from "@/core/download/encryption/sample_aes/iso_bmff/handler";
+import { Mp4DecryptRunner, Mp4DecryptRunResult } from "@/core/download/encryption/sample_aes/iso_bmff/runner";
+import { FatalDecryptionError } from "@/core/download/encryption/types";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import {
     createClearInitialization,

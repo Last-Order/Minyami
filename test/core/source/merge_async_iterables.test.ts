@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { mergeAsyncIterables } from "../../../src/core/source/merge_async_iterables";
+import { mergeAsyncIterables } from "@/core/source/merge_async_iterables";
 
 describe("mergeAsyncIterables", () => {
     test("pulls producers concurrently while preserving each producer's order", async () => {

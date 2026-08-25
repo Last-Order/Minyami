@@ -3,8 +3,8 @@ import * as http from "http";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
 import axios from "axios";
-import { normalizeDownloaderConfig } from "../../../../src/core/download/config";
-import { DownloadHttpClient } from "../../../../src/core/download/infrastructure/http_client";
+import { normalizeDownloaderConfig } from "@/core/download/config";
+import { DownloadHttpClient } from "@/core/download/infrastructure/http_client";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
 

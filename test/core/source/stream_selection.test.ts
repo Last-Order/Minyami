@@ -1,10 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import {
-    AudioTrack,
-    StreamCatalog,
-    VideoTrack,
-    validateTrackSelection,
-} from "../../../src/core/source/stream_selection";
+import { AudioTrack, StreamCatalog, VideoTrack, validateTrackSelection } from "@/core/source/stream_selection";
 
 const videoA: VideoTrack = { id: "video-a", type: "video" };
 const videoB: VideoTrack = { id: "video-b", type: "video" };

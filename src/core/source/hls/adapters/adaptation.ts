@@ -1,4 +1,4 @@
-import { DownloadItem, DownloadItemNamer, DownloadSourceContext, DownloadSourceHttpClient } from "../../types";
+import { DownloadItem, DownloadItemNamer, DownloadSourceContext, DownloadSourceHttpClient } from "@/core/source/types";
 import { HLSExplicitKey } from "../explicit_key";
 import { HLSMediaPlaylist, HLSSegment } from "../playlist/parser";
 import { selectHLSProfile } from "./profiles/selector";

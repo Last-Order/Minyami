@@ -1,11 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import {
-    createDefaultMuxers,
-    ExecutableRunner,
-    FFmpegMuxer,
-    MkvmergeMuxer,
-    selectAvailableMuxer,
-} from "../../../src/core/muxer";
+import { createDefaultMuxers, ExecutableRunner, FFmpegMuxer, MkvmergeMuxer, selectAvailableMuxer } from "@/core/muxer";
 
 class RecordingRunner implements ExecutableRunner {
     readonly availabilityChecks: { command: string; arguments_: readonly string[] }[] = [];

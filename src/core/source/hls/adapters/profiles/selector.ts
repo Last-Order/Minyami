@@ -1,12 +1,12 @@
-import { hasAdtsHeader, parseLeadingId3Tags } from "../../../../packed_audio";
-import { DownloadSourceHttpClient } from "../../../types";
+import { hasAdtsHeader, parseLeadingId3Tags } from "@/core/packed_audio";
+import { DownloadSourceHttpClient } from "@/core/source/types";
 import {
     HLSInitializationSegment,
     HLSMediaPlaylist,
     HLSMediaSegment,
     HLSSegment,
     HLSSegmentKind,
-} from "../../playlist/parser";
+} from "@/core/source/hls/playlist/parser";
 import { fmp4HLSProfile } from "./fmp4";
 import { packedAacHLSProfile } from "./packed_aac";
 import { mpegTsHLSProfile } from "./mpeg_ts";

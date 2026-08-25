@@ -1,7 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { SocksProxyAgent } from "socks-proxy-agent";
-import { createProxyAgent, parseWindowsInternetSettings } from "../../src/utils/agent";
+import { createProxyAgent, parseWindowsInternetSettings } from "@/utils/agent";
 
 describe("createProxyAgent", () => {
     test("creates agents for supported proxy address forms", () => {

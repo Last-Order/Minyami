@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, jest, test } from "@jest/globals";
-import logger from "../../src/utils/log";
+import logger from "@/utils/log";
 
 describe("ConsoleLogger", () => {
     afterEach(() => {

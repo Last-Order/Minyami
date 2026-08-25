@@ -1,16 +1,16 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { normalizeDownloaderConfig } from "../../../../../src/core/download/config";
-import { DownloadHttpClient } from "../../../../../src/core/download/infrastructure/http_client";
-import { KeyStore } from "../../../../../src/core/download/infrastructure/key_store";
-import { HLSMediaPlaylistCursor } from "../../../../../src/core/source/hls/playlist/cursor";
+import { normalizeDownloaderConfig } from "@/core/download/config";
+import { DownloadHttpClient } from "@/core/download/infrastructure/http_client";
+import { KeyStore } from "@/core/download/infrastructure/key_store";
+import { HLSMediaPlaylistCursor } from "@/core/source/hls/playlist/cursor";
 import {
     HLSKeyReferenceKind,
     HLSMediaPlaylist,
     HLSPlaylistKind,
     HLSSegmentKind,
-} from "../../../../../src/core/source/hls/playlist/parser";
-import { PlaylistLoader } from "../../../../../src/core/source/hls/playlist/loader";
-import { DownloadSourceContext, SourceBatch } from "../../../../../src/core/source/types";
+} from "@/core/source/hls/playlist/parser";
+import { PlaylistLoader } from "@/core/source/hls/playlist/loader";
+import { DownloadSourceContext, SourceBatch } from "@/core/source/types";
 
 describe("HLSMediaPlaylistCursor", () => {
     test("publishes track metadata and tagged snapshot batches", async () => {

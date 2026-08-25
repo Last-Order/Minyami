@@ -1,4 +1,4 @@
-import logger from "../../../utils/log";
+import logger from "@/utils/log";
 import { mergeAsyncIterables } from "../merge_async_iterables";
 import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } from "../stream_selection";
 import { selectDefaultStream } from "../stream_selector";

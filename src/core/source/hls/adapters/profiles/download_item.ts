@@ -1,5 +1,5 @@
-import { DownloadEncryption, DownloadItem } from "../../../types";
-import { HLSSegment, HLSSegmentKind } from "../../playlist/parser";
+import { DownloadEncryption, DownloadItem } from "@/core/source/types";
+import { HLSSegment, HLSSegmentKind } from "@/core/source/hls/playlist/parser";
 
 const HLS_MAP_PREFIX_SLOT = "hls-map";
 

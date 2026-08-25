@@ -1,6 +1,6 @@
 import * as crypto from "crypto";
 import { describe, expect, test } from "@jest/globals";
-import { decryptSampleAesAudio } from "../../../../src/core/download/encryption/sample_aes/audio";
+import { decryptSampleAesAudio } from "@/core/download/encryption/sample_aes/shared/audio";
 
 const key = Buffer.from("00112233445566778899aabbccddeeff", "hex");
 const iv = Buffer.from("ffeeddccbbaa99887766554433221100", "hex");

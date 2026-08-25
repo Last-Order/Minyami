@@ -3,8 +3,8 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { createDownloader } from "../../../../src/core/download/downloader";
-import { createHLSSource } from "../../../../src/core/source/hls";
+import { createDownloader } from "@/core/download/downloader";
+import { createHLSSource } from "@/core/source/hls";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
 

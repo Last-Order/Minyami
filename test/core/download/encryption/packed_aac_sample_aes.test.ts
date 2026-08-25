@@ -2,7 +2,7 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { PackedAacSampleAesHandler } from "../../../../src/core/download/encryption/packed_aac_sample_aes/handler";
+import { PackedAacSampleAesHandler } from "@/core/download/encryption/sample_aes/packed_aac/handler";
 import { withTempDirectory } from "../../../helpers/filesystem";
 
 const key = Buffer.from("00112233445566778899aabbccddeeff", "hex");

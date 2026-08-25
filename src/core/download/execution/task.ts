@@ -1,4 +1,4 @@
-import { DownloadItem, DownloadTrackId } from "../../source/types";
+import { DownloadItem, DownloadTrackId } from "@/core/source/types";
 
 /** Runtime work assigned by the session after protocol-neutral discovery. */
 export interface DownloadTask {

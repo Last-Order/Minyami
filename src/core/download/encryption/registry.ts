@@ -1,7 +1,7 @@
-import { Aes128CbcHandler } from "./aes_128_cbc";
-import { IsoBmffSampleAesHandler } from "./iso_bmff_sample_aes/handler";
-import { MpegTsSampleAesHandler } from "./mpeg_ts_sample_aes/handler";
-import { PackedAacSampleAesHandler } from "./packed_aac_sample_aes/handler";
+import { Aes128CbcHandler } from "./aes_128_cbc/handler";
+import { IsoBmffSampleAesHandler } from "./sample_aes/iso_bmff/handler";
+import { MpegTsSampleAesHandler } from "./sample_aes/mpeg_ts/handler";
+import { PackedAacSampleAesHandler } from "./sample_aes/packed_aac/handler";
 import { EncryptionHandler } from "./types";
 
 export class EncryptionHandlerRegistry {

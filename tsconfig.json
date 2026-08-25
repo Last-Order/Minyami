@@ -6,6 +6,9 @@
         "declaration": true,
         "module": "esnext",
         "moduleResolution": "bundler",
+        "paths": {
+            "@/*": ["./src/*"]
+        },
         "sourceMap": true,
         "lib": ["es7", "esnext"],
         "types": ["node"],

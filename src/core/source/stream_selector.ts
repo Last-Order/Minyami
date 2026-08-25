@@ -1,5 +1,5 @@
 import prompts from "prompts";
-import logger from "../../utils/log";
+import logger from "@/utils/log";
 import { AudioTrack, MediaTrack, StreamCatalog, StreamOption, TrackSelection, VideoTrack } from "./stream_selection";
 
 interface StreamOptionChoice {

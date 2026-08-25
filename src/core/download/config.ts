@@ -1,5 +1,5 @@
 import * as path from "path";
-import logger from "../../utils/log";
+import logger from "@/utils/log";
 import { normalizeOutputBasePath } from "../media_container";
 import { createDefaultMuxers, Muxer } from "../muxer";
 import { DownloaderConfig } from "./types";

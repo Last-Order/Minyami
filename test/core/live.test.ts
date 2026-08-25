@@ -3,7 +3,7 @@ import * as http from "http";
 import * as path from "path";
 import { AddressInfo } from "net";
 import { describe, expect, test } from "@jest/globals";
-import { createLiveDownloader } from "../../src/core/live";
+import { createLiveDownloader } from "@/core/live";
 import { withTempDirectory } from "../helpers/filesystem";
 import { close, listen, masterVariantChunks, withMasterPlaylistServer } from "../helpers/http";
 

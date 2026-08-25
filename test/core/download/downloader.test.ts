@@ -3,9 +3,9 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { createDownloader } from "../../../src/core/download/downloader";
-import { MPEG_TS_CONTAINER } from "../../../src/core/media_container";
-import { DownloadSource } from "../../../src/core/source/types";
+import { createDownloader } from "@/core/download/downloader";
+import { MPEG_TS_CONTAINER } from "@/core/media_container";
+import { DownloadSource } from "@/core/source/types";
 import { close, listen, withMediaServer } from "../../helpers/http";
 import { withTempDirectory } from "../../helpers/filesystem";
 

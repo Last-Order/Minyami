@@ -1,8 +1,8 @@
 import * as http from "http";
 import { AddressInfo } from "net";
 import { describe, expect, test } from "@jest/globals";
-import { createArchiveDownloader } from "../../../../src/core/archive";
-import { createLiveDownloader } from "../../../../src/core/live";
+import { createArchiveDownloader } from "@/core/archive";
+import { createLiveDownloader } from "@/core/live";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
 

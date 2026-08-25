@@ -1,15 +1,15 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { fmp4HLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/fmp4";
-import { packedAacHLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/packed_aac";
-import { mpegTsHLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/mpeg_ts";
-import { selectHLSProfile } from "../../../../../../src/core/source/hls/adapters/profiles/selector";
+import { fmp4HLSProfile } from "@/core/source/hls/adapters/profiles/fmp4";
+import { packedAacHLSProfile } from "@/core/source/hls/adapters/profiles/packed_aac";
+import { mpegTsHLSProfile } from "@/core/source/hls/adapters/profiles/mpeg_ts";
+import { selectHLSProfile } from "@/core/source/hls/adapters/profiles/selector";
 import {
     HLSKeyReferenceKind,
     HLSMediaPlaylist,
     HLSPlaylistKind,
     HLSSegmentKind,
-} from "../../../../../../src/core/source/hls/playlist/parser";
-import { DownloadSourceHttpClient } from "../../../../../../src/core/source/types";
+} from "@/core/source/hls/playlist/parser";
+import { DownloadSourceHttpClient } from "@/core/source/types";
 import { createClearInitialization } from "../../../../../helpers/isobmff";
 
 describe("HLS profile selection", () => {

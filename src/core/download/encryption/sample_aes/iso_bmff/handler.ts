@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
 import * as fs from "fs";
-import { validateClearIsoBmffFragment, validateClearIsoBmffInitialization } from "../../../isobmff";
-import { DownloadEncryption, IsoBmffSampleAesEncryption } from "../../../source/types";
-import { DecryptionRequest, EncryptionHandler, FatalDecryptionError } from "../types";
+import { validateClearIsoBmffFragment, validateClearIsoBmffInitialization } from "@/core/isobmff";
+import { DownloadEncryption, IsoBmffSampleAesEncryption } from "@/core/source/types";
+import { DecryptionRequest, EncryptionHandler, FatalDecryptionError } from "@/core/download/encryption/types";
 import { Mp4DecryptRunner, SystemMp4DecryptRunner } from "./runner";
 
 const AES_128_KEY = /^[0-9a-fA-F]{32}$/;

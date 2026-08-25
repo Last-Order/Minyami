@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { KeyStore } from "../../../../src/core/download/infrastructure/key_store";
+import { KeyStore } from "@/core/download/infrastructure/key_store";
 
 describe("KeyStore", () => {
     test("registers individual and batched encryption keys", () => {

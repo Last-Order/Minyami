@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { mixedItemNamer } from "../../../../src/core/download/output/item_naming";
+import { mixedItemNamer } from "@/core/download/output/item_naming";
 
 describe("mixedItemNamer", () => {
     test("combines a sortable discovery id with the upstream basename", () => {

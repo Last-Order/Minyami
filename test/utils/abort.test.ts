@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, jest, test } from "@jest/globals";
-import { createTimedAbortScope } from "../../src/utils/abort";
+import { createTimedAbortScope } from "@/utils/abort";
 
 describe("createTimedAbortScope", () => {
     afterEach(() => {

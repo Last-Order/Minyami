@@ -1,5 +1,5 @@
 import * as path from "path";
-import { DownloadItem, DownloadTrackId, SourceBatch, SourceTrack } from "../../source/types";
+import { DownloadItem, DownloadTrackId, SourceBatch, SourceTrack } from "@/core/source/types";
 import { DownloadTask } from "../execution/task";
 import { mixedItemNamer } from "../output/item_naming";
 

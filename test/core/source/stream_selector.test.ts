@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, jest, test } from "@jest/globals";
 import prompts from "prompts";
-import { AudioTrack, StreamCatalog, VideoTrack } from "../../../src/core/source/stream_selection";
-import { selectDefaultStream, selectStreamInteractively } from "../../../src/core/source/stream_selector";
-import logger from "../../../src/utils/log";
+import { AudioTrack, StreamCatalog, VideoTrack } from "@/core/source/stream_selection";
+import { selectDefaultStream, selectStreamInteractively } from "@/core/source/stream_selector";
+import logger from "@/utils/log";
 
 jest.mock("prompts");
 

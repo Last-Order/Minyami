@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { createArchiveDownloader } from "../../src/core/archive";
-import { ChunkDownloadedInfo } from "../../src/core/download/controller";
+import { createArchiveDownloader } from "@/core/archive";
+import { ChunkDownloadedInfo } from "@/core/download/controller";
 import { withTempDirectory } from "../helpers/filesystem";
 import { masterVariantChunks, withMasterPlaylistServer, withMediaServer } from "../helpers/http";
 

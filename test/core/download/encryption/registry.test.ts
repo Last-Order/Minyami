@@ -1,6 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
-import { Aes128CbcHandler } from "../../../../src/core/download/encryption/aes_128_cbc";
-import { EncryptionHandlerRegistry } from "../../../../src/core/download/encryption/registry";
+import { Aes128CbcHandler } from "@/core/download/encryption/aes_128_cbc/handler";
+import { EncryptionHandlerRegistry } from "@/core/download/encryption/registry";
 
 describe("EncryptionHandlerRegistry", () => {
     test("returns the handler registered for a scheme", () => {

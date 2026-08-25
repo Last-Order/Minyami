@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
 import * as fs from "fs";
-import { parseLeadingId3Tags } from "../../../packed_audio";
-import { DownloadEncryption, PackedAacSampleAesEncryption } from "../../../source/types";
-import { decryptSampleAesAudio } from "../sample_aes/audio";
-import { DecryptionRequest, EncryptionHandler } from "../types";
+import { parseLeadingId3Tags } from "@/core/packed_audio";
+import { DownloadEncryption, PackedAacSampleAesEncryption } from "@/core/source/types";
+import { DecryptionRequest, EncryptionHandler } from "@/core/download/encryption/types";
+import { decryptSampleAesAudio } from "../shared/audio";
 
 const AES_128_KEY = /^[0-9a-fA-F]{32}$/;
 const AES_128_IV = /^[0-9a-fA-F]{1,32}$/;

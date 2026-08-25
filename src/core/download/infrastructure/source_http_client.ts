@@ -1,5 +1,5 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios";
-import { DownloadSourceHttpClient } from "../../source/types";
+import { DownloadSourceHttpClient } from "@/core/source/types";
 import { DownloadHttpClient } from "./http_client";
 
 /** Applies the configured source-attempt policy outside protocol implementations. */

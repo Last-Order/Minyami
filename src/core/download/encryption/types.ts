@@ -1,4 +1,4 @@
-import { DownloadEncryption } from "../../source/types";
+import { DownloadEncryption } from "@/core/source/types";
 
 export interface DecryptionRequest {
     readonly inputPath: string;

@@ -1,7 +1,7 @@
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { normalizeDownloaderConfig } from "../../../src/core/download/config";
-import { OutputSession } from "../../../src/core/download/output/output_session";
+import { normalizeDownloaderConfig } from "@/core/download/config";
+import { OutputSession } from "@/core/download/output/output_session";
 import { withTempDirectory } from "../../helpers/filesystem";
 
 describe("download configuration", () => {

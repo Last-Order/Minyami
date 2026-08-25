@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { hasAdtsHeader, parseLeadingId3Tags } from "../../src/core/packed_audio";
+import { hasAdtsHeader, parseLeadingId3Tags } from "@/core/packed_audio";
 
 describe("Packed Audio framing", () => {
     test("locates ADTS after multiple ID3v2 tags", () => {

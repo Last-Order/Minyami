@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, jest, test } from "@jest/globals";
-import FileConcentrator from "../../../../src/core/download/output/file_concentrator";
+import FileConcentrator from "@/core/download/output/file_concentrator";
 import { withTempDirectory } from "../../../helpers/filesystem";
 
 function createChunk(directory: string, filename: string, content: string): string {
