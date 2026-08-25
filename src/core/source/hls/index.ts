@@ -85,9 +85,6 @@ export class HLSSource implements DownloadSource {
         if (this.cancelled) {
             return;
         }
-        if (this.cursors.length === 0) {
-            throw new Error("HLS source has no prepared media-playlist cursors.");
-        }
 
         const discoveryAbort = new AbortController();
         const onAbort = () => discoveryAbort.abort();
@@ -120,10 +117,6 @@ export class HLSSource implements DownloadSource {
                 },
             ];
         }
-        if (loaded.variants.length === 0) {
-            throw new Error("Master playlist does not contain any stream options.");
-        }
-
         const plan = createHLSStreamCatalogPlan(loaded);
         const selection = await this.selectTracks(plan);
         throwIfAborted(signal);
@@ -134,10 +127,7 @@ export class HLSSource implements DownloadSource {
         logger.info(`Master playlist input detected. Selected ${selection.length} media track(s).`);
         logger.debug(`Selected tracks: ${selection.map((track) => track.id).join(", ")}`);
         return selection.map((track) => {
-            const mediaPlan = plan.mediaTracks.get(track);
-            if (!mediaPlan) {
-                throw new Error(`Missing HLS media plan for selected track ${track.id}.`);
-            }
+            const mediaPlan = plan.mediaTracks.get(track)!;
             return {
                 sourceTrackId: mediaPlan.sourceTrackId,
                 mediaTrack: track,

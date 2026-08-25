@@ -27,11 +27,7 @@ export class TaskScheduler<T, TResult = void> {
     private activeTasks = 0;
     private completion?: Promise<void>;
 
-    constructor(private readonly options: TaskSchedulerOptions<T, TResult>) {
-        if (options.concurrency < 1) {
-            throw new Error("Task scheduler concurrency must be at least 1.");
-        }
-    }
+    constructor(private readonly options: TaskSchedulerOptions<T, TResult>) {}
 
     add(tasks: T | T[]): void {
         if (this.closed) {

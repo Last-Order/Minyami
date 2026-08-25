@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import * as fs from "fs";
 import { parseLeadingId3Tags } from "../../../packed_audio";
-import { DownloadEncryption } from "../../../source/types";
+import { DownloadEncryption, PackedAacSampleAesEncryption } from "../../../source/types";
 import { decryptSampleAesAudio } from "../sample_aes/audio";
 import { DecryptionRequest, EncryptionHandler } from "../types";
 
@@ -18,7 +18,10 @@ export class PackedAacSampleAesHandler implements EncryptionHandler {
         return [encryption.keyId];
     }
 
-    validate(encryption: DownloadEncryption, keys: ReadonlyMap<string, string>): void {
+    validate(
+        encryption: DownloadEncryption,
+        keys: ReadonlyMap<string, string>
+    ): asserts encryption is PackedAacSampleAesEncryption {
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
         }
@@ -37,9 +40,6 @@ export class PackedAacSampleAesHandler implements EncryptionHandler {
     async decrypt(request: DecryptionRequest): Promise<void> {
         const { inputPath, outputPath, encryption, keys } = request;
         this.validate(encryption, keys);
-        if (encryption.scheme !== this.scheme) {
-            throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
-        }
         const key = keys.get(encryption.keyId)!;
         const temporaryOutputPath = `${outputPath}.t-${process.pid}-${randomUUID()}`;
 

@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import * as fs from "fs";
 import { validateClearIsoBmffFragment, validateClearIsoBmffInitialization } from "../../../isobmff";
-import { DownloadEncryption } from "../../../source/types";
+import { DownloadEncryption, IsoBmffSampleAesEncryption } from "../../../source/types";
 import { DecryptionRequest, EncryptionHandler, FatalDecryptionError } from "../types";
 import { Mp4DecryptRunner, SystemMp4DecryptRunner } from "./runner";
 
@@ -19,7 +19,10 @@ export class IsoBmffSampleAesHandler implements EncryptionHandler {
         return [...new Set(encryption.keys.map((key) => key.keyId))];
     }
 
-    validate(encryption: DownloadEncryption, keys: ReadonlyMap<string, string>): void {
+    validate(
+        encryption: DownloadEncryption,
+        keys: ReadonlyMap<string, string>
+    ): asserts encryption is IsoBmffSampleAesEncryption {
         this.requireDescriptor(encryption);
         if (encryption.keys.length === 0) {
             throw new Error("fMP4 SAMPLE-AES requires at least one decryption key.");
@@ -49,7 +52,6 @@ export class IsoBmffSampleAesHandler implements EncryptionHandler {
     async decrypt(request: DecryptionRequest): Promise<void> {
         const { inputPath, outputPath, encryption, keys, signal } = request;
         this.validate(encryption, keys);
-        this.requireDescriptor(encryption);
 
         const operationId = `${process.pid}-${randomUUID()}`;
         const temporaryOutputPath = `${outputPath}.t-${operationId}`;

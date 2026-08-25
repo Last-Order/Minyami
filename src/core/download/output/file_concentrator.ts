@@ -178,9 +178,6 @@ class FileConcentrator {
         if (!this.acceptingOutcomes) {
             throw new Error("Cannot add file concentration outcomes after finalization has started.");
         }
-        if (!Number.isSafeInteger(index) || index < 0) {
-            throw new Error(`Invalid file concentration task index: ${index}`);
-        }
         // Duplicate or already-consumed indices indicate a downloader lifecycle bug.
         if (index < this.nextIndex || this.pendingOutcomes.has(index)) {
             throw new Error(`File concentration outcome already recorded for task ${index}.`);
@@ -442,9 +439,6 @@ class FileConcentrator {
     }
 
     private async finalize(expectedTaskCount: number): Promise<void> {
-        if (!Number.isSafeInteger(expectedTaskCount) || expectedTaskCount < 0) {
-            throw new Error(`Invalid expected file concentration task count: ${expectedTaskCount}`);
-        }
         this.acceptingOutcomes = false;
         // Scheduler drain has ended, so this is the final chance to consume a ready prefix.
         this.scheduleDrain();

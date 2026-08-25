@@ -204,9 +204,6 @@ function validateProfileShape(
         // https://www.rfc-editor.org/rfc/rfc8216.html#section-3.3
         throw new Error("Every fMP4 HLS media segment must have an EXT-X-MAP initialization segment.");
     }
-    if (initializations.length === 0) {
-        throw new Error("Internal HLS profile selection error: expected an initialization segment.");
-    }
     return profileForKind(profile);
 }
 

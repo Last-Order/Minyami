@@ -357,25 +357,6 @@ describe("multi-track downloads", () => {
             batches: [{ trackId: "audio", items: [] }],
             message: "unknown track",
         },
-        {
-            name: "a total smaller than discovered items",
-            batches: [
-                {
-                    trackId: "main",
-                    items: [{ url: "https://example.com/one.ts", kind: "media" as const, duration: 1 }],
-                    totalItemCount: 0,
-                },
-            ],
-            message: "Invalid total item count",
-        },
-        {
-            name: "conflicting totals",
-            batches: [
-                { trackId: "main", items: [], totalItemCount: 1 },
-                { trackId: "main", items: [], totalItemCount: 2 },
-            ],
-            message: "Conflicting total item count",
-        },
     ])("rejects $name", async ({ batches, message }) => {
         await withTempDirectory("minyami-invalid-batch-", async (directory) => {
             const source: DownloadSource = {

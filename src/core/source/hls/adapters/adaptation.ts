@@ -29,11 +29,7 @@ export interface PreparedHLSAdaptation {
 }
 
 export async function prepareHLSAdaptation(options: HLSAdaptationOptions): Promise<PreparedHLSAdaptation> {
-    const matchingSiteAdapters = hlsSiteAdapters.filter((adapter) => adapter.matches(options));
-    if (matchingSiteAdapters.length > 1) {
-        throw new Error(`Expected at most one HLS site adapter, but found ${matchingSiteAdapters.length}.`);
-    }
-    const siteAdapter = matchingSiteAdapters[0];
+    const siteAdapter = hlsSiteAdapters.find((adapter) => adapter.matches(options));
     const sitePlan = siteAdapter ? await siteAdapter.prepare(options) : {};
     // The site is selected once, while its segment transform is reused for every refreshed snapshot.
     const adaptPlaylist = (playlist: HLSMediaPlaylist): HLSMediaPlaylist =>

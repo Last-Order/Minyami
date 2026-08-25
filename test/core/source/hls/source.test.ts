@@ -594,18 +594,8 @@ describe("HLSSource", () => {
         });
     });
 
-    test("rejects an empty master playlist and a selected nested master playlist", async () => {
+    test("rejects a selected nested master playlist", async () => {
         const loader = jest.spyOn(PlaylistLoader.prototype, "load");
-        loader.mockResolvedValueOnce({ kind: HLSPlaylistKind.Master, variants: [], audioRenditions: [] });
-
-        await withTempDirectory("minyami-empty-master-", async (directory) => {
-            const downloader = createDownloader(
-                createHLSSource("https://media.example/empty.m3u8", { mode: "snapshot" }),
-                { tempDir: directory }
-            );
-            await expect(downloader.download()).rejects.toThrow("Master playlist does not contain any stream options.");
-        });
-
         const variant = createVariant("https://media.example/nested.m3u8", 1000000);
         const master = { kind: HLSPlaylistKind.Master, variants: [variant], audioRenditions: [] } as const;
         loader.mockResolvedValueOnce(master).mockResolvedValueOnce(master);

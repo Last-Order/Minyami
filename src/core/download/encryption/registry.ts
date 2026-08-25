@@ -9,9 +9,6 @@ export class EncryptionHandlerRegistry {
 
     constructor(handlers: readonly EncryptionHandler[]) {
         for (const handler of handlers) {
-            if (this.handlers.has(handler.scheme)) {
-                throw new Error(`Duplicate encryption handler: ${handler.scheme}`);
-            }
             this.handlers.set(handler.scheme, handler);
         }
     }

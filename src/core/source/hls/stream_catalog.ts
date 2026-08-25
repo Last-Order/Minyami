@@ -7,7 +7,7 @@ import {
     VideoTrack,
 } from "../stream_selection";
 import { DownloadTrackId } from "../types";
-import { HLSAudioRendition, HLSMasterPlaylist, HLSParseError, HLSVariant } from "./playlist/models";
+import { HLSAudioRendition, HLSMasterPlaylist, HLSVariant } from "./playlist/models";
 
 export interface HLSMediaTrackPlan {
     readonly sourceTrackId: DownloadTrackId;
@@ -33,11 +33,7 @@ export function createHLSStreamCatalogPlan(master: HLSMasterPlaylist): HLSStream
 
         const optionTracks: MediaTrack[] = [primary];
         if (variant.audioGroupId) {
-            const renditions = groups.get(variant.audioGroupId);
-            if (!renditions?.length) {
-                throw new HLSParseError(`Missing audio renditions for group ${variant.audioGroupId}.`);
-            }
-            for (const rendition of renditions) {
+            for (const rendition of groups.get(variant.audioGroupId)!) {
                 // A URI-less rendition is already multiplexed into the primary resource,
                 // so it must not create a duplicate physical download track. The current
                 // design also assumes that a primary video carrying embedded audio will

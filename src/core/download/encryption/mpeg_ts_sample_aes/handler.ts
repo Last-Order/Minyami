@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { randomUUID } from "crypto";
-import { DownloadEncryption } from "../../../source/types";
+import { DownloadEncryption, MpegTsSampleAesEncryption } from "../../../source/types";
 import { DecryptionRequest, EncryptionHandler } from "../types";
 import { decryptMpegTsSampleAes } from "./transport_stream";
 
@@ -17,7 +17,10 @@ export class MpegTsSampleAesHandler implements EncryptionHandler {
         return [encryption.keyId];
     }
 
-    validate(encryption: DownloadEncryption, keys: ReadonlyMap<string, string>): void {
+    validate(
+        encryption: DownloadEncryption,
+        keys: ReadonlyMap<string, string>
+    ): asserts encryption is MpegTsSampleAesEncryption {
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
         }
@@ -36,9 +39,6 @@ export class MpegTsSampleAesHandler implements EncryptionHandler {
     async decrypt(request: DecryptionRequest): Promise<void> {
         const { inputPath, outputPath, encryption, keys } = request;
         this.validate(encryption, keys);
-        if (encryption.scheme !== this.scheme) {
-            throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
-        }
         const key = keys.get(encryption.keyId)!;
         const temporaryOutputPath = `${outputPath}.t-${process.pid}-${randomUUID()}`;
         try {

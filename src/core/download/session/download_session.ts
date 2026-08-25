@@ -433,9 +433,6 @@ export class DownloadSession {
     }
 
     private finishAborted(): void {
-        if (this.state.kind === "aborted") {
-            return;
-        }
         // Hard abort is terminal but deliberately distinct from a successfully finalized session.
         this.state = { kind: "aborted" };
         this.events.emit("finished");

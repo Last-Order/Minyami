@@ -47,9 +47,6 @@ export class DownloadManifest {
     }
 
     registerTracks(metadata: readonly SourceTrack[]): void {
-        if (this.tracks.size > 0) {
-            throw new Error("Download tracks have already been registered.");
-        }
         if (metadata.length === 0) {
             throw new Error("A prepared source must declare at least one track.");
         }
@@ -78,7 +75,6 @@ export class DownloadManifest {
     discover(batch: SourceBatch, validateItem: (item: DownloadItem) => void): readonly DownloadTask[] {
         const track = this.requireTrack(batch.trackId);
         const nextTaskIndex = track.nextTaskIndex + batch.items.length;
-        this.validateTrackTotal(batch.trackId, nextTaskIndex, track.declaredTotalItemCount, batch.totalItemCount);
 
         const firstTaskId = this.nextTaskId;
         const firstTrackIndex = track.nextTaskIndex;
@@ -111,14 +107,14 @@ export class DownloadManifest {
     }
 
     recordSuccessful(task: DownloadTask): void {
-        const track = this.requireTrack(task.trackId);
+        const track = this.tracks.get(task.trackId)!;
         track.successfulChunkCount++;
         // Initialization items affect task progress but have no playable duration.
         track.successfulDuration += task.item.kind === "media" ? task.item.duration : 0;
     }
 
     recordDropped(task: DownloadTask): void {
-        this.requireTrack(task.trackId).droppedChunkCount++;
+        this.tracks.get(task.trackId)!.droppedChunkCount++;
     }
 
     expectedTaskCounts(): ReadonlyMap<DownloadTrackId, number> {
@@ -127,7 +123,7 @@ export class DownloadManifest {
     }
 
     getTrack(trackId: DownloadTrackId): SourceTrack {
-        return this.requireTrack(trackId).metadata;
+        return this.tracks.get(trackId)!.metadata;
     }
 
     get snapshot(): DownloadManifestSnapshot {
@@ -190,27 +186,6 @@ export class DownloadManifest {
         return `${Math.floor(remainingSeconds / 3600)}h ${Math.floor((remainingSeconds % 3600) / 60)}m ${
             remainingSeconds % 60
         }s`;
-    }
-
-    private validateTrackTotal(
-        trackId: DownloadTrackId,
-        discoveredItemCount: number,
-        declaredTotalItemCount?: number,
-        batchTotalItemCount?: number
-    ): void {
-        // Once declared, a source total is an invariant; changing it would make progress and finalization disagree.
-        if (batchTotalItemCount !== undefined) {
-            if (!Number.isSafeInteger(batchTotalItemCount) || batchTotalItemCount < discoveredItemCount) {
-                throw new Error(`Invalid total item count for track ${trackId}: ${batchTotalItemCount}`);
-            }
-            if (declaredTotalItemCount !== undefined && declaredTotalItemCount !== batchTotalItemCount) {
-                throw new Error(`Conflicting total item count for track ${trackId}.`);
-            }
-            return;
-        }
-        if (declaredTotalItemCount !== undefined && discoveredItemCount > declaredTotalItemCount) {
-            throw new Error(`Track ${trackId} yielded more items than its declared total.`);
-        }
     }
 
     private validateFilename(trackId: DownloadTrackId, filename: string): void {

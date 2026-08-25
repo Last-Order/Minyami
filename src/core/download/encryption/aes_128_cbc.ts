@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as fs from "fs";
 import { pipeline } from "stream/promises";
-import { DownloadEncryption } from "../../source/types";
+import { Aes128CbcEncryption, DownloadEncryption } from "../../source/types";
 import { DecryptionRequest, EncryptionHandler } from "./types";
 
 const AES_128_KEY = /^[0-9a-fA-F]{32}$/;
@@ -17,7 +17,10 @@ export class Aes128CbcHandler implements EncryptionHandler {
         return [encryption.keyId];
     }
 
-    validate(encryption: DownloadEncryption, keys: ReadonlyMap<string, string>): void {
+    validate(
+        encryption: DownloadEncryption,
+        keys: ReadonlyMap<string, string>
+    ): asserts encryption is Aes128CbcEncryption {
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
         }
@@ -36,9 +39,6 @@ export class Aes128CbcHandler implements EncryptionHandler {
     async decrypt(request: DecryptionRequest): Promise<void> {
         const { inputPath, outputPath, encryption, keys } = request;
         this.validate(encryption, keys);
-        if (encryption.scheme !== this.scheme) {
-            throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
-        }
         const key = keys.get(encryption.keyId)!;
 
         const normalizedIv = encryption.iv.padStart(32, "0");

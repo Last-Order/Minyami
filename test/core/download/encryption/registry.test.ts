@@ -10,12 +10,6 @@ describe("EncryptionHandlerRegistry", () => {
         expect(registry.require("aes-128-cbc")).toBe(handler);
     });
 
-    test("rejects duplicate handlers", () => {
-        expect(() => new EncryptionHandlerRegistry([new Aes128CbcHandler(), new Aes128CbcHandler()])).toThrow(
-            "Duplicate encryption handler: aes-128-cbc"
-        );
-    });
-
     test("rejects an unsupported scheme", () => {
         const registry = new EncryptionHandlerRegistry([new Aes128CbcHandler()]);
 

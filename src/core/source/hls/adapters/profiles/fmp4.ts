@@ -113,23 +113,17 @@ function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
                 });
             }
             if (segment.encryption?.method === "SAMPLE-AES") {
-                if (!sampleAes) {
-                    throw new Error("Missing prepared fMP4 SAMPLE-AES initialization context.");
-                }
                 return toDownloadItem(segment, {
                     scheme: "iso-bmff-sample-aes",
                     operation: "fragment",
-                    keys: sampleAes.keys,
-                    fragmentsInfoBase64: sampleAes.fragmentsInfoBase64,
+                    keys: sampleAes!.keys,
+                    fragmentsInfoBase64: sampleAes!.fragmentsInfoBase64,
                 });
             }
             if (!segment.encryption) {
                 return toDownloadItem(segment);
             }
             const iv = segment.encryption.iv;
-            if (segment.kind === HLSSegmentKind.Initialization && !iv) {
-                throw new Error("An explicit IV is required for an AES-128 encrypted initialization segment.");
-            }
             return toDownloadItem(segment, {
                 scheme: "aes-128-cbc",
                 keyId: segment.encryption.key.id,

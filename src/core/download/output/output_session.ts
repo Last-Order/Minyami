@@ -41,8 +41,6 @@ export class OutputSession {
     readonly outputBasePath: string;
 
     private readonly tracks = new Map<DownloadTrackId, OutputTrack>();
-    private tracksConfigured = false;
-    private sourceContainer?: MediaContainer;
     private muxedOutputPath?: string;
 
     constructor(readonly config: OutputSessionConfig) {
@@ -57,15 +55,11 @@ export class OutputSession {
     }
 
     configureTracks(metadata: readonly SourceTrack[], container: MediaContainer): void {
-        if (this.tracksConfigured) {
-            throw new Error("Download output tracks have already been configured.");
-        }
-        this.tracksConfigured = true;
-        this.sourceContainer = container;
-
         for (const track of metadata) {
             const trackTempPath = path.resolve(this.tempPath, track.id);
-            const plannedOutputPath = getAvailableOutputPath(this.createTrackOutputPath(track, metadata.length));
+            const plannedOutputPath = getAvailableOutputPath(
+                this.createTrackOutputPath(track, metadata.length, container)
+            );
             this.tracks.set(track.id, {
                 metadata: track,
                 tempPath: trackTempPath,
@@ -86,11 +80,11 @@ export class OutputSession {
     }
 
     getTrackTempPath(trackId: DownloadTrackId): string {
-        return this.requireTrack(trackId).tempPath;
+        return this.getTrack(trackId).tempPath;
     }
 
     markTaskReady(task: DownloadTask, outputPath: string): void {
-        this.requireTrack(task.trackId).writer?.markTaskReady({
+        this.getTrack(task.trackId).writer?.markTaskReady({
             filePath: outputPath,
             index: task.trackIndex,
             output: task.item.output,
@@ -98,28 +92,17 @@ export class OutputSession {
     }
 
     markTaskDropped(task: DownloadTask): void {
-        this.requireTrack(task.trackId).writer?.markTaskDropped(task.trackIndex);
+        this.getTrack(task.trackId).writer?.markTaskDropped(task.trackIndex);
     }
 
     async finalize(expectedTaskCounts: ReadonlyMap<DownloadTrackId, number>): Promise<readonly TrackArtifact[]> {
-        if (this.config.noMerge) {
-            return [];
-        }
-
         const errors: unknown[] = [];
         // Settle every track before reporting failure so no writer is left running behind a rejected session.
         await Promise.all(
             [...this.tracks.values()].map(async (track) => {
                 try {
-                    if (!track.writer) {
-                        throw new Error(`Missing ordered output writer for track ${track.metadata.id}.`);
-                    }
-                    const expectedTaskCount = expectedTaskCounts.get(track.metadata.id);
-                    if (expectedTaskCount === undefined) {
-                        throw new Error(`Missing expected task count for track ${track.metadata.id}.`);
-                    }
-                    await track.writer.waitAllFilesWritten(expectedTaskCount);
-                    track.outputPaths = track.writer.getOutputFilePaths();
+                    await track.writer!.waitAllFilesWritten(expectedTaskCounts.get(track.metadata.id)!);
+                    track.outputPaths = track.writer!.getOutputFilePaths();
                 } catch (error) {
                     errors.push(error);
                 }
@@ -181,13 +164,10 @@ export class OutputSession {
         }
     }
 
-    private createTrackOutputPath(track: SourceTrack, trackCount: number): string {
-        if (!this.sourceContainer) {
-            throw new Error("Download source container has not been configured.");
-        }
+    private createTrackOutputPath(track: SourceTrack, trackCount: number, sourceContainer: MediaContainer): string {
         return createContainerOutputPath(
             this.outputBasePath,
-            track.container ?? this.sourceContainer,
+            track.container ?? sourceContainer,
             trackCount === 1 ? undefined : track.id
         );
     }
@@ -237,7 +217,7 @@ export class OutputSession {
         for (const input of inputs) {
             try {
                 await fs.promises.unlink(input.inputPath);
-                const track = this.requireTrack(input.trackId);
+                const track = this.getTrack(input.trackId);
                 // Snapshots expose only paths that still exist after successful mux cleanup.
                 track.outputPaths = track.outputPaths.filter((outputPath) => outputPath !== input.inputPath);
             } catch {
@@ -247,12 +227,8 @@ export class OutputSession {
         }
     }
 
-    private requireTrack(trackId: DownloadTrackId): OutputTrack {
-        const track = this.tracks.get(trackId);
-        if (!track) {
-            throw new Error(`Unknown output track: ${trackId}`);
-        }
-        return track;
+    private getTrack(trackId: DownloadTrackId): OutputTrack {
+        return this.tracks.get(trackId)!;
     }
 
     private validateTemporaryBasePath(): void {

@@ -90,9 +90,6 @@ export function toSingleFileDownloadItem(
         });
     }
     const iv = segment.encryption.iv;
-    if (segment.kind === HLSSegmentKind.Initialization && !iv) {
-        throw new Error("An explicit IV is required for an encrypted initialization segment.");
-    }
     return toDownloadItem(segment, {
         scheme: "aes-128-cbc",
         keyId: segment.encryption.key.id,

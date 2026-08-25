@@ -39,9 +39,8 @@ export class HLSMediaPlaylistCursor {
     /** Initialization context most recently published for newly discovered media. */
     private activeInitializationId?: string;
     private playlist: HLSMediaPlaylist;
-    private adaptationPlan?: HLSAdaptationPlan;
+    private adaptationPlan!: HLSAdaptationPlan;
     private timeout = 60000;
-    private prepared = false;
     private discoveredItemCount = 0;
 
     constructor(private readonly options: HLSMediaPlaylistCursorOptions) {
@@ -49,9 +48,6 @@ export class HLSMediaPlaylistCursor {
     }
 
     async prepare(context: DownloadSourceContext, signal: AbortSignal): Promise<PreparedHLSMediaTrack> {
-        if (this.prepared) {
-            throw new Error(`HLS media-playlist cursor ${this.options.id} has already been prepared.`);
-        }
         throwIfAborted(signal);
         if (this.continuous) {
             this.updateFollowTimeouts();
@@ -67,7 +63,6 @@ export class HLSMediaPlaylistCursor {
         this.adaptationPlan = adaptation.plan;
         // Items may execute as soon as discovery yields, so known keys must be ready first.
         await this.adaptationPlan.ensureKeys(this.playlist, context, signal);
-        this.prepared = true;
 
         return {
             container: this.adaptationPlan.container,
@@ -83,13 +78,6 @@ export class HLSMediaPlaylistCursor {
     }
 
     async *discover(context: DownloadSourceContext, signal: AbortSignal): AsyncIterable<SourceBatch> {
-        if (!this.prepared) {
-            throw new Error(`HLS media-playlist cursor ${this.options.id} must be prepared before discovery.`);
-        }
-        if (!this.adaptationPlan) {
-            throw new Error(`HLS media-playlist cursor ${this.options.id} has no adaptation plan.`);
-        }
-
         if (!this.continuous) {
             // Snapshot cursors know their final per-track total and yield once even when empty.
             const items = sliceItems(this.toItems(this.playlist.segments), this.options.slice);
@@ -209,11 +197,7 @@ export class HLSMediaPlaylistCursor {
     }
 
     private toItems(segments: readonly HLSSegment[]): DownloadItem[] {
-        const plan = this.adaptationPlan;
-        if (!plan) {
-            throw new Error(`HLS media-playlist cursor ${this.options.id} has no adaptation plan.`);
-        }
-        return segments.map((segment) => plan.toDownloadItem(segment));
+        return segments.map((segment) => this.adaptationPlan.toDownloadItem(segment));
     }
 }
 
