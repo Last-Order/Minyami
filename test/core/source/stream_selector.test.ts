@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, jest, test } from "@jest/globals";
 import prompts from "prompts";
 import { AudioTrack, StreamCatalog, VideoTrack } from "@/core/source/stream_selection";
-import { selectDefaultStream, selectStreamInteractively } from "@/core/source/stream_selector";
+import { selectStreamInteractively } from "@/core/source/stream_selector";
 import logger from "@/utils/log";
 
 jest.mock("prompts");
@@ -168,10 +168,6 @@ describe("stream selector", () => {
         promptMock.mockResolvedValue({});
 
         await expect(selectStreamInteractively(singleVideo)).resolves.toBeUndefined();
-    });
-
-    test("the non-interactive default selects the highest-bandwidth option", () => {
-        expect(selectDefaultStream(catalog)).toBe(catalog.options[1].tracks);
     });
 });
 

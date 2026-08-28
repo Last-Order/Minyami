@@ -351,13 +351,7 @@ describe("multi-track downloads", () => {
         });
     });
 
-    test.each([
-        {
-            name: "an unknown track batch",
-            batches: [{ trackId: "audio", items: [] }],
-            message: "unknown track",
-        },
-    ])("rejects $name", async ({ batches, message }) => {
+    test("rejects a batch for an unknown track", async () => {
         await withTempDirectory("minyami-invalid-batch-", async (directory) => {
             const source: DownloadSource = {
                 sourcePath: "custom://invalid-batch",
@@ -366,14 +360,12 @@ describe("multi-track downloads", () => {
                     return { container: MPEG_TS_CONTAINER, tracks: [createTrack("main")] };
                 },
                 async *discover() {
-                    for (const batch of batches) {
-                        yield batch;
-                    }
+                    yield { trackId: "audio", items: [] };
                 },
             };
 
             await expect(createDownloader(source, { noMerge: true, tempDir: directory }).download()).rejects.toThrow(
-                message
+                "unknown track"
             );
         });
     });

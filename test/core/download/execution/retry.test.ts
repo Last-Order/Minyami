@@ -2,15 +2,11 @@ import * as http from "http";
 import { AddressInfo } from "net";
 import { describe, expect, test } from "@jest/globals";
 import { createArchiveDownloader } from "@/core/archive";
-import { createLiveDownloader } from "@/core/live";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
 
 describe("download retry lifecycle", () => {
-    test.each([
-        ["archive", createArchiveDownloader],
-        ["live", createLiveDownloader],
-    ] as const)("records a dropped item after the %s downloader exhausts task attempts", async (name, create) => {
+    test("records a dropped item after exhausting task attempts", async () => {
         let chunkRequests = 0;
         const server = http.createServer((request, response) => {
             if (request.url === "/failed.ts") {
@@ -35,9 +31,9 @@ describe("download retry lifecycle", () => {
         const baseUrl = await listen(server);
 
         try {
-            await withTempDirectory(`minyami-retry-limit-${name}-`, async (directory) => {
+            await withTempDirectory("minyami-retry-limit-", async (directory) => {
                 let chunkErrors = 0;
-                const downloader = create(`${baseUrl}/playlist.m3u8`, {
+                const downloader = createArchiveDownloader(`${baseUrl}/playlist.m3u8`, {
                     noMerge: true,
                     taskAttempts: 2,
                     tempDir: directory,

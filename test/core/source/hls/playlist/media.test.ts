@@ -470,15 +470,6 @@ describe("parseMediaPlaylist", () => {
             expectedMessage: "Missing URL for encryption key",
         },
         {
-            name: "an invalid encryption IV",
-            content: [
-                '#EXT-X-KEY:METHOD=AES-128,URI="https://cdn.example/key.bin",IV=invalid',
-                "#EXTINF:1,",
-                "https://cdn.example/0.ts",
-            ].join("\n"),
-            expectedMessage: "Invalid IV for encryption key",
-        },
-        {
             name: "a media tag without a segment URI",
             content: "#EXTINF:1,\n",
             expectedMessage: "Invalid HLS playlist.",

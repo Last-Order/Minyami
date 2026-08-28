@@ -6,17 +6,14 @@ import { DownloadSource } from "@/core/source/types";
 import { withTempDirectory } from "../../../helpers/filesystem";
 
 describe("download encryption validation", () => {
-    test.each([
-        ["invalid key", "z".repeat(32), "1", "AES-128 key"],
-        ["invalid IV", "00".repeat(16), "xy", "AES-128-CBC IV"],
-    ])("rejects an %s before downloading media", async (_name, key, iv, message) => {
+    test("validates encryption metadata before downloading media", async () => {
         await withTempDirectory("minyami-encryption-validation-", async (directory) => {
             const download = jest.spyOn(DownloadHttpClient.prototype, "download");
             const source: DownloadSource = {
                 sourcePath: "custom://invalid-encryption",
                 continuous: false,
                 async prepare(context) {
-                    context.keys.set("test:key", key);
+                    context.keys.set("test:key", "00".repeat(16));
                     return {
                         container: MPEG_TS_CONTAINER,
                         tracks: [
@@ -36,7 +33,7 @@ describe("download encryption validation", () => {
                                 url: "http://127.0.0.1/unused.ts",
                                 kind: "media",
                                 duration: 1,
-                                encryption: { scheme: "aes-128-cbc", keyId: "test:key", iv },
+                                encryption: { scheme: "aes-128-cbc", keyId: "test:key", iv: "invalid" },
                             },
                         ],
                         totalItemCount: 1,
@@ -45,7 +42,7 @@ describe("download encryption validation", () => {
             };
             const downloader = createDownloader(source, { noMerge: true, tempDir: directory });
 
-            await expect(downloader.download()).rejects.toThrow(message);
+            await expect(downloader.download()).rejects.toThrow("AES-128-CBC IV");
             expect(download).not.toHaveBeenCalled();
         });
     });

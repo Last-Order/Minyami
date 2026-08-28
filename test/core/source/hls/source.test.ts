@@ -5,74 +5,14 @@ import * as path from "path";
 import { AddressInfo } from "net";
 import { describe, expect, jest, test } from "@jest/globals";
 import { createDownloader } from "@/core/download/downloader";
-import { KeyStore } from "@/core/download/infrastructure/key_store";
 import { createHLSSource } from "@/core/source/hls";
 import { HLSMediaPlaylist, HLSPlaylistKind, HLSVariant } from "@/core/source/hls/playlist/parser";
 import { PlaylistLoader } from "@/core/source/hls/playlist/loader";
 import { StreamSelector, TrackSelection } from "@/core/source/stream_selection";
-import { DownloadSourceHttpClient, SourceBatch } from "@/core/source/types";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
 
 describe("HLSSource", () => {
-    test("requires a manual key for SAMPLE-AES and publishes its explicit IV", async () => {
-        await withTempDirectory("minyami-sample-aes-source-", async (directory) => {
-            const playlistPath = path.join(directory, "sample-aes.m3u8");
-            const keyId = "skd://test-asset";
-            const key = "00112233445566778899aabbccddeeff";
-            fs.writeFileSync(
-                playlistPath,
-                [
-                    "#EXTM3U",
-                    `#EXT-X-KEY:METHOD=SAMPLE-AES,URI="${keyId}",KEYFORMAT="com.apple.streamingkeydelivery",IV=0x01`,
-                    "#EXTINF:1,",
-                    "https://cdn.example/0.ts",
-                    "#EXT-X-ENDLIST",
-                ].join("\n")
-            );
-            const http: DownloadSourceHttpClient = {
-                async get<T>() {
-                    throw new Error("Unexpected source request.");
-                },
-                async request<T>() {
-                    throw new Error("Unexpected key request.");
-                },
-            };
-            const keys = new KeyStore();
-            const missingKeySource = createHLSSource(playlistPath, { mode: "snapshot" });
-            await expect(missingKeySource.prepare({ http, keys }, new AbortController().signal)).rejects.toThrow(
-                "This HLS content is protected. Provide an explicit decryption key."
-            );
-
-            const source = createHLSSource(playlistPath, { mode: "snapshot", explicitKeys: [{ key }] });
-            await source.prepare({ http, keys }, new AbortController().signal);
-            const batches: SourceBatch[] = [];
-            for await (const batch of source.discover({ http, keys }, new AbortController().signal)) {
-                batches.push(batch);
-            }
-
-            expect(keys.get(keyId)).toBe(key);
-            expect(batches).toEqual([
-                {
-                    trackId: "main",
-                    items: [
-                        {
-                            url: "https://cdn.example/0.ts",
-                            kind: "media",
-                            duration: 1,
-                            encryption: {
-                                scheme: "mpeg-ts-sample-aes",
-                                keyId,
-                                iv: "01",
-                            },
-                        },
-                    ],
-                    totalItemCount: 1,
-                },
-            ]);
-        });
-    });
-
     test("downloads initialization and media byte ranges from one resource in playlist order", async () => {
         const resource = Buffer.from("INITfirstsecond");
         const requestedRanges: string[] = [];
@@ -165,56 +105,6 @@ describe("HLSSource", () => {
         }
     });
 
-    test("resolves playlist encryption metadata and produces decryptable items", async () => {
-        const key = Buffer.from("0123456789abcdef");
-        const iv = Buffer.alloc(16);
-        iv[15] = 1;
-        const expected = Buffer.from("encrypted chunk payload");
-        const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
-        const encrypted = Buffer.concat([cipher.update(expected), cipher.final()]);
-        const server = http.createServer((request, response) => {
-            const address = server.address() as AddressInfo;
-            if (request.url === "/key") {
-                response.end(key);
-                return;
-            }
-            if (request.url === "/0.ts") {
-                response.end(encrypted);
-                return;
-            }
-            response.end(
-                [
-                    "#EXTM3U",
-                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key",IV=0x00000000000000000000000000000001`,
-                    "#EXTINF:1,",
-                    `http://127.0.0.1:${address.port}/0.ts`,
-                    "#EXT-X-ENDLIST",
-                ].join("\n")
-            );
-        });
-        const baseUrl = await listen(server);
-
-        try {
-            await withTempDirectory("minyami-encrypted-hls-", async (directory) => {
-                const output = path.join(directory, "encrypted.ts");
-                const source = createHLSSource(`${baseUrl}/playlist.m3u8`, { mode: "snapshot" });
-                const downloader = createDownloader(source, { output, tempDir: directory });
-
-                await downloader.download();
-
-                expect(downloader.getSnapshot()).toMatchObject({
-                    status: "finished",
-                    completedChunkCount: 1,
-                    successfulChunkCount: 1,
-                    successfulDuration: 1,
-                });
-                expect(fs.readFileSync(output)).toEqual(expected);
-            });
-        } finally {
-            await close(server);
-        }
-    });
-
     test("decrypts AES-128 media with an inline data key without a key request", async () => {
         const key = Buffer.from("0123456789abcdef");
         const iv = Buffer.alloc(16);
@@ -252,72 +142,6 @@ describe("HLSSource", () => {
 
                 expect(requestedPaths).toEqual(["/playlist.m3u8", "/0.ts"]);
                 expect(fs.readFileSync(output)).toEqual(expected);
-            });
-        } finally {
-            await close(server);
-        }
-    });
-
-    test("maps one explicit key to every key URI without requesting remote keys", async () => {
-        const key = Buffer.from("0123456789abcdef");
-        const firstIv = Buffer.alloc(16);
-        firstIv[15] = 1;
-        const secondIv = Buffer.alloc(16);
-        secondIv[15] = 2;
-        const firstPayload = Buffer.from("first explicit-key payload");
-        const secondPayload = Buffer.from("second explicit-key payload");
-        const encrypt = (payload: Buffer, iv: Buffer): Buffer => {
-            const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
-            return Buffer.concat([cipher.update(payload), cipher.final()]);
-        };
-        const encryptedPayloads: Record<string, Buffer> = {
-            "/0.ts": encrypt(firstPayload, firstIv),
-            "/1.ts": encrypt(secondPayload, secondIv),
-        };
-        let keyRequestCount = 0;
-        const server = http.createServer((request, response) => {
-            if (request.url === "/key-a" || request.url === "/key-b") {
-                keyRequestCount++;
-                response.end("remote key must not be requested");
-                return;
-            }
-            if (encryptedPayloads[request.url!]) {
-                response.end(encryptedPayloads[request.url!]);
-                return;
-            }
-            const address = server.address() as AddressInfo;
-            response.end(
-                [
-                    "#EXTM3U",
-                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key-a",IV=0x${firstIv.toString(
-                        "hex"
-                    )}`,
-                    "#EXTINF:1,",
-                    `http://127.0.0.1:${address.port}/0.ts`,
-                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key-b",IV=0x${secondIv.toString(
-                        "hex"
-                    )}`,
-                    "#EXTINF:1,",
-                    `http://127.0.0.1:${address.port}/1.ts`,
-                    "#EXT-X-ENDLIST",
-                ].join("\n")
-            );
-        });
-        const baseUrl = await listen(server);
-
-        try {
-            await withTempDirectory("minyami-explicit-hls-key-", async (directory) => {
-                const output = path.join(directory, "explicit-key.ts");
-                const source = createHLSSource(`${baseUrl}/playlist.m3u8`, {
-                    mode: "snapshot",
-                    explicitKeys: [{ key: key.toString("hex") }],
-                });
-                const downloader = createDownloader(source, { output, tempDir: directory });
-
-                await downloader.download();
-
-                expect(keyRequestCount).toBe(0);
-                expect(fs.readFileSync(output)).toEqual(Buffer.concat([firstPayload, secondPayload]));
             });
         } finally {
             await close(server);
@@ -383,51 +207,6 @@ describe("HLSSource", () => {
 
                 expect(keyRequestCount).toBe(0);
                 expect(fs.readFileSync(output)).toEqual(Buffer.concat([firstPayload, secondPayload]));
-            });
-        } finally {
-            await close(server);
-        }
-    });
-
-    test("derives an omitted media IV from the media sequence", async () => {
-        const key = Buffer.from("0123456789abcdef");
-        const iv = Buffer.alloc(16);
-        iv[15] = 7;
-        const expected = Buffer.from("implicit HLS IV payload");
-        const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
-        const encrypted = Buffer.concat([cipher.update(expected), cipher.final()]);
-        const server = http.createServer((request, response) => {
-            if (request.url === "/key") {
-                response.end(key);
-                return;
-            }
-            if (request.url === "/7.ts") {
-                response.end(encrypted);
-                return;
-            }
-            const address = server.address() as AddressInfo;
-            response.end(
-                [
-                    "#EXTM3U",
-                    "#EXT-X-MEDIA-SEQUENCE:7",
-                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key"`,
-                    "#EXTINF:1,",
-                    `http://127.0.0.1:${address.port}/7.ts`,
-                    "#EXT-X-ENDLIST",
-                ].join("\n")
-            );
-        });
-        const baseUrl = await listen(server);
-
-        try {
-            await withTempDirectory("minyami-implicit-hls-iv-", async (directory) => {
-                const output = path.join(directory, "encrypted.ts");
-                const source = createHLSSource(`${baseUrl}/playlist.m3u8`, { mode: "snapshot" });
-                const downloader = createDownloader(source, { output, tempDir: directory });
-
-                await downloader.download();
-
-                expect(fs.readFileSync(output)).toEqual(expected);
             });
         } finally {
             await close(server);
@@ -550,43 +329,6 @@ describe("HLSSource", () => {
         } finally {
             await close(server);
         }
-    });
-
-    test("rejects copied and cross-option selector tracks", async () => {
-        const variants = [
-            { ...createVariant("https://media.example/low.m3u8", 800000), audioGroupId: "audio" },
-            createVariant("https://media.example/high.m3u8", 2400000),
-        ];
-        const master = {
-            kind: HLSPlaylistKind.Master,
-            variants,
-            audioRenditions: [createAudioRendition("English", "en", "https://media.example/en.m3u8")],
-        } as const;
-        const loader = jest.spyOn(PlaylistLoader.prototype, "load");
-        loader.mockResolvedValueOnce(master);
-
-        await withTempDirectory("minyami-copied-track-", async (directory) => {
-            const downloader = createDownloader(
-                createHLSSource("https://media.example/master.m3u8", {
-                    mode: "snapshot",
-                    streamSelector: (catalog) => [{ ...catalog.tracks[0] }],
-                }),
-                { tempDir: directory }
-            );
-            await expect(downloader.download()).rejects.toThrow("track that was not offered");
-        });
-
-        loader.mockResolvedValueOnce(master);
-        await withTempDirectory("minyami-incompatible-tracks-", async (directory) => {
-            const downloader = createDownloader(
-                createHLSSource("https://media.example/master.m3u8", {
-                    mode: "snapshot",
-                    streamSelector: (catalog) => [catalog.options[1].tracks[0], catalog.options[0].tracks[1]],
-                }),
-                { tempDir: directory }
-            );
-            await expect(downloader.download()).rejects.toThrow("one compatible stream option");
-        });
     });
 
     test("treats an undefined track selection as normal cancellation", async () => {

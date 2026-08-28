@@ -29,10 +29,10 @@ describe("DownloadManifest", () => {
         manifest.recordDropped(tasks[2]);
         jest.spyOn(Date, "now").mockReturnValue(5_000);
 
-        expect(tasks.map((task) => ({ id: task.id, trackIndex: task.trackIndex }))).toEqual([
-            { id: 0, trackIndex: 0 },
-            { id: 1, trackIndex: 1 },
-            { id: 2, trackIndex: 2 },
+        expect(tasks.map(({ id, trackIndex, filename }) => ({ id, trackIndex, filename }))).toEqual([
+            { id: 0, trackIndex: 0, filename: "000000_init.mp4" },
+            { id: 1, trackIndex: 1, filename: "000001_segment.m4s" },
+            { id: 2, trackIndex: 2, filename: "000002_dropped.ts" },
         ]);
         expect(manifest.snapshot).toMatchObject({
             startedAt: 1_000,

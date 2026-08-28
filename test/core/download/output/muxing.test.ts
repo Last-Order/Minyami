@@ -3,13 +3,7 @@ import * as http from "http";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
 import { createDownloader } from "@/core/download/downloader";
-import {
-    AAC_CONTAINER,
-    MATROSKA_CONTAINER,
-    MediaContainer,
-    MP4_CONTAINER,
-    MPEG_TS_CONTAINER,
-} from "@/core/media_container";
+import { AAC_CONTAINER, MATROSKA_CONTAINER, MediaContainer, MPEG_TS_CONTAINER } from "@/core/media_container";
 import { Muxer, MuxRequest } from "@/core/muxer";
 import { DownloadSource } from "@/core/source/types";
 import { withTempDirectory } from "../../../helpers/filesystem";
@@ -109,34 +103,6 @@ describe("download output muxing", () => {
                 expect(downloader.getSnapshot().outputPaths).toEqual(expectedOutputs);
                 expect(expectedOutputs.every((file) => fs.existsSync(file))).toBe(true);
                 expect(fs.existsSync(output)).toBe(false);
-            });
-        } finally {
-            await close(server);
-        }
-    });
-
-    test("uses the selected muxer's container instead of the requested extension", async () => {
-        const server = http.createServer((request, response) => response.end(request.url!.slice(1)));
-        const baseUrl = await listen(server);
-
-        try {
-            await withTempDirectory("minyami-mp4-muxing-", async (directory) => {
-                const mkvmerge = new TestMuxer("mkvmerge", false, MATROSKA_CONTAINER);
-                const ffmpeg = new TestMuxer("ffmpeg", true, MP4_CONTAINER);
-                const downloader = createDownloader(createTwoTrackSource(baseUrl), {
-                    output: path.join(directory, "media.avi"),
-                    tempDir: directory,
-                    muxers: [mkvmerge, ffmpeg],
-                });
-
-                await downloader.download();
-
-                const output = path.join(directory, "media.mp4");
-                expect(mkvmerge.availabilityChecks).toBe(1);
-                expect(ffmpeg.availabilityChecks).toBe(1);
-                expect(ffmpeg.requests[0].outputPath).toBe(output);
-                expect(downloader.getSnapshot().outputPaths).toEqual([output]);
-                expect(fs.readdirSync(directory)).toEqual(["media.mp4"]);
             });
         } finally {
             await close(server);

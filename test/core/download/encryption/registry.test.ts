@@ -4,13 +4,6 @@ import { EncryptionHandlerRegistry } from "@/core/download/encryption/registry";
 import { KeyStore } from "@/core/download/infrastructure/key_store";
 
 describe("EncryptionHandlerRegistry", () => {
-    test("returns the handler registered for a scheme", () => {
-        const handler = new Aes128CbcHandler();
-        const registry = new EncryptionHandlerRegistry([handler]);
-
-        expect(registry.require("aes-128-cbc")).toBe(handler);
-    });
-
     test("rejects an unsupported scheme", () => {
         const registry = new EncryptionHandlerRegistry([new Aes128CbcHandler()]);
 

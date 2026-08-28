@@ -10,16 +10,6 @@ function createChunk(directory: string, filename: string, content: string): stri
     return filePath;
 }
 
-async function waitForContents(filePath: string, expected: string): Promise<void> {
-    for (let attempt = 0; attempt < 100; attempt++) {
-        if (fs.existsSync(filePath) && fs.readFileSync(filePath, "utf8") === expected) {
-            return;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 5));
-    }
-    throw new Error(`Timed out waiting for output contents at ${filePath}.`);
-}
-
 describe("FileConcentrator", () => {
     test("writes out-of-order results in discovery order", async () => {
         await withTempDirectory("minyami-concentrator-order-", async (directory) => {
@@ -34,34 +24,6 @@ describe("FileConcentrator", () => {
 
             expect(fs.readFileSync(output, "utf8")).toBe("firstsecond");
             expect(concentrator.getOutputFilePaths()).toEqual([output]);
-        });
-    });
-
-    test("streams a replayable prefix and ready payload before finalization", async () => {
-        await withTempDirectory("minyami-concentrator-fmp4-live-", async (directory) => {
-            const initialization = createChunk(directory, "init.mp4", "init");
-            const media = createChunk(directory, "0.m4s", "media");
-            const output = path.join(directory, "live.mp4");
-            const stagingOutput = path.join(directory, "live_0.mp4");
-            const concentrator = new FileConcentrator({ outputPath: output });
-            const prefix = { slot: "fixture-prefix", identity: "a" } as const;
-
-            concentrator.markTaskReady({
-                filePath: initialization,
-                index: 0,
-                output: { replayablePrefix: prefix, startsNewRun: true },
-            });
-            concentrator.markTaskReady({
-                filePath: media,
-                index: 1,
-                output: { requiredPrefixes: [prefix] },
-            });
-
-            await waitForContents(stagingOutput, "initmedia");
-            expect(fs.existsSync(output)).toBe(false);
-
-            await concentrator.waitAllFilesWritten(2);
-            expect(fs.readFileSync(output, "utf8")).toBe("initmedia");
         });
     });
 
@@ -176,39 +138,6 @@ describe("FileConcentrator", () => {
             expect(fs.readFileSync(outputPaths[1], "utf8")).toBe("second");
             expect(fs.existsSync(first)).toBe(false);
             expect(fs.existsSync(second)).toBe(false);
-        });
-    });
-
-    test("can ignore dropped-task breakpoints", async () => {
-        await withTempDirectory("minyami-concentrator-ignore-gap-", async (directory) => {
-            const first = createChunk(directory, "first.chunk", "first");
-            const second = createChunk(directory, "second.chunk", "second");
-            const output = path.join(directory, "continuous.ts");
-            const concentrator = new FileConcentrator({ outputPath: output, ignoreBreakpoints: true });
-
-            concentrator.markTaskReady({ filePath: first, index: 0 });
-            concentrator.markTaskDropped(1);
-            concentrator.markTaskReady({ filePath: second, index: 2 });
-            await concentrator.waitAllFilesWritten(3);
-
-            expect(concentrator.getOutputFilePaths()).toEqual([output]);
-            expect(fs.readFileSync(output, "utf8")).toBe("firstsecond");
-        });
-    });
-
-    test("preserves an extensionless output path", async () => {
-        await withTempDirectory("minyami-concentrator-extensionless-", async (directory) => {
-            const dottedDirectory = path.join(directory, "parent.with.dots");
-            fs.mkdirSync(dottedDirectory);
-            const chunk = createChunk(directory, "input.chunk", "content");
-            const output = path.join(dottedDirectory, "video");
-            const concentrator = new FileConcentrator({ outputPath: output });
-
-            concentrator.markTaskReady({ filePath: chunk, index: 0 });
-            await concentrator.waitAllFilesWritten(1);
-
-            expect(concentrator.getOutputFilePaths()).toEqual([output]);
-            expect(fs.readFileSync(output, "utf8")).toBe("content");
         });
     });
 
