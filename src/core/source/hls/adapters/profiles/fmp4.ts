@@ -1,13 +1,12 @@
-import logger from "@/utils/log";
 import { getAbortSignal } from "@/utils/abort";
 import { readIsoBmffDecryptionTrackIds } from "@/core/isobmff";
 import { MP4_CONTAINER } from "@/core/media_container";
 import { DownloadSourceContext, IsoBmffSampleAesKey } from "@/core/source/types";
 import { HLSExplicitKey } from "@/core/source/hls/explicit_key";
+import { createHLSKeyResolver } from "@/core/source/hls/key_resolver";
 import {
     HLSByteRange,
     HLSInitializationSegment,
-    HLSKeyReferenceKind,
     HLSMediaPlaylist,
     HLSSegment,
     HLSSegmentKind,
@@ -36,6 +35,7 @@ export const fmp4HLSProfile: HLSProfileAdapter = {
 };
 
 function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
+    const aes128KeyResolver = createHLSKeyResolver(explicitKeys, http);
     let preparedSampleAesKeys: readonly PreparedExplicitKey[] | undefined;
     const sampleAesByInitialization = new Map<string, SampleAesInitializationContext>();
 
@@ -49,7 +49,7 @@ function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
                 throw new Error("One fMP4 media playlist cannot mix AES-128 and SAMPLE-AES encryption.");
             }
             if (!hasSampleAes) {
-                await ensureAes128Keys(playlist, explicitKeys, context, http);
+                await aes128KeyResolver.ensure(playlist, context, "AES-128");
                 return;
             }
             const preparedKeys = (preparedSampleAesKeys ??= prepareExplicitKeys(explicitKeys));
@@ -132,46 +132,6 @@ function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
             });
         },
     };
-}
-
-async function ensureAes128Keys(
-    playlist: HLSMediaPlaylist,
-    explicitKeys: readonly HLSExplicitKey[],
-    context: DownloadSourceContext,
-    http: HLSProfilePrepareOptions["http"]
-): Promise<void> {
-    if (explicitKeys.length > 1) {
-        throw new Error("The fMP4 HLS profile accepts at most one explicit AES-128 key.");
-    }
-    const referencedKeys = new Map(
-        playlist.segments.flatMap((segment) =>
-            segment.encryption?.method === "AES-128"
-                ? ([[segment.encryption.key.id, segment.encryption.key]] as const)
-                : []
-        )
-    );
-    const missingKeys = [...referencedKeys.values()].filter((key) => !context.keys.has(key.id));
-    if (missingKeys.length === 0) {
-        return;
-    }
-    const explicitKey = explicitKeys[0]?.key;
-    if (explicitKey !== undefined) {
-        context.keys.setMany(Object.fromEntries(missingKeys.map((key) => [key.id, explicitKey])));
-        return;
-    }
-    if (missingKeys.some((key) => key.kind === HLSKeyReferenceKind.External)) {
-        throw new Error("An explicit decryption key is required for this HLS key reference.");
-    }
-    const resolved: Record<string, string> = {};
-    for (const [index, key] of missingKeys.entries()) {
-        logger.info(`Resolving decrypt keys. (${index + 1} / ${missingKeys.length})`);
-        const response = await http.request<ArrayBuffer>(key.kind === HLSKeyReferenceKind.Http ? key.url : key.uri, {
-            responseType: "arraybuffer",
-            signal: getAbortSignal(),
-        });
-        resolved[key.id] = Buffer.from(response.data).toString("hex");
-    }
-    context.keys.setMany(resolved);
 }
 
 function prepareExplicitKeys(explicitKeys: readonly HLSExplicitKey[]): readonly PreparedExplicitKey[] {

@@ -10,10 +10,7 @@ export const mpegTsHLSProfile: HLSProfileAdapter = {
     prepare: (options) => ({
         id: PROFILE_ID,
         container: MPEG_TS_CONTAINER,
-        ensureKeys: prepareSingleFileKeys(
-            options,
-            "The standard HLS profile accepts at most one explicit decryption key."
-        ),
+        ensureKeys: prepareSingleFileKeys(options),
         toDownloadItem: (segment) =>
             toSingleFileDownloadItem(
                 segment,

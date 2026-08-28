@@ -1,74 +1,26 @@
-import logger from "@/utils/log";
-import { getAbortSignal } from "@/utils/abort";
-import { HLSKeyReferenceKind, HLSSegment, HLSSegmentKind } from "@/core/source/hls/playlist/parser";
+import { HLSSegment, HLSSegmentKind } from "@/core/source/hls/playlist/parser";
+import { createHLSKeyResolver } from "@/core/source/hls/key_resolver";
 import { toDownloadItem } from "./download_item";
 import { HLSProfilePlan, HLSProfilePrepareOptions, SAMPLE_AES_EXPLICIT_KEY_REQUIRED } from "./types";
 
 type SingleFileSampleAesScheme = "mpeg-ts-sample-aes" | "packed-aac-sample-aes";
 
-export function prepareSingleFileKeys(
-    { playlist, explicitKeys, http }: HLSProfilePrepareOptions,
-    tooManyKeysMessage: string
-): HLSProfilePlan["ensureKeys"] {
-    if (playlist.segments.some((segment) => segment.encryption?.method === "SAMPLE-AES")) {
-        if (explicitKeys.length === 0) {
-            throw new Error(SAMPLE_AES_EXPLICIT_KEY_REQUIRED);
-        }
-        if (explicitKeys.length > 1) {
-            throw new Error("Exactly one explicit decryption key is required for SAMPLE-AES HLS.");
-        }
-        if (!/^[0-9a-fA-F]{32}$/.test(explicitKeys[0].key)) {
-            throw new Error("SAMPLE-AES key must contain exactly 16 bytes of hexadecimal data.");
-        }
-    }
-    if (explicitKeys.length > 1) {
-        throw new Error(tooManyKeysMessage);
-    }
-    const explicitKey = explicitKeys[0]?.key;
+export function prepareSingleFileKeys({ explicitKeys, http }: HLSProfilePrepareOptions): HLSProfilePlan["ensureKeys"] {
+    const keyResolver = createHLSKeyResolver(explicitKeys, http);
 
     return async (candidate, context) => {
-        const referencedKeys = new Map(
-            candidate.segments.flatMap((segment) =>
-                segment.encryption ? [[segment.encryption.key.id, segment.encryption.key] as const] : []
-            )
-        );
-        const missingKeys = [...referencedKeys.values()].filter((key) => !context.keys.has(key.id));
-        if (missingKeys.length === 0) {
-            return;
-        }
-
-        if (explicitKey !== undefined) {
-            // One manual key is authoritative for every identity, so no remote key requests are attempted.
-            context.keys.setMany(Object.fromEntries(missingKeys.map((key) => [key.id, explicitKey])));
-            return;
-        }
-        if (missingKeys.some((key) => key.kind === HLSKeyReferenceKind.External)) {
-            // Opaque license identities such as skd:// are never treated as fetchable network locations.
-            throw new Error("An explicit decryption key is required for this HLS key reference.");
-        }
-
-        const resolved: Record<string, string> = {};
-        for (const [index, key] of missingKeys.entries()) {
-            logger.info(`Resolving decrypt keys. (${index + 1} / ${missingKeys.length})`);
-            try {
-                // The source HTTP facade owns retries; the profile only converts the final key bytes.
-                const response = await http.request<ArrayBuffer>(
-                    key.kind === HLSKeyReferenceKind.Http ? key.url : key.uri,
-                    {
-                        responseType: "arraybuffer",
-                        signal: getAbortSignal(),
-                    }
-                );
-                resolved[key.id] = Array.from(new Uint8Array(response.data))
-                    .map((value) => value.toString(16).padStart(2, "0"))
-                    .join("");
-            } catch (error) {
-                logger.debug(error);
-                throw new Error("Source request attempts exhausted. Abort.");
+        if (candidate.segments.some((segment) => segment.encryption?.method === "SAMPLE-AES")) {
+            if (explicitKeys.length === 0) {
+                throw new Error(SAMPLE_AES_EXPLICIT_KEY_REQUIRED);
+            }
+            if (explicitKeys.length > 1) {
+                throw new Error("Exactly one explicit decryption key is required for SAMPLE-AES HLS.");
+            }
+            if (!/^[0-9a-fA-F]{32}$/.test(explicitKeys[0].key)) {
+                throw new Error("SAMPLE-AES key must contain exactly 16 bytes of hexadecimal data.");
             }
         }
-        // Register the complete batch before its corresponding items can be published to workers.
-        context.keys.setMany(resolved);
+        await keyResolver.ensure(candidate, context);
     };
 }
 

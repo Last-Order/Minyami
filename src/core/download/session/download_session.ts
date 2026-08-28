@@ -343,15 +343,11 @@ export class DownloadSession {
         if (!item.encryption) {
             return;
         }
-        const handler = this.encryptionHandlers.require(item.encryption.scheme);
-        const keys = new Map<string, string>();
-        for (const keyId of handler.keyIds(item.encryption)) {
-            const key = this.keys.get(keyId);
-            if (!key) {
-                throw new Error(`Encryption key is not registered: ${keyId}`);
-            }
-            keys.set(keyId, key);
-        }
+        const { handler, keys } = this.encryptionHandlers.resolve(
+            item.encryption,
+            this.keys,
+            (keyId) => `Encryption key is not registered: ${keyId}`
+        );
         // Algorithm validation happens before a broken item can consume execution attempts.
         handler.validate(item.encryption, keys);
     }

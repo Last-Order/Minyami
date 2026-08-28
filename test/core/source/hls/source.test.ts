@@ -324,23 +324,46 @@ describe("HLSSource", () => {
         }
     });
 
-    test("rejects more than one explicit key in the standard profile before requesting remote keys", async () => {
-        let playlistRequestCount = 0;
+    test("maps multiple explicit keys to distinct key URIs without requesting remote keys", async () => {
+        const firstKey = Buffer.from("0123456789abcdef");
+        const secondKey = Buffer.from("fedcba9876543210");
+        const firstIv = Buffer.alloc(16, 1);
+        const secondIv = Buffer.alloc(16, 2);
+        const firstPayload = Buffer.from("first ordered-key payload");
+        const secondPayload = Buffer.from("second ordered-key payload");
+        const encrypt = (payload: Buffer, key: Buffer, iv: Buffer): Buffer => {
+            const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
+            return Buffer.concat([cipher.update(payload), cipher.final()]);
+        };
+        const encryptedPayloads: Record<string, Buffer> = {
+            "/0.ts": encrypt(firstPayload, firstKey, firstIv),
+            "/1.ts": encrypt(secondPayload, secondKey, secondIv),
+        };
         let keyRequestCount = 0;
         const server = http.createServer((request, response) => {
-            if (request.url === "/key") {
+            if (request.url === "/key-a" || request.url === "/key-b") {
                 keyRequestCount++;
                 response.end("remote key must not be requested");
                 return;
             }
-            playlistRequestCount++;
+            if (encryptedPayloads[request.url!]) {
+                response.end(encryptedPayloads[request.url!]);
+                return;
+            }
             const address = server.address() as AddressInfo;
             response.end(
                 [
                     "#EXTM3U",
-                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key"`,
+                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key-a",IV=0x${firstIv.toString(
+                        "hex"
+                    )}`,
                     "#EXTINF:1,",
                     `http://127.0.0.1:${address.port}/0.ts`,
+                    `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key-b",IV=0x${secondIv.toString(
+                        "hex"
+                    )}`,
+                    "#EXTINF:1,",
+                    `http://127.0.0.1:${address.port}/1.ts`,
                     "#EXT-X-ENDLIST",
                 ].join("\n")
             );
@@ -348,21 +371,18 @@ describe("HLSSource", () => {
         const baseUrl = await listen(server);
 
         try {
-            await withTempDirectory("minyami-explicit-hls-keys-limit-", async (directory) => {
+            await withTempDirectory("minyami-explicit-hls-keys-", async (directory) => {
+                const output = path.join(directory, "ordered-keys.ts");
                 const source = createHLSSource(`${baseUrl}/playlist.m3u8`, {
                     mode: "snapshot",
-                    explicitKeys: [
-                        { key: "00000000000000000000000000000000" },
-                        { key: "11111111111111111111111111111111" },
-                    ],
+                    explicitKeys: [{ key: firstKey.toString("hex") }, { key: secondKey.toString("hex") }],
                 });
-                const downloader = createDownloader(source, { tempDir: directory });
+                const downloader = createDownloader(source, { output, tempDir: directory });
 
-                await expect(downloader.download()).rejects.toThrow(
-                    "The standard HLS profile accepts at most one explicit decryption key."
-                );
-                expect(playlistRequestCount).toBe(1);
+                await downloader.download();
+
                 expect(keyRequestCount).toBe(0);
+                expect(fs.readFileSync(output)).toEqual(Buffer.concat([firstPayload, secondPayload]));
             });
         } finally {
             await close(server);

@@ -199,7 +199,7 @@ Erii.addOption({
     description: "Set an explicit HLS decryption key",
     argument: {
         name: "key | kid:key",
-        description: "Repeat --key to supply multiple keys; comma-separated keys are not supported.",
+        description: "Repeat --key in HLS key-URI order; use kid:key for multiple fMP4 SAMPLE-AES keys.",
     },
 });
 

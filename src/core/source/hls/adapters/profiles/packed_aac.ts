@@ -9,10 +9,7 @@ export const packedAacHLSProfile: HLSProfileAdapter = {
     prepare: (options) => ({
         id: PROFILE_ID,
         container: AAC_CONTAINER,
-        ensureKeys: prepareSingleFileKeys(
-            options,
-            "The packed-AAC HLS profile accepts at most one explicit decryption key."
-        ),
+        ensureKeys: prepareSingleFileKeys(options),
         toDownloadItem: (segment) =>
             toSingleFileDownloadItem(
                 segment,

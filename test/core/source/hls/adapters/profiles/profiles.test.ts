@@ -163,6 +163,58 @@ describe("Packed AAC HLS profile", () => {
 });
 
 describe("fMP4 HLS profile", () => {
+    test("maps multiple AES-128 keys to key URIs in first-seen order", async () => {
+        const http = new DownloadHttpClient(normalizeDownloaderConfig());
+        const request = jest.spyOn(http, "request");
+        const context = { http, keys: new KeyStore() };
+        const firstKey = {
+            kind: HLSKeyReferenceKind.Http,
+            id: "https://media.example/first.key",
+            url: "https://media.example/first.key",
+        } as const;
+        const secondKey = {
+            kind: HLSKeyReferenceKind.Http,
+            id: "https://media.example/second.key",
+            url: "https://media.example/second.key",
+        } as const;
+        const playlist: HLSMediaPlaylist = {
+            kind: HLSPlaylistKind.Media,
+            segments: [
+                {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/0.m4s",
+                    duration: 2,
+                    sequenceId: 0,
+                    encryption: { method: "AES-128", key: firstKey },
+                },
+                {
+                    kind: HLSSegmentKind.Media,
+                    url: "https://media.example/1.m4s",
+                    duration: 2,
+                    sequenceId: 1,
+                    encryption: { method: "AES-128", key: secondKey },
+                },
+            ],
+            keys: [firstKey, secondKey],
+            hasEndList: true,
+            totalDuration: 4,
+            averageSegmentDuration: 2,
+        };
+        const explicitKeys = [{ key: "44".repeat(16) }, { key: "55".repeat(16) }];
+        const plan = await fmp4HLSProfile.prepare({ playlist, explicitKeys, http });
+
+        await withSignal(() => plan.ensureKeys(playlist, context));
+
+        expect(context.keys.get(firstKey.id)).toBe(explicitKeys[0].key);
+        expect(context.keys.get(secondKey.id)).toBe(explicitKeys[1].key);
+        expect(request).not.toHaveBeenCalled();
+        expect(plan.toDownloadItem(playlist.segments[1]).encryption).toEqual({
+            scheme: "aes-128-cbc",
+            keyId: secondKey.id,
+            iv: "1",
+        });
+    });
+
     test("maps one key to every protected track id without inspecting unrelated protection metadata", async () => {
         const http = new DownloadHttpClient(normalizeDownloaderConfig());
         jest.spyOn(http, "request").mockResolvedValue({ data: createProtectedInitialization(7, "cenc") } as never);

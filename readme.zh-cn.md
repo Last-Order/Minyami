@@ -62,7 +62,7 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 | `--retries <次数>` | 同时设置来源请求和下载任务的最大尝试次数，默认为 `5`。 |
 | `--output <路径>`、`-o <路径>` | 设置输出文件基名，默认为 `./output`。 |
 | `--temp-dir <路径>` | 设置临时文件所在的父目录。 |
-| `--key <key\|kid:key>` | 手动指定 HLS 解密密钥，也可在密钥前附加 KID。多个密钥必须重复使用 `--key`。 |
+| `--key <key\|kid:key>` | 手动指定 HLS 解密密钥。一个密钥应用于所有 AES-128 key URI；重复传入时在每个 Media Playlist 内按各 URI 首次出现的顺序依次对应。fMP4 SAMPLE-AES 的多个密钥必须使用 `kid:key`。 |
 | `--cookies <内容>` | 为下载请求添加 Cookie。 |
 | `--headers <请求头>`、`-H <请求头>` | 添加 HTTP 请求头；可重复使用以添加多个请求头。 |
 | `--live` | 持续下载直播播放列表。 |
@@ -98,7 +98,9 @@ await downloader.download();
 ```
 
 通过库调用时，需将解析后的显式密钥作为 `HLSExplicitKey` 对象传入，例如 `explicitKeys: [{ key }]` 或
-`explicitKeys: [{ kid, key }]`；CLI 则接受等价的紧凑格式 `key` 和 `kid:key`。
+`explicitKeys: [{ kid, key }]`；CLI 则接受等价的紧凑格式 `key` 和 `kid:key`。对于 AES-128，一个显式密钥会
+应用于所有 key URI；多个密钥则在每个 Media Playlist 内按不同 key URI 的首次出现顺序依次绑定，并在直播
+刷新时保留绑定。fMP4 SAMPLE-AES 的多个密钥则通过 KID 选择。
 
 下载直播时使用 `createLiveDownloader`，需要结束下载时调用 `stop()`：
 

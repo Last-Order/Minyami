@@ -62,7 +62,7 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 | `--retries <number>` | Set the maximum attempts for both source requests and download tasks. The default is `5`. |
 | `--output <path>`, `-o <path>` | Set the output basename. The default is `./output`. |
 | `--temp-dir <path>` | Choose the parent directory for temporary files. |
-| `--key <key\|kid:key>` | Supply an explicit HLS decryption key, optionally prefixed with its KID. Repeat `--key` to provide multiple keys. |
+| `--key <key\|kid:key>` | Supply an explicit HLS decryption key. One key applies to every AES-128 key URI; repeated keys map to distinct URIs in first-seen order within each Media Playlist. Multiple fMP4 SAMPLE-AES keys require `kid:key`. |
 | `--cookies <cookies>` | Send cookies with download requests. |
 | `--headers <header>`, `-H <header>` | Send a custom HTTP header. Repeat the option to send multiple headers. |
 | `--live` | Follow a live playlist. |
@@ -98,7 +98,10 @@ await downloader.download();
 ```
 
 Library callers pass parsed explicit keys as `HLSExplicitKey` objects, for example `explicitKeys: [{ key }]` or
-`explicitKeys: [{ kid, key }]`. The CLI accepts the equivalent compact `key` and `kid:key` forms.
+`explicitKeys: [{ kid, key }]`. The CLI accepts the equivalent compact `key` and `kid:key` forms. For AES-128,
+one explicit key applies to every key URI; multiple keys are assigned to distinct key URIs in first-seen order within
+each Media Playlist and retain those assignments across live refreshes. Multiple fMP4 SAMPLE-AES keys are selected by
+KID instead.
 
 For a live playlist, create a live downloader and call `stop()` when you want to finish:
 

@@ -46,15 +46,7 @@ export class ChunkExecutor {
             }
 
             // Decrypt beside the encrypted input so a failed transform never replaces recoverable source bytes.
-            const handler = this.encryptionHandlers.require(item.encryption.scheme);
-            const keys = new Map<string, string>();
-            for (const keyId of handler.keyIds(item.encryption)) {
-                const key = this.keys.get(keyId);
-                if (!key) {
-                    throw new Error(`Missing encryption key for ${keyId}`);
-                }
-                keys.set(keyId, key);
-            }
+            const { handler, keys } = this.encryptionHandlers.resolve(item.encryption, this.keys);
             const decryptedPath = downloadedPath + ".decrypt";
             await handler.decrypt({
                 inputPath: downloadedPath,
