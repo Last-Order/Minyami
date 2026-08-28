@@ -33,7 +33,6 @@ describe("PackedAacSampleAesHandler", () => {
                     iv: iv.toString("hex"),
                 },
                 keys: new Map([["skd://fixture", key.toString("hex")]]),
-                signal: new AbortController().signal,
             });
 
             expect(fs.readFileSync(outputPath)).toEqual(clear);
@@ -60,7 +59,6 @@ describe("PackedAacSampleAesHandler", () => {
                     iv: iv.toString("hex"),
                 },
                 keys: new Map([["skd://fixture", key.toString("hex")]]),
-                signal: new AbortController().signal,
             });
 
             expect(fs.existsSync(inputPath)).toBe(true);

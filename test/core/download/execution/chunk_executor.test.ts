@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
+import { runWithAbortSignal } from "@/utils/abort";
 import { normalizeDownloaderConfig } from "@/core/download/config";
 import { Aes128CbcHandler } from "@/core/download/encryption/aes_128_cbc/handler";
 import { EncryptionHandlerRegistry } from "@/core/download/encryption/registry";
@@ -47,13 +48,14 @@ describe("ChunkExecutor encryption lifecycle", () => {
                     },
                 };
 
-                const result = await executor.execute(task, {
-                    tempPath: directory,
-                    itemTimeout: 1000,
-                    keepEncryptedChunks: keep,
-                    attempt: 1,
-                    signal: new AbortController().signal,
-                });
+                const result = await runWithAbortSignal(new AbortController().signal, () =>
+                    executor.execute(task, {
+                        tempPath: directory,
+                        itemTimeout: 1000,
+                        keepEncryptedChunks: keep,
+                        attempt: 1,
+                    })
+                );
 
                 expect(fs.readFileSync(result.outputPath)).toEqual(plaintext);
                 expect(fs.existsSync(path.join(directory, task.filename))).toBe(keep);

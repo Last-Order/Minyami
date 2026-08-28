@@ -3,7 +3,7 @@ import { URL } from "url";
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { Agent } from "agent-base";
 import UA from "@/constants/ua";
-import { createTimedAbortScope } from "@/utils/abort";
+import { createTimedAbortScope, getOptionalAbortSignal } from "@/utils/abort";
 import ProxyAgentHelper, { createProxyAgent } from "@/utils/agent";
 import { DownloadByteRange } from "@/core/source/types";
 
@@ -70,7 +70,7 @@ export class DownloadHttpClient {
         const { byteRange, ...requestOptions } = options;
         const timeout = requestOptions.timeout || 60000;
         // Keep a local timeout guard because some adapters do not abort stalled response bodies consistently.
-        const abortScope = createTimedAbortScope(timeout, requestOptions.signal);
+        const abortScope = createTimedAbortScope(timeout, requestOptions.signal ?? getOptionalAbortSignal());
 
         try {
             const response = await this.request<ArrayBuffer>(url, {

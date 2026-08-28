@@ -1,4 +1,5 @@
 import logger from "@/utils/log";
+import { getAbortSignal } from "@/utils/abort";
 import { HLSKeyReferenceKind, HLSSegment, HLSSegmentKind } from "@/core/source/hls/playlist/parser";
 import { toDownloadItem } from "./download_item";
 import { HLSProfilePlan, HLSProfilePrepareOptions, SAMPLE_AES_EXPLICIT_KEY_REQUIRED } from "./types";
@@ -25,7 +26,7 @@ export function prepareSingleFileKeys(
     }
     const explicitKey = explicitKeys[0]?.key;
 
-    return async (candidate, context, signal) => {
+    return async (candidate, context) => {
         const referencedKeys = new Map(
             candidate.segments.flatMap((segment) =>
                 segment.encryption ? [[segment.encryption.key.id, segment.encryption.key] as const] : []
@@ -55,7 +56,7 @@ export function prepareSingleFileKeys(
                     key.kind === HLSKeyReferenceKind.Http ? key.url : key.uri,
                     {
                         responseType: "arraybuffer",
-                        signal,
+                        signal: getAbortSignal(),
                     }
                 );
                 resolved[key.id] = Array.from(new Uint8Array(response.data))

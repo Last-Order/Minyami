@@ -16,7 +16,7 @@ export interface HLSProfilePlan {
     readonly container: MediaContainer;
 
     /** Registers every key referenced by the effective snapshot before any corresponding item is yielded. */
-    ensureKeys(playlist: HLSMediaPlaylist, context: DownloadSourceContext, signal: AbortSignal): Promise<void>;
+    ensureKeys(playlist: HLSMediaPlaylist, context: DownloadSourceContext): Promise<void>;
 
     /** Resolves all HLS-specific encryption semantics before crossing the source boundary. */
     toDownloadItem(segment: HLSSegment): DownloadItem;

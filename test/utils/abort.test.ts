@@ -1,5 +1,44 @@
 import { afterEach, describe, expect, jest, test } from "@jest/globals";
-import { createTimedAbortScope } from "@/utils/abort";
+import { createTimedAbortScope, getAbortSignal, iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
+
+describe("AbortSignal async context", () => {
+    test("keeps concurrent source and task branches isolated across awaits", async () => {
+        const source = new AbortController();
+        const task = new AbortController();
+
+        const [sourceSignal, taskSignal] = await Promise.all([
+            runWithAbortSignal(source.signal, async () => {
+                await Promise.resolve();
+                return getAbortSignal();
+            }),
+            runWithAbortSignal(task.signal, async () => {
+                await Promise.resolve();
+                return getAbortSignal();
+            }),
+        ]);
+
+        expect(sourceSignal).toBe(source.signal);
+        expect(taskSignal).toBe(task.signal);
+        expect(() => getAbortSignal()).toThrow("outside a download operation");
+    });
+
+    test("re-enters the context whenever an async iterator advances", async () => {
+        const controller = new AbortController();
+        async function* signals(): AsyncIterable<AbortSignal> {
+            yield getAbortSignal();
+            await Promise.resolve();
+            yield getAbortSignal();
+        }
+
+        const seen: AbortSignal[] = [];
+        for await (const signal of iterateWithAbortSignal(controller.signal, signals)) {
+            seen.push(signal);
+            expect(() => getAbortSignal()).toThrow("outside a download operation");
+        }
+
+        expect(seen).toEqual([controller.signal, controller.signal]);
+    });
+});
 
 describe("createTimedAbortScope", () => {
     afterEach(() => {

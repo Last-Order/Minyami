@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
+import { runWithAbortSignal } from "@/utils/abort";
 import { IsoBmffSampleAesHandler } from "@/core/download/encryption/sample_aes/iso_bmff/handler";
 import { Mp4DecryptRunner, Mp4DecryptRunResult } from "@/core/download/encryption/sample_aes/iso_bmff/runner";
 import { FatalDecryptionError } from "@/core/download/encryption/types";
@@ -61,20 +62,22 @@ describe("IsoBmffSampleAesHandler", () => {
                 fragmentsInfoBase64: protectedInitialization.toString("base64"),
             };
 
-            await handler.decrypt({
-                inputPath: encryptedInitialization,
-                outputPath: clearInitialization,
-                encryption: initializationEncryption,
-                keys,
-                signal,
-            });
-            await handler.decrypt({
-                inputPath: encryptedFragment,
-                outputPath: clearFragment,
-                encryption: fragmentEncryption,
-                keys,
-                signal,
-            });
+            await runWithAbortSignal(signal, () =>
+                handler.decrypt({
+                    inputPath: encryptedInitialization,
+                    outputPath: clearInitialization,
+                    encryption: initializationEncryption,
+                    keys,
+                })
+            );
+            await runWithAbortSignal(signal, () =>
+                handler.decrypt({
+                    inputPath: encryptedFragment,
+                    outputPath: clearFragment,
+                    encryption: fragmentEncryption,
+                    keys,
+                })
+            );
 
             expect(runner.calls[0].slice(0, 2)).toEqual(["--key", `1:${key}`]);
             expect(runner.calls[1]).toContain("--fragments-info");
@@ -92,13 +95,14 @@ describe("IsoBmffSampleAesHandler", () => {
             const handler = new IsoBmffSampleAesHandler(new CopyingRunner(createClearInitialization(), true));
 
             await expect(
-                handler.decrypt({
-                    inputPath,
-                    outputPath,
-                    encryption: initializationEncryption,
-                    keys: new Map([["fixture:key", key]]),
-                    signal: new AbortController().signal,
-                })
+                runWithAbortSignal(new AbortController().signal, () =>
+                    handler.decrypt({
+                        inputPath,
+                        outputPath,
+                        encryption: initializationEncryption,
+                        keys: new Map([["fixture:key", key]]),
+                    })
+                )
             ).rejects.toBeInstanceOf(FatalDecryptionError);
             expect(fs.existsSync(inputPath)).toBe(true);
             expect(fs.existsSync(outputPath)).toBe(false);

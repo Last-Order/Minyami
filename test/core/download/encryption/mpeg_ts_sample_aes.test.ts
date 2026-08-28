@@ -92,7 +92,6 @@ describe("MpegTsSampleAesHandler", () => {
                     iv: iv.toString("hex"),
                 },
                 keys: new Map([["skd://fixture", key.toString("hex")]]),
-                signal: new AbortController().signal,
             });
 
             expect(readPesPayload(fs.readFileSync(outputPath), 0x100)).toEqual(fixture.video);
@@ -118,7 +117,6 @@ describe("MpegTsSampleAesHandler", () => {
                         iv: iv.toString("hex"),
                     },
                     keys: new Map([["skd://fixture", key.toString("hex")]]),
-                    signal: new AbortController().signal,
                 })
             ).rejects.toThrow("188-byte MPEG transport stream");
 

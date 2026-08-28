@@ -5,7 +5,6 @@ export interface DecryptionRequest {
     readonly outputPath: string;
     readonly encryption: DownloadEncryption;
     readonly keys: ReadonlyMap<string, string>;
-    readonly signal: AbortSignal;
 }
 
 export class FatalDecryptionError extends Error {

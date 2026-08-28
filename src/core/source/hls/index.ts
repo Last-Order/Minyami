@@ -1,4 +1,5 @@
 import logger from "@/utils/log";
+import { getAbortSignal, iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
 import { mergeAsyncIterables } from "../merge_async_iterables";
 import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } from "../stream_selection";
 import { selectDefaultStream } from "../stream_selector";
@@ -38,16 +39,24 @@ export class HLSSource implements DownloadSource {
         this.continuous = options.mode === "follow";
     }
 
-    async prepare(context: DownloadSourceContext, signal: AbortSignal): Promise<SourceMetadata> {
+    prepare(context: DownloadSourceContext, signal: AbortSignal): Promise<SourceMetadata> {
+        return runWithAbortSignal(signal, () => this.prepareWithContext(context));
+    }
+
+    discover(context: DownloadSourceContext, signal: AbortSignal): AsyncIterable<SourceBatch> {
+        return iterateWithAbortSignal(signal, () => this.discoverWithContext(context));
+    }
+
+    private async prepareWithContext(context: DownloadSourceContext): Promise<SourceMetadata> {
         if (this.prepared) {
             throw new Error("This HLS source has already been prepared.");
         }
         if (!this.sourcePath) {
             throw new Error("Missing HLS source path.");
         }
-        throwIfAborted(signal);
+        throwIfAborted();
         this.loader = new PlaylistLoader(context.http);
-        const selectedTracks = await this.selectMediaTracks(signal);
+        const selectedTracks = await this.selectMediaTracks();
         if (!selectedTracks) {
             this.cancelled = true;
             this.prepared = true;
@@ -58,7 +67,7 @@ export class HLSSource implements DownloadSource {
         this.cursors = await Promise.all(
             selectedTracks.map(async (selected) => {
                 const playlist =
-                    selected.initialPlaylist ?? (await this.loadSelectedMediaPlaylist(selected.sourcePath, signal));
+                    selected.initialPlaylist ?? (await this.loadSelectedMediaPlaylist(selected.sourcePath));
                 return new HLSMediaPlaylistCursor({
                     id: selected.sourceTrackId,
                     mediaTrack: selected.mediaTrack,
@@ -72,13 +81,13 @@ export class HLSSource implements DownloadSource {
             })
         );
         // All cursors resolve keys before any track metadata is published to the downloader.
-        const preparedTracks = await Promise.all(this.cursors.map((cursor) => cursor.prepare(context, signal)));
+        const preparedTracks = await Promise.all(this.cursors.map((cursor) => cursor.prepare(context)));
         const container = preparedTracks[0].container;
         this.prepared = true;
         return { container, tracks: preparedTracks.map((prepared) => prepared.track) };
     }
 
-    async *discover(context: DownloadSourceContext, signal: AbortSignal): AsyncIterable<SourceBatch> {
+    private async *discoverWithContext(context: DownloadSourceContext): AsyncIterable<SourceBatch> {
         if (!this.prepared) {
             throw new Error("HLS source must be prepared before discovering items.");
         }
@@ -86,25 +95,30 @@ export class HLSSource implements DownloadSource {
             return;
         }
 
+        const signal = getAbortSignal();
         const discoveryAbort = new AbortController();
         const onAbort = () => discoveryAbort.abort();
         signal.addEventListener("abort", onAbort, { once: true });
+        if (signal.aborted) {
+            discoveryAbort.abort();
+        }
         try {
-            const discoveries = this.cursors.map((cursor) => cursor.discover(context, discoveryAbort.signal));
-            // A failing rendition cancels its siblings so the downloader never finalizes a partial track set.
-            yield* mergeAsyncIterables(discoveries, () => discoveryAbort.abort());
+            yield* iterateWithAbortSignal(discoveryAbort.signal, () => {
+                const discoveries = this.cursors.map((cursor) => cursor.discover(context));
+                // A failing rendition cancels its siblings so the downloader never finalizes a partial track set.
+                return mergeAsyncIterables(discoveries, () => discoveryAbort.abort());
+            });
         } finally {
             discoveryAbort.abort();
             signal.removeEventListener("abort", onAbort);
         }
     }
 
-    private async selectMediaTracks(signal: AbortSignal): Promise<readonly SelectedHLSMediaTrack[] | undefined> {
+    private async selectMediaTracks(): Promise<readonly SelectedHLSMediaTrack[] | undefined> {
         const loaded = await this.loader!.load(this.sourcePath, {
             timeout: 60000,
-            signal,
         });
-        throwIfAborted(signal);
+        throwIfAborted();
         if (loaded.kind === HLSPlaylistKind.Media) {
             // A direct Media Playlist has one synthetic track because no master metadata supplies an identity.
             const mediaTrack = Object.freeze<MediaTrack>({ id: "main", type: "video" });
@@ -119,7 +133,7 @@ export class HLSSource implements DownloadSource {
         }
         const plan = createHLSStreamCatalogPlan(loaded);
         const selection = await this.selectTracks(plan);
-        throwIfAborted(signal);
+        throwIfAborted();
         if (!selection) {
             return undefined;
         }
@@ -144,10 +158,9 @@ export class HLSSource implements DownloadSource {
         return validateTrackSelection(plan.catalog, selection);
     }
 
-    private async loadSelectedMediaPlaylist(sourcePath: string, signal: AbortSignal): Promise<HLSMediaPlaylist> {
+    private async loadSelectedMediaPlaylist(sourcePath: string): Promise<HLSMediaPlaylist> {
         const playlist = await this.loader!.load(sourcePath, {
             timeout: 60000,
-            signal,
         });
         if (playlist.kind === HLSPlaylistKind.Master) {
             throw new Error(`Selected HLS track ${sourcePath} points to another master playlist.`);
@@ -160,8 +173,8 @@ export function createHLSSource(sourcePath: string, options: HLSSourceOptions): 
     return new HLSSource(sourcePath, options);
 }
 
-function throwIfAborted(signal: AbortSignal): void {
-    if (signal.aborted) {
+function throwIfAborted(): void {
+    if (getAbortSignal().aborted) {
         throw new Error("Source preparation was aborted.");
     }
 }

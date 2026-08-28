@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import { getAbortSignal } from "@/utils/abort";
 
 const MAX_DIAGNOSTIC_BYTES = 1024 * 1024;
 
@@ -7,12 +8,13 @@ export interface Mp4DecryptRunResult {
 }
 
 export interface Mp4DecryptRunner {
-    run(arguments_: readonly string[], signal: AbortSignal): Promise<Mp4DecryptRunResult>;
+    run(arguments_: readonly string[]): Promise<Mp4DecryptRunResult>;
 }
 
 /** Runs Bento4 directly so paths and decryption keys are never interpreted by a shell. */
 export class SystemMp4DecryptRunner implements Mp4DecryptRunner {
-    run(arguments_: readonly string[], signal: AbortSignal): Promise<Mp4DecryptRunResult> {
+    run(arguments_: readonly string[]): Promise<Mp4DecryptRunResult> {
+        const signal = getAbortSignal();
         return new Promise((resolve, reject) => {
             const child = spawn("mp4decrypt", [...arguments_], {
                 stdio: ["ignore", "ignore", "pipe"],

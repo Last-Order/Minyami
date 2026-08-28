@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import logger from "@/utils/log";
+import { getAbortSignal } from "@/utils/abort";
 import { EncryptionHandlerRegistry } from "../encryption/registry";
 import { DownloadHttpClient } from "../infrastructure/http_client";
 import { KeyStore } from "../infrastructure/key_store";
@@ -12,7 +13,6 @@ export interface ExecuteChunkOptions {
     itemTimeout: number;
     keepEncryptedChunks: boolean;
     attempt: number;
-    signal: AbortSignal;
 }
 
 export interface ChunkResult {
@@ -37,7 +37,6 @@ export class ChunkExecutor {
         try {
             await this.http.download(item.url, downloadedPath, {
                 timeout,
-                signal: options.signal,
                 ...(item.byteRange ? { byteRange: item.byteRange } : {}),
             });
             logger.debug(`Downloading ${task.filename} succeed.`);
@@ -62,7 +61,6 @@ export class ChunkExecutor {
                 outputPath: decryptedPath,
                 encryption: item.encryption,
                 keys,
-                signal: options.signal,
             });
             if (!options.keepEncryptedChunks) {
                 try {
@@ -77,7 +75,7 @@ export class ChunkExecutor {
             // Only the fully downloaded/decrypted path is admitted to ordered output by the session.
             return { outputPath: decryptedPath };
         } catch (error) {
-            if (options.signal.aborted) {
+            if (getAbortSignal().aborted) {
                 logger.debug(`Processing ${task.filename} was aborted.`);
                 throw error;
             }

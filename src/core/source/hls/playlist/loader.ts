@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import logger from "@/utils/log";
+import { getAbortSignal } from "@/utils/abort";
 import { DownloadSourceHttpClient } from "@/core/source/types";
 import { HLSPlaylist, parseHLSPlaylist } from "./parser";
 
 export interface LoadPlaylistOptions {
     timeout?: number;
-    signal?: AbortSignal;
 }
 
 export class PlaylistLoader {
@@ -27,7 +27,7 @@ export class PlaylistLoader {
         let content: string;
         let playlistUrl: string;
         try {
-            const response = await this.http.get<string>(sourcePath, { timeout, signal: options.signal });
+            const response = await this.http.get<string>(sourcePath, { timeout, signal: getAbortSignal() });
             content = response.data;
             // Relative playlist references must resolve against the final URL after redirects, not the requested URL.
             playlistUrl = response.request?.res?.responseUrl || sourcePath;

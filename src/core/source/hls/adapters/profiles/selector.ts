@@ -1,4 +1,5 @@
 import { hasAdtsHeader, parseLeadingId3Tags } from "@/core/packed_audio";
+import { getAbortSignal } from "@/utils/abort";
 import { DownloadSourceHttpClient } from "@/core/source/types";
 import {
     HLSInitializationSegment,
@@ -29,8 +30,7 @@ interface IsoBmffBoxHeader {
 /** Analyzes one effective media playlist and selects its profile exactly once. */
 export async function selectHLSProfile(
     playlist: HLSMediaPlaylist,
-    http: DownloadSourceHttpClient,
-    signal: AbortSignal
+    http: DownloadSourceHttpClient
 ): Promise<HLSProfileAdapter> {
     // Partition the immutable snapshot once so every later decision evaluates locator and content evidence against
     // the same playlist shape.
@@ -65,7 +65,7 @@ export async function selectHLSProfile(
         // RFC 8216 section 4.3.2.4 defines SAMPLE-AES as encrypting sample data only, leaving container framing
         // available for this bounded format probe.
         // https://www.rfc-editor.org/rfc/rfc8216.html#section-4.3.2.4
-        const prefix = await probeSegmentPrefix(firstMedia, http, signal);
+        const prefix = await probeSegmentPrefix(firstMedia, http);
         const profile = classifyMedia(prefix);
         if (!profile) {
             throw new Error("Unable to determine the SAMPLE-AES HLS media segment format.");
@@ -105,7 +105,7 @@ export async function selectHLSProfile(
     // https://www.rfc-editor.org/rfc/rfc8216.html#section-3.1
     // https://www.rfc-editor.org/rfc/rfc8216.html#section-4.3.2.4
     if (initialization.encryption?.method !== "AES-128") {
-        const prefix = await probeSegmentPrefix(initialization, http, signal);
+        const prefix = await probeSegmentPrefix(initialization, http);
         // RFC 8216 section 3.3 requires an iso6-compatible ftyp followed by moov in the fMP4 initialization.
         // https://www.rfc-editor.org/rfc/rfc8216.html#section-3.3
         // The bounded prefix only needs the complete ftyp box and the following moov header; the moov payload may
@@ -178,7 +178,7 @@ export async function selectHLSProfile(
     // safe secondary evidence; validateProfileShape still enforces the selected format's MAP requirements.
     const probeableMedia = media.find((segment) => segment.encryption?.method !== "AES-128");
     if (probeableMedia) {
-        const prefix = await probeSegmentPrefix(probeableMedia, http, signal);
+        const prefix = await probeSegmentPrefix(probeableMedia, http);
         const profile = classifyMedia(prefix);
         if (profile) {
             return validateProfileShape(profile, initializations, media);
@@ -281,11 +281,7 @@ function classifyMedia(data: Buffer): HLSProfileKind | undefined {
     return undefined;
 }
 
-async function probeSegmentPrefix(
-    segment: HLSSegment,
-    http: DownloadSourceHttpClient,
-    signal: AbortSignal
-): Promise<Buffer> {
+async function probeSegmentPrefix(segment: HLSSegment, http: DownloadSourceHttpClient): Promise<Buffer> {
     const offset = segment.byteRange?.offset ?? 0;
     // Bound both bandwidth and parsing work, while never reading beyond an explicit segment byte range.
     const length = Math.min(segment.byteRange?.length ?? PROBE_BYTE_COUNT, PROBE_BYTE_COUNT);
@@ -295,7 +291,7 @@ async function probeSegmentPrefix(
             Range: `bytes=${offset}-${offset + length - 1}`,
             "Accept-Encoding": "identity",
         },
-        signal,
+        signal: getAbortSignal(),
     });
     const body = Buffer.from(response.data);
     // A 206 body already starts at the requested offset. If the origin ignored Range and returned the full resource,

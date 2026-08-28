@@ -1,8 +1,9 @@
 import { describe, expect, jest, test } from "@jest/globals";
+import { runWithAbortSignal } from "@/utils/abort";
 import { fmp4HLSProfile } from "@/core/source/hls/adapters/profiles/fmp4";
 import { packedAacHLSProfile } from "@/core/source/hls/adapters/profiles/packed_aac";
 import { mpegTsHLSProfile } from "@/core/source/hls/adapters/profiles/mpeg_ts";
-import { selectHLSProfile } from "@/core/source/hls/adapters/profiles/selector";
+import { selectHLSProfile as selectHLSProfileWithContext } from "@/core/source/hls/adapters/profiles/selector";
 import {
     HLSKeyReferenceKind,
     HLSMediaPlaylist,
@@ -309,6 +310,10 @@ function createPsiPacket(pid: number, section: Buffer): Buffer {
     packet[4] = 0;
     section.copy(packet, 5);
     return packet;
+}
+
+function selectHLSProfile(playlist: HLSMediaPlaylist, http: DownloadSourceHttpClient, abortSignal: AbortSignal) {
+    return runWithAbortSignal(abortSignal, () => selectHLSProfileWithContext(playlist, http));
 }
 
 function signal(): AbortSignal {

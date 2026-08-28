@@ -10,7 +10,6 @@ export interface HLSAdaptationOptions {
     readonly playlist: HLSMediaPlaylist;
     readonly explicitKeys: readonly HLSExplicitKey[];
     readonly http: DownloadSourceHttpClient;
-    readonly signal: AbortSignal;
 }
 
 export interface HLSAdaptationPlan {
@@ -19,7 +18,7 @@ export interface HLSAdaptationPlan {
     readonly siteId?: string;
     readonly itemNamer?: DownloadItemNamer;
     adaptPlaylist(playlist: HLSMediaPlaylist): HLSMediaPlaylist;
-    ensureKeys(playlist: HLSMediaPlaylist, context: DownloadSourceContext, signal: AbortSignal): Promise<void>;
+    ensureKeys(playlist: HLSMediaPlaylist, context: DownloadSourceContext): Promise<void>;
     toDownloadItem(segment: HLSSegment): DownloadItem;
 }
 
@@ -35,7 +34,7 @@ export async function prepareHLSAdaptation(options: HLSAdaptationOptions): Promi
     const adaptPlaylist = (playlist: HLSMediaPlaylist): HLSMediaPlaylist =>
         sitePlan.adaptSegments ? { ...playlist, segments: sitePlan.adaptSegments(playlist.segments) } : playlist;
     const playlist = adaptPlaylist(options.playlist);
-    const profile = await selectHLSProfile(playlist, options.http, options.signal);
+    const profile = await selectHLSProfile(playlist, options.http);
 
     // The profile plan is immutable for the cursor and owns all later key and item conversion.
     const profilePlan = await profile.prepare({

@@ -1,4 +1,5 @@
 import logger from "@/utils/log";
+import { getAbortSignal } from "@/utils/abort";
 import { readIsoBmffDecryptionTrackIds } from "@/core/isobmff";
 import { MP4_CONTAINER } from "@/core/media_container";
 import { DownloadSourceContext, IsoBmffSampleAesKey } from "@/core/source/types";
@@ -41,14 +42,14 @@ function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
     return {
         id: PROFILE_ID,
         container: MP4_CONTAINER,
-        ensureKeys: async (playlist: HLSMediaPlaylist, context: DownloadSourceContext, signal: AbortSignal) => {
+        ensureKeys: async (playlist: HLSMediaPlaylist, context: DownloadSourceContext) => {
             const hasAes128 = playlist.segments.some((segment) => segment.encryption?.method === "AES-128");
             const hasSampleAes = playlist.segments.some((segment) => segment.encryption?.method === "SAMPLE-AES");
             if (hasAes128 && hasSampleAes) {
                 throw new Error("One fMP4 media playlist cannot mix AES-128 and SAMPLE-AES encryption.");
             }
             if (!hasSampleAes) {
-                await ensureAes128Keys(playlist, explicitKeys, context, http, signal);
+                await ensureAes128Keys(playlist, explicitKeys, context, http);
                 return;
             }
             const preparedKeys = (preparedSampleAesKeys ??= prepareExplicitKeys(explicitKeys));
@@ -84,7 +85,7 @@ function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
                 if (!initialization) {
                     throw new Error("fMP4 SAMPLE-AES media references an unavailable initialization segment.");
                 }
-                const data = await loadInitializationSegment(initialization, http, signal);
+                const data = await loadInitializationSegment(initialization, http);
                 const needsTrackSelectors = preparedKeys.length === 1 && preparedKeys[0].kid === undefined;
                 const trackIds = needsTrackSelectors ? readIsoBmffDecryptionTrackIds(data) : [];
                 if (needsTrackSelectors && trackIds.length === 0) {
@@ -137,8 +138,7 @@ async function ensureAes128Keys(
     playlist: HLSMediaPlaylist,
     explicitKeys: readonly HLSExplicitKey[],
     context: DownloadSourceContext,
-    http: HLSProfilePrepareOptions["http"],
-    signal: AbortSignal
+    http: HLSProfilePrepareOptions["http"]
 ): Promise<void> {
     if (explicitKeys.length > 1) {
         throw new Error("The fMP4 HLS profile accepts at most one explicit AES-128 key.");
@@ -167,7 +167,7 @@ async function ensureAes128Keys(
         logger.info(`Resolving decrypt keys. (${index + 1} / ${missingKeys.length})`);
         const response = await http.request<ArrayBuffer>(key.kind === HLSKeyReferenceKind.Http ? key.url : key.uri, {
             responseType: "arraybuffer",
-            signal,
+            signal: getAbortSignal(),
         });
         resolved[key.id] = Buffer.from(response.data).toString("hex");
     }
@@ -231,12 +231,11 @@ function setConsistentKey(context: DownloadSourceContext, keyId: string, key: st
 
 async function loadInitializationSegment(
     segment: HLSInitializationSegment,
-    http: HLSProfilePrepareOptions["http"],
-    signal: AbortSignal
+    http: HLSProfilePrepareOptions["http"]
 ): Promise<Buffer> {
     const response = await http.request<ArrayBuffer>(segment.url, {
         responseType: "arraybuffer",
-        signal,
+        signal: getAbortSignal(),
         ...(segment.byteRange
             ? { headers: { Range: `bytes=${segment.byteRange.offset}-${rangeEnd(segment.byteRange)}` } }
             : {}),

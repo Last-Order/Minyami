@@ -1,4 +1,5 @@
 import { describe, expect, jest, test } from "@jest/globals";
+import { runWithAbortSignal } from "@/utils/abort";
 import { normalizeDownloaderConfig } from "@/core/download/config";
 import { DownloadHttpClient } from "@/core/download/infrastructure/http_client";
 import { KeyStore } from "@/core/download/infrastructure/key_store";
@@ -41,7 +42,7 @@ describe("MPEG-TS HLS profile", () => {
         const explicitKey = "00".repeat(16);
         const plan = await mpegTsHLSProfile.prepare({ playlist, explicitKeys: [{ key: explicitKey }], http });
 
-        await plan.ensureKeys(playlist, context, new AbortController().signal);
+        await withSignal(() => plan.ensureKeys(playlist, context));
 
         expect(context.keys.get(key.id)).toBe(explicitKey);
         expect(plan.toDownloadItem(playlist.segments[0])).toEqual({
@@ -84,7 +85,7 @@ describe("MPEG-TS HLS profile", () => {
         const explicitKey = "11".repeat(16);
         const plan = await mpegTsHLSProfile.prepare({ playlist, explicitKeys: [{ key: explicitKey }], http });
 
-        await plan.ensureKeys(playlist, context, new AbortController().signal);
+        await withSignal(() => plan.ensureKeys(playlist, context));
 
         expect(context.keys.get(key.id)).toBe(explicitKey);
         expect(plan.toDownloadItem(playlist.segments[0])).toEqual({
@@ -148,7 +149,7 @@ describe("Packed AAC HLS profile", () => {
         const explicitKey = "33".repeat(16);
         const plan = await packedAacHLSProfile.prepare({ playlist, explicitKeys: [{ key: explicitKey }], http });
 
-        await plan.ensureKeys(playlist, context, new AbortController().signal);
+        await withSignal(() => plan.ensureKeys(playlist, context));
 
         expect(plan.container).toMatchObject({ name: "AAC", extension: "aac" });
         expect(context.keys.get(key.id)).toBe(explicitKey);
@@ -170,7 +171,7 @@ describe("fMP4 HLS profile", () => {
         const explicitKey = "22".repeat(16);
         const plan = await fmp4HLSProfile.prepare({ playlist, explicitKeys: [{ key: explicitKey }], http });
 
-        await plan.ensureKeys(playlist, context, new AbortController().signal);
+        await withSignal(() => plan.ensureKeys(playlist, context));
 
         const keyId = `fmp4:${playlist.segments[0].initializationId}`;
         expect(context.keys.get(keyId)).toBe(explicitKey);
@@ -213,7 +214,7 @@ describe("fMP4 HLS profile", () => {
             http,
         });
 
-        await plan.ensureKeys(playlist, context, new AbortController().signal);
+        await withSignal(() => plan.ensureKeys(playlist, context));
 
         expect(plan.toDownloadItem(playlist.segments[1]).encryption).toMatchObject({
             scheme: "iso-bmff-sample-aes",
@@ -237,7 +238,7 @@ describe("fMP4 HLS profile", () => {
         const context = { http, keys: new KeyStore() };
         const noKeyPlan = await fmp4HLSProfile.prepare({ playlist, explicitKeys: [], http });
 
-        await expect(noKeyPlan.ensureKeys(playlist, context, new AbortController().signal)).rejects.toThrow(
+        await expect(withSignal(() => noKeyPlan.ensureKeys(playlist, context))).rejects.toThrow(
             "This HLS content is protected. Provide an explicit decryption key."
         );
     });
@@ -275,4 +276,8 @@ function createFmp4SampleAesPlaylist(): HLSMediaPlaylist {
         totalDuration: 2,
         averageSegmentDuration: 2,
     };
+}
+
+function withSignal<T>(operation: () => T): T {
+    return runWithAbortSignal(new AbortController().signal, operation);
 }

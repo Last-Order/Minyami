@@ -1,4 +1,5 @@
 import logger from "@/utils/log";
+import { getAbortSignal } from "@/utils/abort";
 import { DownloadItem, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceTrack } from "@/core/source/types";
 import { MediaTrack } from "@/core/source/stream_selection";
 import { HLSAdaptationPlan, prepareHLSAdaptation } from "../adapters/adaptation";
@@ -47,8 +48,8 @@ export class HLSMediaPlaylistCursor {
         this.playlist = options.initialPlaylist;
     }
 
-    async prepare(context: DownloadSourceContext, signal: AbortSignal): Promise<PreparedHLSMediaTrack> {
-        throwIfAborted(signal);
+    async prepare(context: DownloadSourceContext): Promise<PreparedHLSMediaTrack> {
+        throwIfAborted();
         if (this.continuous) {
             this.updateFollowTimeouts();
         }
@@ -57,12 +58,11 @@ export class HLSMediaPlaylistCursor {
             playlist: this.playlist,
             explicitKeys: this.options.explicitKeys,
             http: context.http,
-            signal,
         });
         this.playlist = adaptation.playlist;
         this.adaptationPlan = adaptation.plan;
         // Items may execute as soon as discovery yields, so known keys must be ready first.
-        await this.adaptationPlan.ensureKeys(this.playlist, context, signal);
+        await this.adaptationPlan.ensureKeys(this.playlist, context);
 
         return {
             container: this.adaptationPlan.container,
@@ -77,7 +77,7 @@ export class HLSMediaPlaylistCursor {
         };
     }
 
-    async *discover(context: DownloadSourceContext, signal: AbortSignal): AsyncIterable<SourceBatch> {
+    async *discover(context: DownloadSourceContext): AsyncIterable<SourceBatch> {
         if (!this.continuous) {
             // Snapshot cursors know their final per-track total and yield once even when empty.
             const items = sliceItems(this.toItems(this.playlist.segments), this.options.slice);
@@ -87,7 +87,7 @@ export class HLSMediaPlaylistCursor {
             return;
         }
 
-        while (!signal.aborted) {
+        while (!getAbortSignal().aborted) {
             // Each refresh is a snapshot; cursor-local identities suppress earlier segments.
             const streamEnded = this.playlist.hasEndList;
             const segments = this.takeNewSegments(this.playlist.segments);
@@ -105,15 +105,15 @@ export class HLSMediaPlaylistCursor {
             }
 
             logger.debug(`Cool down track ${this.options.id}... Wait for next check`);
-            if (!(await waitForNextCheck(Math.min(5000, this.safeChunkLength * 1000), signal))) {
+            if (!(await waitForNextCheck(Math.min(5000, this.safeChunkLength * 1000)))) {
                 return;
             }
 
             try {
-                this.playlist = this.adaptationPlan.adaptPlaylist(await this.loadMediaPlaylist(signal));
-                await this.adaptationPlan.ensureKeys(this.playlist, context, signal);
+                this.playlist = this.adaptationPlan.adaptPlaylist(await this.loadMediaPlaylist());
+                await this.adaptationPlan.ensureKeys(this.playlist, context);
             } catch (error) {
-                if (signal.aborted) {
+                if (getAbortSignal().aborted) {
                     return;
                 }
                 // Before useful output a refresh failure is fatal; afterwards an unavailable live manifest ends the track.
@@ -153,10 +153,9 @@ export class HLSMediaPlaylistCursor {
         this.timeout = Math.min(Math.max(20000, this.playlist.segments.length * this.safeChunkLength * 1000), 60000);
     }
 
-    private async loadMediaPlaylist(signal: AbortSignal): Promise<HLSMediaPlaylist> {
+    private async loadMediaPlaylist(): Promise<HLSMediaPlaylist> {
         const loaded = await this.options.loader.load(this.options.sourcePath, {
             timeout: this.timeout,
-            signal,
         });
         if (loaded.kind === HLSPlaylistKind.Master) {
             throw new Error("Selected HLS stream points to another master playlist.");
@@ -227,13 +226,14 @@ function sliceItems(items: DownloadItem[], slice?: HLSSlice): DownloadItem[] {
     return selected;
 }
 
-function throwIfAborted(signal: AbortSignal): void {
-    if (signal.aborted) {
+function throwIfAborted(): void {
+    if (getAbortSignal().aborted) {
         throw new Error("Source preparation was aborted.");
     }
 }
 
-function waitForNextCheck(milliseconds: number, signal: AbortSignal): Promise<boolean> {
+function waitForNextCheck(milliseconds: number): Promise<boolean> {
+    const signal = getAbortSignal();
     if (signal.aborted) {
         return Promise.resolve(false);
     }

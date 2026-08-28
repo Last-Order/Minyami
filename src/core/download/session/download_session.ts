@@ -1,5 +1,6 @@
 import * as path from "path";
 import logger from "@/utils/log";
+import { iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
 import { DownloadItem, DownloadSource, DownloadSourceContext } from "@/core/source/types";
 import {
     ChunkDownloadedInfo,
@@ -87,7 +88,9 @@ export class DownloadSession {
 
             let metadata;
             try {
-                metadata = await this.source.prepare(this.sourceContext, this.sourceAbort.signal);
+                metadata = await runWithAbortSignal(this.sourceAbort.signal, () =>
+                    this.source.prepare(this.sourceContext, this.sourceAbort.signal)
+                );
             } catch (error) {
                 // A controller-requested cancellation is a terminal command, not a source failure.
                 if (this.cancellation !== "none") {
@@ -122,7 +125,10 @@ export class DownloadSession {
             this.state = { kind: "running" };
 
             try {
-                for await (const batch of this.source.discover(this.sourceContext, this.sourceAbort.signal)) {
+                const batches = iterateWithAbortSignal(this.sourceAbort.signal, () =>
+                    this.source.discover(this.sourceContext, this.sourceAbort.signal)
+                );
+                for await (const batch of batches) {
                     if (this.getCancellation() === "hard") {
                         break;
                     }
@@ -259,13 +265,14 @@ export class DownloadSession {
         return new TaskScheduler<DownloadTask, ChunkResult>({
             concurrency: this.config.threads,
             execute: (task, attempt) =>
-                this.executor.execute(task, {
-                    tempPath: this.output.getTrackTempPath(task.trackId),
-                    itemTimeout: this.manifest.getTrack(task.trackId).itemTimeout ?? 60000,
-                    keepEncryptedChunks: this.config.keepEncryptedChunks,
-                    attempt,
-                    signal: this.taskAbort.signal,
-                }),
+                runWithAbortSignal(this.taskAbort.signal, () =>
+                    this.executor.execute(task, {
+                        tempPath: this.output.getTrackTempPath(task.trackId),
+                        itemTimeout: this.manifest.getTrack(task.trackId).itemTimeout ?? 60000,
+                        keepEncryptedChunks: this.config.keepEncryptedChunks,
+                        attempt,
+                    })
+                ),
             onSuccess: (task, result) => this.commitTaskSuccess(task, result),
             onError: (task, error, attempt) => this.commitTaskError(task, error, attempt),
             onFatal: (error) => {

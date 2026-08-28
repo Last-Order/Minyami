@@ -1,4 +1,5 @@
 import { describe, expect, jest, test } from "@jest/globals";
+import { iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
 import { normalizeDownloaderConfig } from "@/core/download/config";
 import { DownloadHttpClient } from "@/core/download/infrastructure/http_client";
 import { KeyStore } from "@/core/download/infrastructure/key_store";
@@ -18,8 +19,8 @@ describe("HLSMediaPlaylistCursor", () => {
         const cursor = createCursor("video", createPlaylist(), context);
         const signal = new AbortController().signal;
 
-        const track = await cursor.prepare(context, signal);
-        const batches = await collect(cursor.discover(context, signal));
+        const track = await prepare(cursor, context, signal);
+        const batches = await collect(discover(cursor, context, signal));
 
         expect(track).toMatchObject({
             container: { name: "MP4", extension: "mp4" },
@@ -60,12 +61,12 @@ describe("HLSMediaPlaylistCursor", () => {
         const signal = new AbortController().signal;
         const video = createCursor("video", createPlaylist(), context, "follow");
         const audio = createCursor("audio", createPlaylist(), context, "follow");
-        await video.prepare(context, signal);
-        await audio.prepare(context, signal);
+        await prepare(video, context, signal);
+        await prepare(audio, context, signal);
 
         const [videoBatches, audioBatches] = await Promise.all([
-            collect(video.discover(context, signal)),
-            collect(audio.discover(context, signal)),
+            collect(discover(video, context, signal)),
+            collect(discover(audio, context, signal)),
         ]);
 
         expect(videoBatches[0].items).toHaveLength(2);
@@ -123,9 +124,9 @@ describe("HLSMediaPlaylistCursor", () => {
             averageSegmentDuration: 0.001,
         };
         const cursor = createCursor("video", playlist, context, "follow");
-        await cursor.prepare(context, new AbortController().signal);
+        await prepare(cursor, context);
 
-        const batches = await collect(cursor.discover(context, new AbortController().signal));
+        const batches = await collect(discover(cursor, context));
 
         expect(outputContexts(batches)).toEqual([
             [
@@ -156,9 +157,9 @@ describe("HLSMediaPlaylistCursor", () => {
 
         try {
             const cursor = createCursor("video", initial, context, "follow");
-            await cursor.prepare(context, new AbortController().signal);
+            await prepare(cursor, context);
 
-            const batches = await collect(cursor.discover(context, new AbortController().signal));
+            const batches = await collect(discover(cursor, context));
 
             expect(outputContexts(batches)).toEqual([
                 ["init:init-a", "media:init-a"],
@@ -182,9 +183,9 @@ describe("HLSMediaPlaylistCursor", () => {
 
         try {
             const cursor = createCursor("video", initial, context, "follow");
-            await cursor.prepare(context, new AbortController().signal);
+            await prepare(cursor, context);
 
-            const batches = await collect(cursor.discover(context, new AbortController().signal));
+            const batches = await collect(discover(cursor, context));
 
             expect(outputContexts(batches)).toEqual([["init:init-a", "media:init-a"], ["media:init-a"]]);
             expect(load).toHaveBeenCalledTimes(1);
@@ -233,9 +234,9 @@ describe("HLSMediaPlaylistCursor", () => {
 
         try {
             const cursor = createCursor("video", initial, context, "follow", [{ key: "00".repeat(16) }]);
-            await cursor.prepare(context, new AbortController().signal);
+            await prepare(cursor, context);
 
-            const batches = await collect(cursor.discover(context, new AbortController().signal));
+            const batches = await collect(discover(cursor, context));
 
             expect(batches.flatMap((batch) => batch.items.map((item) => item.url))).toEqual([
                 "https://media.example/content/1.ts",
@@ -279,8 +280,8 @@ describe("HLSMediaPlaylistCursor", () => {
         };
         const cursor = createCursor("video", playlist, context);
 
-        await cursor.prepare(context, new AbortController().signal);
-        const batches = await collect(cursor.discover(context, new AbortController().signal));
+        await prepare(cursor, context);
+        const batches = await collect(discover(cursor, context));
 
         expect(batches[0].items.map((item) => item.url)).toEqual(["https://media.example/content/1.ts"]);
         expect(request).not.toHaveBeenCalled();
@@ -333,9 +334,9 @@ describe("HLSMediaPlaylistCursor", () => {
 
         try {
             const cursor = createCursor("video", initial, context, "follow", [{ key: "00".repeat(16) }]);
-            await cursor.prepare(context, new AbortController().signal);
+            await prepare(cursor, context);
 
-            const batches = await collect(cursor.discover(context, new AbortController().signal));
+            const batches = await collect(discover(cursor, context));
 
             expect(batches.flatMap((batch) => batch.items.map((item) => item.url))).toEqual([
                 "https://media.example/protected.ts",
@@ -394,8 +395,8 @@ describe("HLSMediaPlaylistCursor", () => {
 
         try {
             const cursor = createCursor("audio", initial, context, "follow", [{ key: "00".repeat(16) }]);
-            const prepared = await cursor.prepare(context, new AbortController().signal);
-            const batches = await collect(cursor.discover(context, new AbortController().signal));
+            const prepared = await prepare(cursor, context);
+            const batches = await collect(discover(cursor, context));
 
             expect(prepared.container).toMatchObject({ extension: "aac" });
             expect(batches.flatMap((batch) => batch.items)).toEqual([
@@ -425,6 +426,22 @@ describe("HLSMediaPlaylistCursor", () => {
 function createContext(): DownloadSourceContext {
     const http = new DownloadHttpClient(normalizeDownloaderConfig());
     return { http, keys: new KeyStore() };
+}
+
+function prepare(
+    cursor: HLSMediaPlaylistCursor,
+    context: DownloadSourceContext,
+    signal = new AbortController().signal
+) {
+    return runWithAbortSignal(signal, () => cursor.prepare(context));
+}
+
+function discover(
+    cursor: HLSMediaPlaylistCursor,
+    context: DownloadSourceContext,
+    signal = new AbortController().signal
+): AsyncIterable<SourceBatch> {
+    return iterateWithAbortSignal(signal, () => cursor.discover(context));
 }
 
 function createCursor(

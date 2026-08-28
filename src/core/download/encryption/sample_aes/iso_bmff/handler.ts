@@ -3,6 +3,7 @@ import * as fs from "fs";
 import { validateClearIsoBmffFragment, validateClearIsoBmffInitialization } from "@/core/isobmff";
 import { DownloadEncryption, IsoBmffSampleAesEncryption } from "@/core/source/types";
 import { DecryptionRequest, EncryptionHandler, FatalDecryptionError } from "@/core/download/encryption/types";
+import { getAbortSignal } from "@/utils/abort";
 import { Mp4DecryptRunner, SystemMp4DecryptRunner } from "./runner";
 
 const AES_128_KEY = /^[0-9a-fA-F]{32}$/;
@@ -50,7 +51,8 @@ export class IsoBmffSampleAesHandler implements EncryptionHandler {
     }
 
     async decrypt(request: DecryptionRequest): Promise<void> {
-        const { inputPath, outputPath, encryption, keys, signal } = request;
+        const { inputPath, outputPath, encryption, keys } = request;
+        const signal = getAbortSignal();
         this.validate(encryption, keys);
 
         const operationId = `${process.pid}-${randomUUID()}`;
@@ -75,7 +77,7 @@ export class IsoBmffSampleAesHandler implements EncryptionHandler {
                     { flag: "wx" }
                 );
             }
-            await this.runner.run(arguments_, signal);
+            await this.runner.run(arguments_);
             const output = await fs.promises.readFile(temporaryOutputPath);
             if (output.length === 0) {
                 throw new Error("mp4decrypt created an empty output file.");
