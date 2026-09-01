@@ -77,6 +77,48 @@ describe("download output muxing", () => {
         }
     });
 
+    test("muxes one video and multiple audio tracks into one output in track order", async () => {
+        const server = http.createServer((request, response) => response.end(request.url!.slice(1)));
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-multi-audio-muxing-", async (directory) => {
+                const output = path.join(directory, "media.mkv");
+                const muxer = new TestMuxer("available", true);
+                const downloader = createDownloader(createThreeTrackSource(baseUrl), {
+                    output,
+                    tempDir: directory,
+                    muxers: [muxer],
+                });
+
+                await downloader.download();
+
+                const videoOutput = path.join(directory, "media.video.ts");
+                const englishOutput = path.join(directory, "media.audio-en.ts");
+                const japaneseOutput = path.join(directory, "media.audio-ja.ts");
+                expect(fs.readFileSync(output, "utf8")).toBe("video+english+japanese");
+                expect(muxer.requests).toHaveLength(1);
+                expect(muxer.requests[0]).toMatchObject({
+                    outputPath: output,
+                    inputs: [
+                        { trackId: "video", mediaTrack: { type: "video" }, inputPath: videoOutput },
+                        { trackId: "audio-en", mediaTrack: { type: "audio" }, inputPath: englishOutput },
+                        { trackId: "audio-ja", mediaTrack: { type: "audio" }, inputPath: japaneseOutput },
+                    ],
+                });
+                expect(downloader.getSnapshot()).toMatchObject({
+                    outputPaths: [output],
+                    artifacts: [],
+                    tracks: [{ outputPaths: [] }, { outputPaths: [] }, { outputPaths: [] }],
+                });
+                expect([videoOutput, englishOutput, japaneseOutput].every((file) => !fs.existsSync(file))).toBe(true);
+                expect(fs.readdirSync(directory)).toEqual(["media.mkv"]);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test("falls back in order and keeps track outputs when no muxer is available", async () => {
         const server = http.createServer((request, response) => response.end(request.url!.slice(1)));
         const baseUrl = await listen(server);
@@ -236,6 +278,37 @@ function createTwoTrackSource(
                 items: [{ url: `${baseUrl}/audio`, kind: "media", duration: 1 }],
                 totalItemCount: 1,
             };
+        },
+    };
+}
+
+function createThreeTrackSource(baseUrl: string): DownloadSource {
+    const tracks = [
+        { id: "video", type: "video" as const, payload: "video" },
+        { id: "audio-en", type: "audio" as const, payload: "english" },
+        { id: "audio-ja", type: "audio" as const, payload: "japanese" },
+    ];
+    return {
+        sourcePath: "custom://multi-audio-muxing",
+        continuous: false,
+        async prepare() {
+            return {
+                container: MPEG_TS_CONTAINER,
+                tracks: tracks.map((track) => ({
+                    id: track.id,
+                    mediaTrack: { id: `logical-${track.id}`, type: track.type },
+                    sourcePath: `${baseUrl}/${track.payload}`,
+                })),
+            };
+        },
+        async *discover() {
+            for (const track of tracks) {
+                yield {
+                    trackId: track.id,
+                    items: [{ url: `${baseUrl}/${track.payload}`, kind: "media" as const, duration: 1 }],
+                    totalItemCount: 1,
+                };
+            }
         },
     };
 }

@@ -25,9 +25,14 @@ const request = {
             inputPath: "video track.ts",
         },
         {
-            trackId: "audio",
-            mediaTrack: { id: "logical-audio", type: "audio" as const },
-            inputPath: "audio track.ts",
+            trackId: "audio-en",
+            mediaTrack: { id: "logical-audio-en", type: "audio" as const },
+            inputPath: "english audio track.ts",
+        },
+        {
+            trackId: "audio-ja",
+            mediaTrack: { id: "logical-audio-ja", type: "audio" as const },
+            inputPath: "japanese audio track.ts",
         },
     ],
     outputPath: "mixed output.mkv",
@@ -50,7 +55,13 @@ describe("built-in muxers", () => {
         expect(runner.runs).toEqual([
             {
                 command: "mkvmerge",
-                arguments_: ["--output", "mixed output.mkv", "video track.ts", "audio track.ts"],
+                arguments_: [
+                    "--output",
+                    "mixed output.mkv",
+                    "video track.ts",
+                    "english audio track.ts",
+                    "japanese audio track.ts",
+                ],
             },
         ]);
     });
@@ -76,11 +87,15 @@ describe("built-in muxers", () => {
                     "-i",
                     "video track.ts",
                     "-i",
-                    "audio track.ts",
+                    "english audio track.ts",
+                    "-i",
+                    "japanese audio track.ts",
                     "-map",
                     "0",
                     "-map",
                     "1",
+                    "-map",
+                    "2",
                     "-c",
                     "copy",
                     "-movflags",

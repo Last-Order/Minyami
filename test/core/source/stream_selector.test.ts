@@ -46,17 +46,19 @@ afterEach(() => {
 });
 
 describe("stream selector", () => {
-    test("selects video first and then one compatible audio track", async () => {
+    test("selects video first and then multiple compatible audio tracks in manifest order", async () => {
         setTTY(true);
         promptMock.mockImplementation(async (question) => {
             const prompt = question as {
                 name: string;
                 choices: Array<{ value: unknown }>;
             };
-            return prompt.name === "video" ? { video: prompt.choices[0].value } : { audio: prompt.choices[1].value };
+            return prompt.name === "video"
+                ? { video: prompt.choices[0].value }
+                : { audio: [prompt.choices[1].value, prompt.choices[0].value] };
         });
 
-        await expect(selectStreamInteractively(catalog)).resolves.toEqual([highVideo, japaneseAudio]);
+        await expect(selectStreamInteractively(catalog)).resolves.toEqual([highVideo, englishAudio, japaneseAudio]);
 
         const videoPrompt = promptMock.mock.calls[0][0] as {
             name: string;
@@ -74,18 +76,21 @@ describe("stream selector", () => {
         expect(catalog.options.map((option) => option.id)).toEqual(["low", "high"]);
 
         const audioPrompt = promptMock.mock.calls[1][0] as {
+            type: string;
             name: string;
             message: string;
-            initial: number;
-            choices: Array<{ title: string; value: unknown }>;
+            choices: Array<{ title: string; value: unknown; selected: boolean }>;
         };
+        expect(audioPrompt.type).toBe("multiselect");
         expect(audioPrompt.name).toBe("audio");
-        expect(audioPrompt.message).toBe("Select an audio track");
-        expect(audioPrompt.initial).toBe(0);
+        expect(audioPrompt.message).toBe("Select audio tracks");
         expect(audioPrompt.choices).toEqual([
-            { title: "English (en) · 2 ch · mp4a.40.2 · 128 kbps", value: englishAudio },
-            { title: "Japanese (ja)", value: japaneseAudio },
-            { title: "None", value: null },
+            {
+                title: "English (en) · 2 ch · mp4a.40.2 · 128 kbps",
+                value: englishAudio,
+                selected: true,
+            },
+            { title: "Japanese (ja)", value: japaneseAudio, selected: false },
         ]);
     });
 
@@ -93,7 +98,7 @@ describe("stream selector", () => {
         setTTY(true);
         promptMock.mockImplementation(async (question) => {
             const prompt = question as { name: string; choices: Array<{ value: unknown }> };
-            return prompt.name === "video" ? { video: prompt.choices[0].value } : { audio: prompt.choices[2].value };
+            return prompt.name === "video" ? { video: prompt.choices[0].value } : { audio: [] };
         });
 
         await expect(selectStreamInteractively(catalog)).resolves.toEqual([highVideo]);
@@ -103,18 +108,15 @@ describe("stream selector", () => {
         setTTY(true);
         promptMock.mockImplementation(async (question) => {
             const prompt = question as { name: string; choices: Array<{ value: unknown }> };
-            return prompt.name === "video" ? { video: prompt.choices[1].value } : { audio: prompt.choices[0].value };
+            return prompt.name === "video" ? { video: prompt.choices[1].value } : { audio: [prompt.choices[0].value] };
         });
 
         await expect(selectStreamInteractively(catalog)).resolves.toEqual([lowVideo, japaneseAudio]);
 
         const audioPrompt = promptMock.mock.calls[1][0] as {
-            choices: Array<{ title: string; value: unknown }>;
+            choices: Array<{ title: string; value: unknown; selected: boolean }>;
         };
-        expect(audioPrompt.choices).toEqual([
-            { title: "Japanese (ja)", value: japaneseAudio },
-            { title: "None", value: null },
-        ]);
+        expect(audioPrompt.choices).toEqual([{ title: "Japanese (ja)", value: japaneseAudio, selected: true }]);
     });
 
     test("falls back to the highest-bandwidth option outside a TTY", async () => {
@@ -144,12 +146,22 @@ describe("stream selector", () => {
             tracks: [highVideo, englishAudio],
             options: [{ id: "high", tracks: [highVideo, englishAudio] }],
         } as StreamCatalog;
-        promptMock.mockResolvedValue({ audio: englishAudio });
+        promptMock.mockResolvedValue({ audio: [englishAudio] });
 
         await expect(selectStreamInteractively(singleVideo)).resolves.toEqual([highVideo, englishAudio]);
 
         expect(promptMock).toHaveBeenCalledTimes(1);
         expect(promptMock.mock.calls[0][0]).toMatchObject({ name: "audio" });
+    });
+
+    test("skips the audio prompt when the selected video has no compatible audio tracks", async () => {
+        const videoOnly = {
+            tracks: [highVideo],
+            options: [{ id: "high", tracks: [highVideo] }],
+        } as StreamCatalog;
+
+        await expect(selectStreamInteractively(videoOnly)).resolves.toEqual([highVideo]);
+        expect(promptMock).not.toHaveBeenCalled();
     });
 
     test("returns undefined when video selection is cancelled", async () => {

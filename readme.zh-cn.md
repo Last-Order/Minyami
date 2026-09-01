@@ -74,7 +74,6 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 | `--keep-encrypted-chunks` | 解密后保留加密分块，需与 `--keep` 一起使用。 |
 | `--verbose`、`--debug` | 输出调试信息。 |
 
-如果 master playlist 包含多个流选项，Minyami 会按带宽从高到低显示交互式菜单。在非交互式终端中，程序会自动选择带宽最高的选项。只有一个选项时会直接开始下载。
 
 ## 作为库使用
 

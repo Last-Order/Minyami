@@ -19,7 +19,8 @@ interface VideoChoice {
 
 interface AudioChoice {
     readonly title: string;
-    readonly value: AudioTrack | null;
+    readonly value: AudioTrack;
+    readonly selected: boolean;
 }
 
 const TRACK_DETAIL_SEPARATOR = " · ";
@@ -39,7 +40,7 @@ export async function selectStreamInteractively(catalog: StreamCatalog): Promise
     if (videoChoices.length === 0 && catalog.options.length === 1) {
         return defaultSelection;
     }
-    if (videoChoices.length === 1 && createAudioChoices(videoChoices[0].value.option).length === 1) {
+    if (videoChoices.length === 1 && createAudioChoices(videoChoices[0].value.option).length === 0) {
         return [videoChoices[0].value.track];
     }
 
@@ -58,24 +59,27 @@ export async function selectStreamInteractively(catalog: StreamCatalog): Promise
     }
 
     const audioChoices = createAudioChoices(selectedVideo.option);
-    if (audioChoices.length === 1) {
+    if (audioChoices.length === 0) {
         return [selectedVideo.track];
     }
 
     const response = await prompts({
-        type: "select",
+        type: "multiselect",
         name: "audio",
-        message: "Select an audio track",
+        message: "Select audio tracks",
         choices: audioChoices,
-        initial: initialAudioChoice(audioChoices),
     });
-    const selectedAudio = response.audio as AudioTrack | null | undefined;
-    if (selectedAudio === undefined) {
+    const selectedAudios = response.audio as readonly AudioTrack[] | undefined;
+    if (selectedAudios === undefined) {
         return undefined;
     }
 
     // The second prompt is derived from the selected option so it cannot cross a manifest compatibility boundary.
-    return selectedAudio === null ? [selectedVideo.track] : [selectedVideo.track, selectedAudio];
+    const selectedAudioSet = new Set(selectedAudios);
+    return [
+        selectedVideo.track,
+        ...audioChoices.filter((choice) => selectedAudioSet.has(choice.value)).map((choice) => choice.value),
+    ];
 }
 
 async function selectVideo(choices: readonly VideoChoice[]): Promise<VideoChoiceValue | undefined> {
@@ -124,17 +128,15 @@ function createVideoChoices(catalog: StreamCatalog): VideoChoice[] {
 }
 
 function createAudioChoices(option: StreamOption): AudioChoice[] {
-    return [
-        ...option.tracks
-            .filter((track): track is AudioTrack => track.type === "audio")
-            .map((track) => ({ title: formatAudioTrack(track), value: track })),
-        { title: "None", value: null },
-    ];
-}
-
-function initialAudioChoice(choices: readonly AudioChoice[]): number {
-    const defaultIndex = choices.findIndex((choice) => choice.value?.isDefault);
-    return defaultIndex >= 0 ? defaultIndex : 0;
+    const tracks = option.tracks.filter((track): track is AudioTrack => track.type === "audio");
+    const declaredDefaultIndex = tracks.findIndex((track) => track.isDefault);
+    const selectedIndex = declaredDefaultIndex >= 0 ? declaredDefaultIndex : 0;
+    return tracks.map((track, index) => ({
+        title: formatAudioTrack(track),
+        value: track,
+        // Keep pressing Enter compatible with the old single-select default while allowing users to toggle more tracks.
+        selected: index === selectedIndex,
+    }));
 }
 
 function formatVideoChoice(choice: VideoChoiceValue): string {
