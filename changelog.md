@@ -2,17 +2,13 @@
 
 ## Unreleased
 
+## 6.0.0-beta.5 - 2026-09-01
+
 ### Changed
 
 -   Interactive HLS master-playlist selection now accepts multiple compatible audio renditions after choosing a
     video track. The declared default rendition, or the first rendition when no default exists, is preselected;
     selected audio tracks are downloaded independently and muxed with the video into one output when possible.
--   Centralized HLS key acquisition outside the container profiles. Repeated explicit keys now map to distinct
-    AES-128 key URIs in first-seen order within each Media Playlist and retain those assignments across live
-    refreshes, while one explicit key continues to apply to every URI. Multiple fMP4 SAMPLE-AES keys continue to use
-    KID selectors.
--   Centralized download-side key materialization while retaining session preflight validation before task attempts
-    and final algorithm validation inside each encryption handler.
 
 ## 6.0.0-beta.4 - 2026-08-25
 
