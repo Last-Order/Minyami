@@ -75,6 +75,21 @@ describe("MpegTsSampleAesHandler", () => {
         expect(decryptSampleAesH264(encrypted, key, iv)).toEqual(Buffer.concat([prefix, nal, trailingZeros]));
     });
 
+    test("preserves an empty Annex-B NAL unit while decrypting the following sample", () => {
+        const nal = Buffer.alloc(240);
+        nal[0] = 0x65;
+        for (let index = 1; index < nal.length; index++) {
+            nal[index] = (index % 251) + 1;
+        }
+        const encryptedNal = Buffer.from(nal);
+        encryptCbcBlocks(encryptedNal, sampleAesH264BlockOffsets(encryptedNal.length));
+        const emptyNalPrefix = Buffer.from([0, 0, 1]);
+        const samplePrefix = Buffer.from([0, 0, 0, 1]);
+        const encrypted = Buffer.concat([emptyNalPrefix, samplePrefix, applyEmulationPrevention(encryptedNal)]);
+
+        expect(decryptSampleAesH264(encrypted, key, iv)).toEqual(Buffer.concat([emptyNalPrefix, samplePrefix, nal]));
+    });
+
     test("commits an output file without removing the encrypted input", async () => {
         await withTempDirectory("minyami-sample-aes-handler-", async (directory) => {
             const fixture = createEncryptedTransportStream();

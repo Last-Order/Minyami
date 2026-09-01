@@ -14,6 +14,10 @@ export function decryptSampleAesH264(payload: Buffer, key: Buffer, iv: Buffer): 
     const annexB = parseAnnexB(payload);
     const jobs: CbcDecryptJob[] = [];
     const outputUnits = annexB.units.map((unit) => {
+        // Empty NAL units carry no sample bytes, so preserving their delimiter is sufficient and cannot alter CBC work.
+        if (unit.data.length === 0) {
+            return unit;
+        }
         // ITU-T H.264 §7.3.1: nal_unit_type is the low 5 bits of the one-byte NAL header.
         // https://www.itu.int/dms_pubrec/itu-t/rec/h/T-REC-H.264-202408-I%21%21TOC-HTM-E.htm
         const type = unit.data[0] & 0x1f;
@@ -79,9 +83,6 @@ function parseAnnexB(payload: Buffer): AnnexBPayload {
     }
     const units = starts.map((start, index) => {
         const dataEnd = starts[index + 1]?.prefixOffset ?? payloadEnd;
-        if (start.dataOffset >= dataEnd) {
-            throw new Error("SAMPLE-AES H.264 payload contains an empty NAL unit.");
-        }
         return {
             prefix: payload.subarray(start.prefixOffset, start.dataOffset),
             data: Buffer.from(payload.subarray(start.dataOffset, dataEnd)),
