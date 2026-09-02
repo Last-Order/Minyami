@@ -1,7 +1,8 @@
 import * as path from "path";
 import logger from "@/utils/log";
 import { iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
-import { DownloadItem, DownloadSource, DownloadSourceContext } from "@/core/source/types";
+import { DownloadItem, DownloadSource, DownloadSourceContext, SourceTrack } from "@/core/source/types";
+import { MediaContainer } from "@/core/media_container";
 import {
     ChunkDownloadedInfo,
     DownloadEvent,
@@ -21,6 +22,7 @@ import { KeyStore } from "../infrastructure/key_store";
 import { RetryingSourceHttpClient } from "../infrastructure/source_http_client";
 import { DownloadManifest } from "./manifest";
 import { OutputSession } from "../output/output_session";
+import { TaskMetadata } from "../output/task_metadata";
 import { DownloaderConfig } from "../types";
 
 type SessionState =
@@ -81,6 +83,7 @@ export class DownloadSession {
         try {
             // Allocate first so every later failure has one known recovery location to report or clean.
             await this.output.allocateWorkspace();
+            this.output.writeTaskMetadata(this.createTaskMetadata());
             if (this.cancellation !== "none") {
                 this.finishBeforeDiscovery();
                 return;
@@ -111,6 +114,7 @@ export class DownloadSession {
             // Manifest and output must agree on the immutable track set before observers see `parsed`.
             this.manifest.registerTracks(metadata.tracks);
             this.output.configureTracks(metadata.tracks, metadata.container);
+            this.output.writeTaskMetadata(this.createTaskMetadata(metadata.container, metadata.tracks));
             this.events.emit("parsed");
             if (this.cancellation !== "none") {
                 this.finishBeforeDiscovery();
@@ -462,6 +466,38 @@ export class DownloadSession {
     private getCancellation(): Cancellation {
         // Cancellation may change while an awaited source or task operation is in flight.
         return this.cancellation;
+    }
+
+    private createTaskMetadata(sourceContainer?: MediaContainer, tracks: readonly SourceTrack[] = []): TaskMetadata {
+        const outputTracks = new Map(this.output.getTrackSnapshots().map((track) => [track.id, track]));
+        return {
+            schemaVersion: 1,
+            sourcePath: this.source.sourcePath,
+            continuous: this.source.continuous,
+            tempPath: this.output.tempPath,
+            outputBasePath: this.output.outputBasePath,
+            startedAt: this.manifest.snapshot.startedAt,
+            configuration: {
+                threads: this.config.threads,
+                sourceRequestAttempts: this.config.sourceRequestAttempts,
+                taskAttempts: this.config.taskAttempts,
+                noMerge: this.config.noMerge,
+                keepTemporaryFiles: this.config.keepTemporaryFiles,
+                keepEncryptedChunks: this.config.keepEncryptedChunks,
+            },
+            ...(sourceContainer ? { sourceContainer } : {}),
+            tracks: tracks.map((track) => {
+                const output = outputTracks.get(track.id)!;
+                return {
+                    id: track.id,
+                    mediaTrack: track.mediaTrack,
+                    sourcePath: track.sourcePath,
+                    container: track.container ?? sourceContainer!,
+                    tempPath: this.output.getTrackTempPath(track.id),
+                    plannedOutputPath: output.plannedOutputPath,
+                };
+            }),
+        };
     }
 
     private publicStatus(): DownloadStatus {

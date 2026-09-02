@@ -10,6 +10,80 @@ import { close, listen, withMediaServer } from "../../helpers/http";
 import { withTempDirectory } from "../../helpers/filesystem";
 
 describe("createDownloader", () => {
+    test("writes versioned recovery metadata before publishing parsed", async () => {
+        await withTempDirectory("minyami-task-metadata-", async (directory) => {
+            const output = path.join(directory, "metadata.ts");
+            const source: DownloadSource = {
+                sourcePath: "custom://metadata",
+                continuous: false,
+                async prepare() {
+                    return {
+                        container: MPEG_TS_CONTAINER,
+                        tracks: [
+                            {
+                                id: "main",
+                                mediaTrack: { id: "logical-main", type: "video", height: 720 },
+                                sourcePath: "custom://metadata/main",
+                            },
+                        ],
+                    };
+                },
+                async *discover() {
+                    yield { trackId: "main", items: [], totalItemCount: 0 };
+                },
+            };
+            const downloader = createDownloader(source, {
+                output,
+                tempDir: directory,
+                threads: 3,
+                sourceRequestAttempts: 2,
+                taskAttempts: 4,
+                noMerge: true,
+                cookies: "session=secret",
+                headers: "Authorization: secret",
+            });
+            let metadata: Record<string, unknown> | undefined;
+            downloader.once("parsed", () => {
+                metadata = JSON.parse(
+                    fs.readFileSync(path.join(downloader.getSnapshot().tempPath, "task.json"), "utf8")
+                );
+            });
+
+            await downloader.download();
+
+            const snapshot = downloader.getSnapshot();
+            expect(metadata).toEqual({
+                schemaVersion: 1,
+                sourcePath: "custom://metadata",
+                continuous: false,
+                tempPath: snapshot.tempPath,
+                outputBasePath: path.join(directory, "metadata"),
+                startedAt: snapshot.startedAt,
+                configuration: {
+                    threads: 3,
+                    sourceRequestAttempts: 2,
+                    taskAttempts: 4,
+                    noMerge: true,
+                    keepTemporaryFiles: false,
+                    keepEncryptedChunks: false,
+                },
+                sourceContainer: MPEG_TS_CONTAINER,
+                tracks: [
+                    {
+                        id: "main",
+                        mediaTrack: { id: "logical-main", type: "video", height: 720 },
+                        sourcePath: "custom://metadata/main",
+                        container: MPEG_TS_CONTAINER,
+                        tempPath: path.join(snapshot.tempPath, "main"),
+                        plannedOutputPath: output,
+                    },
+                ],
+            });
+            expect(JSON.stringify(metadata)).not.toContain("secret");
+            expect(fs.existsSync(path.join(snapshot.tempPath, "task.json"))).toBe(true);
+        });
+    });
+
     test("downloads and merges protocol-neutral items from a custom source", async () => {
         await withMediaServer(async (playlistUrl, expectedOutput) => {
             await withTempDirectory("minyami-custom-source-", async (directory) => {
@@ -164,6 +238,13 @@ describe("createDownloader", () => {
 
             expect(criticalError).toBeInstanceOf(Error);
             expect(downloader.getSnapshot().status).toBe("failed");
+            expect(
+                JSON.parse(fs.readFileSync(path.join(downloader.getSnapshot().tempPath, "task.json"), "utf8"))
+            ).toMatchObject({
+                schemaVersion: 1,
+                sourcePath: "custom://failure",
+                tracks: [],
+            });
         });
     });
 

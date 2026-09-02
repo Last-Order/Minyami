@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+-   Added a versioned `task.json` to retained temporary workspaces with non-sensitive source, output, execution, and
+    selected-track metadata for future recovery tooling.
+
 ## 6.0.0-beta.5 - 2026-09-01
 
 ### Changed

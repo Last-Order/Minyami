@@ -10,6 +10,7 @@ import { DownloadTrackId, SourceTrack } from "@/core/source/types";
 import { TrackArtifact } from "../controller";
 import { DownloadTask } from "../execution/task";
 import FileConcentrator from "./file_concentrator";
+import { TASK_METADATA_FILENAME, TaskMetadata, writeTaskMetadata } from "./task_metadata";
 
 export interface OutputSessionConfig {
     readonly tempPath: string;
@@ -52,6 +53,10 @@ export class OutputSession {
         this.validateTemporaryBasePath();
         this.tempPath = path.resolve(this.tempPath, `minyami_${Date.now()}_${randomBytes(4).toString("hex")}`);
         fs.mkdirSync(this.tempPath);
+    }
+
+    writeTaskMetadata(metadata: TaskMetadata): void {
+        writeTaskMetadata(path.resolve(this.tempPath, TASK_METADATA_FILENAME), metadata);
     }
 
     configureTracks(metadata: readonly SourceTrack[], container: MediaContainer): void {
@@ -158,6 +163,14 @@ export class OutputSession {
             if (fs.existsSync(track.tempPath) && fs.readdirSync(track.tempPath).length === 0) {
                 fs.rmdirSync(track.tempPath);
             }
+        }
+        const taskMetadataPath = path.resolve(this.tempPath, TASK_METADATA_FILENAME);
+        if (
+            fs.existsSync(taskMetadataPath) &&
+            fs.readdirSync(this.tempPath).every((entry) => entry === TASK_METADATA_FILENAME)
+        ) {
+            // The recovery record is disposable only after every recoverable output has gone.
+            fs.rmSync(taskMetadataPath);
         }
         if (fs.existsSync(this.tempPath) && fs.readdirSync(this.tempPath).length === 0) {
             fs.rmdirSync(this.tempPath);
