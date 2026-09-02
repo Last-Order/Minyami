@@ -1,5 +1,5 @@
-import { HLSSegment, HLSSegmentKind } from "@/core/source/hls/playlist/parser";
 import { createHLSKeyResolver } from "@/core/source/hls/key_resolver";
+import { HLSSegment, HLSSegmentKind } from "@/core/source/hls/playlist/parser";
 import { toDownloadItem } from "./download_item";
 import { HLSProfilePlan, HLSProfilePrepareOptions, SAMPLE_AES_EXPLICIT_KEY_REQUIRED } from "./types";
 
@@ -27,7 +27,7 @@ export function prepareSingleFileKeys({ explicitKeys, http }: HLSProfilePrepareO
 export function toSingleFileDownloadItem(
     segment: HLSSegment,
     sampleAesScheme: SingleFileSampleAesScheme,
-    missingIvMessage: string
+    missingIvMessage: string,
 ) {
     if (!segment.encryption) {
         return toDownloadItem(segment);

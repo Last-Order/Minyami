@@ -10,7 +10,7 @@ describe("download configuration", () => {
     test("removes recognized video extensions from the output basename", () => {
         for (const extension of ["ts", "mkv", "mp4", "webm", "mov", "avi", "m2ts"]) {
             expect(normalizeDownloaderConfig({ output: `./episode.final.${extension}` }).outputBasePath).toBe(
-                path.join(".", "episode.final")
+                path.join(".", "episode.final"),
             );
         }
     });

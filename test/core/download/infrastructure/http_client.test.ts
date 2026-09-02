@@ -14,7 +14,7 @@ describe("DownloadHttpClient", () => {
         const client = new DownloadHttpClient(
             normalizeDownloaderConfig({
                 headers: "X-Minyami-Test: isolated",
-            })
+            }),
         );
 
         expect(client.axios.defaults.headers["X-Minyami-Test"]).toBe("isolated");
@@ -69,7 +69,7 @@ describe("DownloadHttpClient", () => {
                 await expect(
                     client.download(`${baseUrl}/resource`, destination, {
                         byteRange: { offset: 6, length: 3 },
-                    })
+                    }),
                 ).rejects.toThrow("Unexpected response status for byte-range request: 200");
                 expect(fs.existsSync(destination)).toBe(false);
             });
@@ -121,7 +121,7 @@ describe("DownloadHttpClient", () => {
                 await expect(
                     client.download(`${baseUrl}/resource`, destination, {
                         byteRange: { offset: 2, length: 4 },
-                    })
+                    }),
                 ).rejects.toThrow("Downloaded byte count does not match the requested byte range");
                 expect(fs.existsSync(destination)).toBe(false);
             });

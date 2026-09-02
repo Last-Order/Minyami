@@ -126,7 +126,7 @@ describe("stream selector", () => {
         await expect(selectStreamInteractively(catalog)).resolves.toBe(catalog.options[1].tracks);
 
         expect(warning).toHaveBeenCalledWith(
-            "Interactive stream selection is unavailable. Selecting the highest-bandwidth option."
+            "Interactive stream selection is unavailable. Selecting the highest-bandwidth option.",
         );
     });
 

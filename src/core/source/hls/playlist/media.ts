@@ -155,7 +155,7 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
 function parseEncryption(
     tagBody: string,
     playlistUrl: string,
-    warned: boolean
+    warned: boolean,
 ): { encryption?: HLSMediaEncryption; warned: boolean } {
     const attributes = parseAttributeList(tagBody);
     const method = attributes["METHOD"];
@@ -244,7 +244,7 @@ function parseIv(value: string): string {
 function parseInitializationSegment(
     tagBody: string,
     playlistUrl: string,
-    encryption?: HLSMediaEncryption
+    encryption?: HLSMediaEncryption,
 ): HLSInitializationSegment {
     const attributes = parseAttributeList(tagBody);
     const uri = attributes["URI"];

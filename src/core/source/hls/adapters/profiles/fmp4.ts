@@ -1,7 +1,5 @@
-import { getAbortSignal } from "@/utils/abort";
 import { readIsoBmffDecryptionTrackIds } from "@/core/isobmff";
 import { MP4_CONTAINER } from "@/core/media_container";
-import { DownloadSourceContext, IsoBmffSampleAesKey } from "@/core/source/types";
 import { HLSExplicitKey } from "@/core/source/hls/explicit_key";
 import { createHLSKeyResolver } from "@/core/source/hls/key_resolver";
 import {
@@ -11,6 +9,8 @@ import {
     HLSSegment,
     HLSSegmentKind,
 } from "@/core/source/hls/playlist/parser";
+import { DownloadSourceContext, IsoBmffSampleAesKey } from "@/core/source/types";
+import { getAbortSignal } from "@/utils/abort";
 import { toDownloadItem } from "./download_item";
 import { HLSProfileAdapter, HLSProfilePrepareOptions, SAMPLE_AES_EXPLICIT_KEY_REQUIRED } from "./types";
 
@@ -58,13 +58,13 @@ function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
                     segment.encryption?.method !== "SAMPLE-AES"
                         ? []
                         : segment.kind === HLSSegmentKind.Initialization
-                        ? [segment.initializationId]
-                        : segment.initializationId
-                        ? [segment.initializationId]
-                        : (() => {
-                              throw new Error("fMP4 SAMPLE-AES media requires an initialization segment.");
-                          })()
-                )
+                          ? [segment.initializationId]
+                          : segment.initializationId
+                            ? [segment.initializationId]
+                            : (() => {
+                                  throw new Error("fMP4 SAMPLE-AES media requires an initialization segment.");
+                              })(),
+                ),
             );
             if (preparedKeys.length === 0) {
                 throw new Error(SAMPLE_AES_EXPLICIT_KEY_REQUIRED);
@@ -74,8 +74,8 @@ function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
                 playlist.segments.flatMap((segment) =>
                     segment.kind === HLSSegmentKind.Initialization
                         ? ([[segment.initializationId, segment]] as const)
-                        : []
-                )
+                        : [],
+                ),
             );
             for (const initializationId of protectedInitializationIds) {
                 if (sampleAesByInitialization.has(initializationId)) {
@@ -103,8 +103,8 @@ function prepareFmp4Profile({ explicitKeys, http }: HLSProfilePrepareOptions) {
                 segment.kind === HLSSegmentKind.Initialization
                     ? sampleAesByInitialization.get(segment.initializationId)
                     : segment.initializationId
-                    ? sampleAesByInitialization.get(segment.initializationId)
-                    : undefined;
+                      ? sampleAesByInitialization.get(segment.initializationId)
+                      : undefined;
             if (segment.kind === HLSSegmentKind.Initialization && sampleAes) {
                 // The init carries protection metadata even though its boxes are not ciphertext.
                 return toDownloadItem(segment, {
@@ -166,7 +166,7 @@ function registerKeys(
     explicitKeys: readonly PreparedExplicitKey[],
     trackIds: readonly number[],
     initializationId: string,
-    context: DownloadSourceContext
+    context: DownloadSourceContext,
 ): readonly IsoBmffSampleAesKey[] {
     if (explicitKeys.length === 1 && explicitKeys[0].kid === undefined) {
         const keyId = `fmp4:${initializationId}`;
@@ -191,7 +191,7 @@ function setConsistentKey(context: DownloadSourceContext, keyId: string, key: st
 
 async function loadInitializationSegment(
     segment: HLSInitializationSegment,
-    http: HLSProfilePrepareOptions["http"]
+    http: HLSProfilePrepareOptions["http"],
 ): Promise<Buffer> {
     const response = await http.request<ArrayBuffer>(segment.url, {
         responseType: "arraybuffer",

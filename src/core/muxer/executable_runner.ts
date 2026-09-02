@@ -39,8 +39,8 @@ export class SystemExecutableRunner implements ExecutableRunner {
                 const detail = Buffer.concat(stderr).toString().trim();
                 reject(
                     new Error(
-                        `${command} exited with code ${code === null ? "unknown" : code}${detail ? `: ${detail}` : "."}`
-                    )
+                        `${command} exited with code ${code === null ? "unknown" : code}${detail ? `: ${detail}` : "."}`,
+                    ),
                 );
             });
         });

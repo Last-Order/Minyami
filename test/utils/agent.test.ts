@@ -13,7 +13,7 @@ describe("createProxyAgent", () => {
     test("rejects incomplete proxy addresses", () => {
         expect(() => createProxyAgent("socks5://127.0.0.1")).toThrow("Proxy server invalid.");
         expect(() => createProxyAgent("127.0.0.1:", { allowNonPrefixSocksProxy: true })).toThrow(
-            "Proxy server invalid."
+            "Proxy server invalid.",
         );
     });
 

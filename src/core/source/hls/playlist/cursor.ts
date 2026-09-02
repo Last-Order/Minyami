@@ -1,12 +1,12 @@
-import logger from "@/utils/log";
-import { getAbortSignal } from "@/utils/abort";
-import { DownloadItem, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceTrack } from "@/core/source/types";
+import { MediaContainer } from "@/core/media_container";
 import { MediaTrack } from "@/core/source/stream_selection";
+import { DownloadItem, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceTrack } from "@/core/source/types";
+import { getAbortSignal } from "@/utils/abort";
+import logger from "@/utils/log";
 import { HLSAdaptationPlan, prepareHLSAdaptation } from "../adapters/adaptation";
 import { HLSExplicitKey } from "../explicit_key";
-import { HLSInitializationSegment, HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
 import { PlaylistLoader } from "./loader";
-import { MediaContainer } from "@/core/media_container";
+import { HLSInitializationSegment, HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
 
 export type HLSMediaPlaylistCursorMode = "snapshot" | "follow";
 
@@ -126,7 +126,7 @@ export class HLSMediaPlaylistCursor {
                     return;
                 }
                 logger.warning(
-                    `Unable to refresh track ${this.options.id}. Keep the current playlist and retry later.`
+                    `Unable to refresh track ${this.options.id}. Keep the current playlist and retry later.`,
                 );
             }
         }

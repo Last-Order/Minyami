@@ -118,7 +118,7 @@ function createVideoChoices(catalog: StreamCatalog): VideoChoice[] {
         .flatMap((option) =>
             option.tracks
                 .filter((track): track is VideoTrack => track.type === "video")
-                .map((track) => ({ option, track }))
+                .map((track) => ({ option, track })),
         )
         .sort((a, b) => effectiveBandwidth(b.option) - effectiveBandwidth(a.option))
         .map((value) => ({
@@ -178,7 +178,7 @@ function formatVideoTrack(track: VideoTrack): string {
     details.push(
         track.width !== undefined && track.height !== undefined
             ? `${track.width}x${track.height}`
-            : track.name || track.id
+            : track.name || track.id,
     );
     if (track.frameRate !== undefined) {
         details.push(`${track.frameRate} fps`);

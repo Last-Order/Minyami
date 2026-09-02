@@ -14,7 +14,7 @@ export const packedAacHLSProfile: HLSProfileAdapter = {
             toSingleFileDownloadItem(
                 segment,
                 "packed-aac-sample-aes",
-                "An explicit IV is required for Packed AAC SAMPLE-AES HLS."
+                "An explicit IV is required for Packed AAC SAMPLE-AES HLS.",
             ),
     }),
 };

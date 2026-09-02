@@ -25,7 +25,7 @@ export interface EriiOption extends EriiCommand {
 export interface Erii<TOptions extends object> {
     bind(
         config: EriiCommand,
-        handler: (context: EriiCommandContext, options: TOptions) => unknown | Promise<unknown>
+        handler: (context: EriiCommandContext, options: TOptions) => unknown | Promise<unknown>,
     ): void;
     addOption(config: EriiOption): void;
     default(handler: () => unknown): void;

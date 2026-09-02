@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
-import logger from "@/utils/log";
 import { getAbortSignal } from "@/utils/abort";
+import logger from "@/utils/log";
 import { EncryptionHandlerRegistry } from "../encryption/registry";
+import { FatalDecryptionError } from "../encryption/types";
 import { DownloadHttpClient } from "../infrastructure/http_client";
 import { KeyStore } from "../infrastructure/key_store";
-import { FatalDecryptionError } from "../encryption/types";
 import { DownloadTask } from "./task";
 
 export interface ExecuteChunkOptions {
@@ -23,7 +23,7 @@ export class ChunkExecutor {
     constructor(
         private readonly http: DownloadHttpClient,
         private readonly keys: KeyStore,
-        private readonly encryptionHandlers: EncryptionHandlerRegistry
+        private readonly encryptionHandlers: EncryptionHandlerRegistry,
     ) {}
 
     async execute(task: DownloadTask, options: ExecuteChunkOptions): Promise<ChunkResult> {
@@ -75,7 +75,7 @@ export class ChunkExecutor {
             logger.warning(
                 `Downloading or decrypting ${task.filename} failed.${
                     error instanceof FatalDecryptionError ? "" : " Retry later."
-                } [${reason}]`
+                } [${reason}]`,
             );
             logger.debug(error);
             throw error;

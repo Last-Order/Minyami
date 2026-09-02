@@ -1,7 +1,7 @@
+import { DownloadSource } from "../source/types";
 import { DownloadEvent, DownloadEventListener, SourceDownloadSnapshot } from "./controller";
 import { DownloadSession } from "./session/download_session";
 import { DownloaderConfig } from "./types";
-import { DownloadSource } from "../source/types";
 
 export type { SourceDownloadSnapshot } from "./controller";
 

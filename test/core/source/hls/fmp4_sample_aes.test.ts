@@ -31,7 +31,7 @@ describe("fMP4 SAMPLE-AES HLS", () => {
                                 "#EXTINF:1,",
                                 "/0.m4s",
                                 "#EXT-X-ENDLIST",
-                            ].join("\n")
+                            ].join("\n"),
                         );
                         break;
                     case "/init.mp4":
@@ -55,7 +55,7 @@ describe("fMP4 SAMPLE-AES HLS", () => {
                 });
 
                 await expect(downloader.download()).rejects.toThrow(
-                    "This HLS content is protected. Provide an explicit decryption key."
+                    "This HLS content is protected. Provide an explicit decryption key.",
                 );
                 expect(mediaRequestCount).toBe(0);
             } finally {
@@ -111,7 +111,7 @@ describe("fMP4 SAMPLE-AES HLS", () => {
                                 "#EXTINF:1,",
                                 "/1.m4s",
                                 "#EXT-X-ENDLIST",
-                            ].join("\n")
+                            ].join("\n"),
                         );
                         break;
                     case "/init.mp4":
@@ -155,7 +155,7 @@ describe("fMP4 SAMPLE-AES HLS", () => {
                 await download;
 
                 expect(fs.readFileSync(output)).toEqual(
-                    Buffer.concat([clearInitialization, firstFragment, secondFragment])
+                    Buffer.concat([clearInitialization, firstFragment, secondFragment]),
                 );
                 expect(downloader.getSnapshot()).toMatchObject({
                     status: "finished",

@@ -1,16 +1,9 @@
-import { DownloadTrackId } from "../source/types";
 import { MediaTrack } from "../source/stream_selection";
+import { DownloadTrackId } from "../source/types";
 
 /** Graceful stop can finish normally; only a hard abort produces `aborted`. */
 export type DownloadStatus =
-    | "idle"
-    | "preparing"
-    | "downloading"
-    | "stopping"
-    | "merging"
-    | "finished"
-    | "aborted"
-    | "failed";
+    "idle" | "preparing" | "downloading" | "stopping" | "merging" | "finished" | "aborted" | "failed";
 
 export interface ChunkDownloadedInfo {
     taskName: string;

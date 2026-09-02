@@ -73,7 +73,7 @@ export function createHLSStreamCatalogPlan(master: HLSMasterPlaylist): HLSStream
 }
 
 function groupAudioRenditions(
-    renditions: readonly HLSAudioRendition[]
+    renditions: readonly HLSAudioRendition[],
 ): ReadonlyMap<string, readonly HLSAudioRendition[]> {
     const groups = new Map<string, HLSAudioRendition[]>();
     for (const rendition of renditions) {

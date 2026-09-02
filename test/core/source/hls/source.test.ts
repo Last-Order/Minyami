@@ -1,13 +1,13 @@
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as http from "http";
-import * as path from "path";
 import { AddressInfo } from "net";
+import * as path from "path";
 import { describe, expect, jest, test } from "@jest/globals";
 import { createDownloader } from "@/core/download/downloader";
 import { createHLSSource } from "@/core/source/hls";
-import { HLSMediaPlaylist, HLSPlaylistKind, HLSVariant } from "@/core/source/hls/playlist/parser";
 import { PlaylistLoader } from "@/core/source/hls/playlist/loader";
+import { HLSMediaPlaylist, HLSPlaylistKind, HLSVariant } from "@/core/source/hls/playlist/parser";
 import { StreamSelector, TrackSelection } from "@/core/source/stream_selection";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
@@ -33,7 +33,7 @@ describe("HLSSource", () => {
                     "#EXT-X-BYTERANGE:6",
                     "/media.mp4",
                     "#EXT-X-ENDLIST",
-                ].join("\n")
+                ].join("\n"),
             );
         });
         const baseUrl = await listen(server);
@@ -83,7 +83,7 @@ describe("HLSSource", () => {
                     `#EXT-X-BYTERANGE:${encrypted.length}@${prefix.length}`,
                     "/media.bin",
                     "#EXT-X-ENDLIST",
-                ].join("\n")
+                ].join("\n"),
             );
         });
         const baseUrl = await listen(server);
@@ -127,7 +127,7 @@ describe("HLSSource", () => {
                     "#EXTINF:1,",
                     "/0.ts",
                     "#EXT-X-ENDLIST",
-                ].join("\n")
+                ].join("\n"),
             );
         });
         const baseUrl = await listen(server);
@@ -179,17 +179,17 @@ describe("HLSSource", () => {
                 [
                     "#EXTM3U",
                     `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key-a",IV=0x${firstIv.toString(
-                        "hex"
+                        "hex",
                     )}`,
                     "#EXTINF:1,",
                     `http://127.0.0.1:${address.port}/0.ts`,
                     `#EXT-X-KEY:METHOD=AES-128,URI="http://127.0.0.1:${address.port}/key-b",IV=0x${secondIv.toString(
-                        "hex"
+                        "hex",
                     )}`,
                     "#EXTINF:1,",
                     `http://127.0.0.1:${address.port}/1.ts`,
                     "#EXT-X-ENDLIST",
-                ].join("\n")
+                ].join("\n"),
             );
         });
         const baseUrl = await listen(server);
@@ -240,7 +240,7 @@ describe("HLSSource", () => {
         await withTempDirectory("minyami-selected-tracks-", async (directory) => {
             const downloader = createDownloader(
                 createHLSSource("https://media.example/master.m3u8", { mode: "snapshot", streamSelector }),
-                { tempDir: directory }
+                { tempDir: directory },
             );
 
             await downloader.download();
@@ -290,7 +290,7 @@ describe("HLSSource", () => {
                     '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Japanese",LANGUAGE="ja",DEFAULT=NO,AUTOSELECT=YES,URI="/ja.m3u8"',
                     '#EXT-X-STREAM-INF:BANDWIDTH=2000000,AUDIO="audio",RESOLUTION=1280x720',
                     "/video.m3u8",
-                ].join("\n")
+                ].join("\n"),
             );
         });
         const baseUrl = await listen(server);
@@ -345,7 +345,7 @@ describe("HLSSource", () => {
                     mode: "snapshot",
                     streamSelector: () => undefined,
                 }),
-                { output, tempDir: directory }
+                { output, tempDir: directory },
             );
 
             await expect(downloader.download()).resolves.toBeUndefined();
@@ -365,7 +365,7 @@ describe("HLSSource", () => {
         await withTempDirectory("minyami-nested-master-", async (directory) => {
             const downloader = createDownloader(
                 createHLSSource("https://media.example/master.m3u8", { mode: "snapshot" }),
-                { tempDir: directory }
+                { tempDir: directory },
             );
             await expect(downloader.download()).rejects.toThrow("points to another master playlist");
         });

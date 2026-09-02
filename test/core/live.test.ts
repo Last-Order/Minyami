@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as http from "http";
-import * as path from "path";
 import { AddressInfo } from "net";
+import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
 import { createLiveDownloader } from "@/core/live";
 import { withTempDirectory } from "../helpers/filesystem";
@@ -55,7 +55,7 @@ describe("createLiveDownloader", () => {
                     new Map([
                         ["/0.ts", 1],
                         ["/1.ts", 1],
-                    ])
+                    ]),
                 );
                 expect(downloader.getSnapshot()).toMatchObject({
                     totalChunkCount: 2,
@@ -87,7 +87,7 @@ describe("createLiveDownloader", () => {
                     "#EXT-X-MEDIA-SEQUENCE:0",
                     "#EXTINF:10,",
                     `http://127.0.0.1:${address.port}/0.ts`,
-                ].join("\n")
+                ].join("\n"),
             );
         });
         const baseUrl = await listen(server);

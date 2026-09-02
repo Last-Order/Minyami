@@ -46,7 +46,7 @@ describe("Aes128CbcHandler", () => {
         const handler = new Aes128CbcHandler();
 
         expect(() =>
-            handler.validate({ scheme: "aes-128-cbc", keyId: "test:key", iv }, new Map([["test:key", invalidKey]]))
+            handler.validate({ scheme: "aes-128-cbc", keyId: "test:key", iv }, new Map([["test:key", invalidKey]])),
         ).toThrow(message);
     });
 
@@ -63,7 +63,7 @@ describe("Aes128CbcHandler", () => {
                     outputPath,
                     encryption: { scheme: "aes-128-cbc", keyId: "test:key", iv: "1" },
                     keys: new Map([["test:key", keyHex]]),
-                })
+                }),
             ).rejects.toThrow();
 
             expect(fs.existsSync(inputPath)).toBe(true);

@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
-import logger from "@/utils/log";
 import { DownloadOutputLayout, DownloadOutputPrefix } from "@/core/source/types";
+import logger from "@/utils/log";
 
 // Read streams produce 64 KiB chunks by default. A larger, finite output buffer
 // preserves read/write overlap and writev opportunities without unbounded queueing.
@@ -275,7 +275,7 @@ class FileConcentrator {
 
     private async appendRequiredPrefixes(
         prefixes: readonly DownloadOutputPrefix[],
-        output: fs.WriteStream
+        output: fs.WriteStream,
     ): Promise<void> {
         const missing = prefixes.filter((prefix) => !this.emittedPrefixes.has(prefixKey(prefix)));
         if (missing.length > 0 && output.bytesWritten !== 0) {
@@ -454,7 +454,7 @@ class FileConcentrator {
             // A missing outcome is a downloader lifecycle violation, not an implicit drop.
             await this.closeWriteStream();
             throw new Error(
-                `Cannot finalize file concentration: expected ${expectedTaskCount} task outcomes, consumed ${this.nextIndex}.`
+                `Cannot finalize file concentration: expected ${expectedTaskCount} task outcomes, consumed ${this.nextIndex}.`,
             );
         }
 

@@ -1,5 +1,5 @@
-import { AddressInfo } from "net";
 import * as http from "http";
+import { AddressInfo } from "net";
 
 export const mediaChunks = {
     "/0.ts": Buffer.from("first-chunk"),
@@ -57,7 +57,7 @@ export async function withMediaServer<T>(run: (playlistUrl: string, expectedOutp
                 "#EXTINF:1,",
                 `http://127.0.0.1:${address.port}/1.ts`,
                 "#EXT-X-ENDLIST",
-            ].join("\n")
+            ].join("\n"),
         );
     });
     const baseUrl = await listen(server);
@@ -69,7 +69,7 @@ export async function withMediaServer<T>(run: (playlistUrl: string, expectedOutp
 }
 
 export async function withMasterPlaylistServer<T>(
-    run: (context: MasterPlaylistServerContext) => Promise<T>
+    run: (context: MasterPlaylistServerContext) => Promise<T>,
 ): Promise<T> {
     const requests = new Map<string, number>();
     const server = http.createServer((request, response) => {
@@ -96,7 +96,7 @@ export async function withMasterPlaylistServer<T>(
                 "/low.m3u8",
                 '#EXT-X-STREAM-INF:BANDWIDTH=2400000,CODECS="avc1.high,mp4a.40.2",RESOLUTION=1920x1080,FRAME-RATE=60',
                 "/high.m3u8",
-            ].join("\n")
+            ].join("\n"),
         );
     });
     const baseUrl = await listen(server);

@@ -153,7 +153,7 @@ export class DownloadManifest {
                 successfulChunkCount: 0,
                 droppedChunkCount: 0,
                 successfulDuration: 0,
-            }
+            },
         );
         return { startedAt: this.startedAtValue, tracks, ...aggregate };
     }
@@ -175,7 +175,7 @@ export class DownloadManifest {
         const usedTime = Date.now() - this.startedAtValue;
         const remainingSeconds = Math.max(
             0,
-            Math.round(((usedTime / completedChunkCount) * totalChunkCount - usedTime) / 1000)
+            Math.round(((usedTime / completedChunkCount) * totalChunkCount - usedTime) / 1000),
         );
         if (remainingSeconds < 60) {
             return `${remainingSeconds}s`;

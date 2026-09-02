@@ -98,7 +98,7 @@ describe("parseMasterPlaylist", () => {
         {
             name: "a referenced audio group without renditions",
             content: ['#EXT-X-STREAM-INF:BANDWIDTH=1280000,AUDIO="missing"', "https://media.example/720p.m3u8"].join(
-                "\n"
+                "\n",
             ),
             expectedMessage: "Missing audio renditions for group missing.",
         },

@@ -12,7 +12,7 @@ describe("ConsoleLogger", () => {
         logger.error("Aborted due to critical error.", new Error("Invalid encryption key."));
 
         expect(output).toHaveBeenCalledWith(
-            expect.stringContaining("Aborted due to critical error. Invalid encryption key.")
+            expect.stringContaining("Aborted due to critical error. Invalid encryption key."),
         );
     });
 });

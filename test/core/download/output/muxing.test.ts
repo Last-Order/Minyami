@@ -16,7 +16,7 @@ class TestMuxer implements Muxer {
     constructor(
         readonly name: string,
         private readonly available: boolean,
-        readonly outputContainer: MediaContainer = MATROSKA_CONTAINER
+        readonly outputContainer: MediaContainer = MATROSKA_CONTAINER,
     ) {}
 
     async isAvailable(): Promise<boolean> {
@@ -222,7 +222,7 @@ describe("download output muxing", () => {
                         tempDir: directory,
                         taskAttempts: 1,
                         muxers: [muxer],
-                    }
+                    },
                 );
 
                 await downloader.download();
@@ -244,7 +244,7 @@ describe("download output muxing", () => {
 function createTwoTrackSource(
     baseUrl: string,
     videoItems: readonly string[] = ["video"],
-    audioContainer?: MediaContainer
+    audioContainer?: MediaContainer,
 ): DownloadSource {
     return {
         sourcePath: "custom://muxing",

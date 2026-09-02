@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
 import * as fs from "fs";
+import { DecryptionRequest, EncryptionHandler } from "@/core/download/encryption/types";
 import { parseLeadingId3Tags } from "@/core/packed_audio";
 import { DownloadEncryption, PackedAacSampleAesEncryption } from "@/core/source/types";
-import { DecryptionRequest, EncryptionHandler } from "@/core/download/encryption/types";
 import { decryptSampleAesAudio } from "../shared/audio";
 
 const AES_128_KEY = /^[0-9a-fA-F]{32}$/;
@@ -20,7 +20,7 @@ export class PackedAacSampleAesHandler implements EncryptionHandler {
 
     validate(
         encryption: DownloadEncryption,
-        keys: ReadonlyMap<string, string>
+        keys: ReadonlyMap<string, string>,
     ): asserts encryption is PackedAacSampleAesEncryption {
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
@@ -51,7 +51,7 @@ export class PackedAacSampleAesHandler implements EncryptionHandler {
                 encrypted.subarray(payloadOffset),
                 "aac",
                 Buffer.from(key, "hex"),
-                Buffer.from(encryption.iv.padStart(32, "0"), "hex")
+                Buffer.from(encryption.iv.padStart(32, "0"), "hex"),
             );
             const decrypted = Buffer.concat([encrypted.subarray(0, payloadOffset), decryptedAudio]);
             await fs.promises.writeFile(temporaryOutputPath, decrypted, { flag: "wx" });

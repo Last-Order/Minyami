@@ -1,7 +1,7 @@
-import * as fs from "fs";
 import { randomUUID } from "crypto";
-import { DownloadEncryption, MpegTsSampleAesEncryption } from "@/core/source/types";
+import * as fs from "fs";
 import { DecryptionRequest, EncryptionHandler } from "@/core/download/encryption/types";
+import { DownloadEncryption, MpegTsSampleAesEncryption } from "@/core/source/types";
 import { decryptMpegTsSampleAes } from "./transport_stream";
 
 const AES_128_KEY = /^[0-9a-fA-F]{32}$/;
@@ -19,7 +19,7 @@ export class MpegTsSampleAesHandler implements EncryptionHandler {
 
     validate(
         encryption: DownloadEncryption,
-        keys: ReadonlyMap<string, string>
+        keys: ReadonlyMap<string, string>,
     ): asserts encryption is MpegTsSampleAesEncryption {
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
@@ -46,7 +46,7 @@ export class MpegTsSampleAesHandler implements EncryptionHandler {
             const decrypted = decryptMpegTsSampleAes(
                 encrypted,
                 Buffer.from(key, "hex"),
-                Buffer.from(encryption.iv.padStart(32, "0"), "hex")
+                Buffer.from(encryption.iv.padStart(32, "0"), "hex"),
             );
             await fs.promises.writeFile(temporaryOutputPath, decrypted, { flag: "wx" });
             await fs.promises.rename(temporaryOutputPath, outputPath);

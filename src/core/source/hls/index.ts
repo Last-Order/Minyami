@@ -1,5 +1,5 @@
-import logger from "@/utils/log";
 import { getAbortSignal, iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
+import logger from "@/utils/log";
 import { mergeAsyncIterables } from "../merge_async_iterables";
 import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } from "../stream_selection";
 import { selectDefaultStream } from "../stream_selector";
@@ -35,7 +35,10 @@ export class HLSSource implements DownloadSource {
     private prepared = false;
     private cancelled = false;
 
-    constructor(readonly sourcePath: string, private readonly options: HLSSourceOptions) {
+    constructor(
+        readonly sourcePath: string,
+        private readonly options: HLSSourceOptions,
+    ) {
         this.continuous = options.mode === "follow";
     }
 
@@ -78,7 +81,7 @@ export class HLSSource implements DownloadSource {
                     slice: this.options.slice,
                     explicitKeys: this.options.explicitKeys ?? [],
                 });
-            })
+            }),
         );
         // All cursors resolve keys before any track metadata is published to the downloader.
         const preparedTracks = await Promise.all(this.cursors.map((cursor) => cursor.prepare(context)));

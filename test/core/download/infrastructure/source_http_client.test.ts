@@ -28,7 +28,7 @@ describe("RetryingSourceHttpClient", () => {
         const sourceHttp = new RetryingSourceHttpClient(http, 5);
 
         await expect(sourceHttp.get("https://example.com/playlist.m3u8", { signal: abort.signal })).rejects.toThrow(
-            "cancelled"
+            "cancelled",
         );
         expect(get).toHaveBeenCalledTimes(1);
     });

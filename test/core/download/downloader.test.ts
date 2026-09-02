@@ -6,8 +6,8 @@ import { describe, expect, test } from "@jest/globals";
 import { createDownloader } from "@/core/download/downloader";
 import { MPEG_TS_CONTAINER } from "@/core/media_container";
 import { DownloadSource } from "@/core/source/types";
-import { close, listen, withMediaServer } from "../../helpers/http";
 import { withTempDirectory } from "../../helpers/filesystem";
+import { close, listen, withMediaServer } from "../../helpers/http";
 
 describe("createDownloader", () => {
     test("writes versioned recovery metadata before publishing parsed", async () => {
@@ -45,7 +45,7 @@ describe("createDownloader", () => {
             let metadata: Record<string, unknown> | undefined;
             downloader.once("parsed", () => {
                 metadata = JSON.parse(
-                    fs.readFileSync(path.join(downloader.getSnapshot().tempPath, "task.json"), "utf8")
+                    fs.readFileSync(path.join(downloader.getSnapshot().tempPath, "task.json"), "utf8"),
                 );
             });
 
@@ -239,7 +239,7 @@ describe("createDownloader", () => {
             expect(criticalError).toBeInstanceOf(Error);
             expect(downloader.getSnapshot().status).toBe("failed");
             expect(
-                JSON.parse(fs.readFileSync(path.join(downloader.getSnapshot().tempPath, "task.json"), "utf8"))
+                JSON.parse(fs.readFileSync(path.join(downloader.getSnapshot().tempPath, "task.json"), "utf8")),
             ).toMatchObject({
                 schemaVersion: 1,
                 sourcePath: "custom://failure",

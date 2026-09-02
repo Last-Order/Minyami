@@ -58,10 +58,7 @@ export type IsoBmffSampleAesEncryption =
       };
 
 export type DownloadEncryption =
-    | Aes128CbcEncryption
-    | MpegTsSampleAesEncryption
-    | PackedAacSampleAesEncryption
-    | IsoBmffSampleAesEncryption;
+    Aes128CbcEncryption | MpegTsSampleAesEncryption | PackedAacSampleAesEncryption | IsoBmffSampleAesEncryption;
 
 /** Opaque output-prefix identity. Concentrators compare it but never interpret its protocol or format. */
 export interface DownloadOutputPrefix {

@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import { URL } from "url";
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { Agent } from "agent-base";
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import UA from "@/constants/ua";
+import { DownloadByteRange } from "@/core/source/types";
 import { createTimedAbortScope, getOptionalAbortSignal } from "@/utils/abort";
 import ProxyAgentHelper, { createProxyAgent } from "@/utils/agent";
-import { DownloadByteRange } from "@/core/source/types";
 
 export interface DownloadHttpClientConfig {
     readonly proxy: string;

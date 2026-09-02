@@ -22,7 +22,7 @@ describe("ISO-BMFF inspection", () => {
 
     test("rejects a protected initialization as clear output", () => {
         expect(() => validateClearIsoBmffInitialization(createProtectedInitialization())).toThrow(
-            "still contains protected"
+            "still contains protected",
         );
     });
 

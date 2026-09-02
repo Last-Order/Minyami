@@ -25,7 +25,7 @@ describe("download retry lifecycle", () => {
                     "#EXTINF:1,",
                     `http://127.0.0.1:${address.port}/failed.ts`,
                     "#EXT-X-ENDLIST",
-                ].join("\n")
+                ].join("\n"),
             );
         });
         const baseUrl = await listen(server);

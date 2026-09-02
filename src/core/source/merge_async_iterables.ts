@@ -8,7 +8,7 @@ type PendingResult<T> =
  */
 export async function* mergeAsyncIterables<T>(
     sources: readonly AsyncIterable<T>[],
-    onClose?: () => void
+    onClose?: () => void,
 ): AsyncIterable<T> {
     const iterators = sources.map((source) => source[Symbol.asyncIterator]());
     const pending = new Map<number, Promise<PendingResult<T>>>();
@@ -17,8 +17,8 @@ export async function* mergeAsyncIterables<T>(
             index,
             iterators[index].next().then(
                 (result) => ({ index, status: "fulfilled", result }),
-                (error) => ({ index, status: "rejected", error })
-            )
+                (error) => ({ index, status: "rejected", error }),
+            ),
         );
     };
 

@@ -22,7 +22,7 @@ describe("DownloadManifest", () => {
                 ],
                 totalItemCount: 3,
             },
-            () => undefined
+            () => undefined,
         );
         manifest.recordSuccessful(tasks[0]);
         manifest.recordSuccessful(tasks[1]);

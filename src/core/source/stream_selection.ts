@@ -44,7 +44,7 @@ export interface StreamCatalog {
 }
 
 export type StreamSelector = (
-    catalog: StreamCatalog
+    catalog: StreamCatalog,
 ) => TrackSelection | undefined | Promise<TrackSelection | undefined>;
 
 /** Freezes the canonical descriptor in place so its identity survives every layer unchanged. */

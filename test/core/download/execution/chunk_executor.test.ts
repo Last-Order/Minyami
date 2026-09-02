@@ -3,7 +3,6 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { runWithAbortSignal } from "@/utils/abort";
 import { normalizeDownloaderConfig } from "@/core/download/config";
 import { Aes128CbcHandler } from "@/core/download/encryption/aes_128_cbc/handler";
 import { EncryptionHandlerRegistry } from "@/core/download/encryption/registry";
@@ -11,6 +10,7 @@ import { ChunkExecutor } from "@/core/download/execution/chunk_executor";
 import { DownloadTask } from "@/core/download/execution/task";
 import { DownloadHttpClient } from "@/core/download/infrastructure/http_client";
 import { KeyStore } from "@/core/download/infrastructure/key_store";
+import { runWithAbortSignal } from "@/utils/abort";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
 
@@ -33,7 +33,7 @@ describe("ChunkExecutor encryption lifecycle", () => {
                 const executor = new ChunkExecutor(
                     new DownloadHttpClient(config),
                     keys,
-                    new EncryptionHandlerRegistry([new Aes128CbcHandler()])
+                    new EncryptionHandlerRegistry([new Aes128CbcHandler()]),
                 );
                 const task: DownloadTask = {
                     id: 0,
@@ -54,7 +54,7 @@ describe("ChunkExecutor encryption lifecycle", () => {
                         itemTimeout: 1000,
                         keepEncryptedChunks: keep,
                         attempt: 1,
-                    })
+                    }),
                 );
 
                 expect(fs.readFileSync(result.outputPath)).toEqual(plaintext);

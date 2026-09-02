@@ -15,7 +15,7 @@ export const mpegTsHLSProfile: HLSProfileAdapter = {
             toSingleFileDownloadItem(
                 segment,
                 "mpeg-ts-sample-aes",
-                "An explicit IV is required for MPEG-TS SAMPLE-AES HLS."
+                "An explicit IV is required for MPEG-TS SAMPLE-AES HLS.",
             ),
     }),
 };

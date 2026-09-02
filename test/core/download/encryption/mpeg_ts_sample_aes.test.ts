@@ -2,9 +2,9 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
+import { decryptSampleAesH264 } from "@/core/download/encryption/sample_aes/mpeg_ts/h264";
 import { MpegTsSampleAesHandler } from "@/core/download/encryption/sample_aes/mpeg_ts/handler";
 import { decryptMpegTsSampleAes, mpegCrc32 } from "@/core/download/encryption/sample_aes/mpeg_ts/transport_stream";
-import { decryptSampleAesH264 } from "@/core/download/encryption/sample_aes/mpeg_ts/h264";
 import { withTempDirectory } from "../../../helpers/filesystem";
 
 const key = Buffer.from("00112233445566778899aabbccddeeff", "hex");
@@ -44,13 +44,13 @@ describe("MpegTsSampleAesHandler", () => {
 
             expect(readPmtStreamTypes(clear)).toEqual([clearType]);
             expect(readPesPayload(clear, 0x101)).toEqual(audio);
-        }
+        },
     );
 
     test("rejects malformed transport length and protected PES continuity", () => {
         const fixture = createEncryptedTransportStream();
         expect(() => decryptMpegTsSampleAes(fixture.encrypted.subarray(0, -1), key, iv)).toThrow(
-            "188-byte MPEG transport stream"
+            "188-byte MPEG transport stream",
         );
 
         const badContinuity = Buffer.from(fixture.encrypted);
@@ -132,7 +132,7 @@ describe("MpegTsSampleAesHandler", () => {
                         iv: iv.toString("hex"),
                     },
                     keys: new Map([["skd://fixture", key.toString("hex")]]),
-                })
+                }),
             ).rejects.toThrow("188-byte MPEG transport stream");
 
             expect(fs.readFileSync(inputPath, "utf8")).toBe("not a transport stream");
@@ -149,8 +149,8 @@ describe("MpegTsSampleAesHandler", () => {
         expect(() =>
             handler.validate(
                 { scheme: "mpeg-ts-sample-aes", keyId: "skd://fixture", iv: invalidIv },
-                new Map([["skd://fixture", invalidKey]])
-            )
+                new Map([["skd://fixture", invalidKey]]),
+            ),
         ).toThrow(message);
     });
 });
@@ -172,7 +172,7 @@ function createEncryptedTransportStream(): { encrypted: Buffer; video: Buffer; a
     const audioEncryptedLength = Math.floor((audio.length - audioHeaderLength - 16) / 16) * 16;
     encryptCbcBlocks(
         encryptedAudio,
-        Array.from({ length: audioEncryptedLength / 16 }, (_value, index) => audioHeaderLength + 16 + index * 16)
+        Array.from({ length: audioEncryptedLength / 16 }, (_value, index) => audioHeaderLength + 16 + index * 16),
     );
 
     const packets = [
@@ -316,10 +316,10 @@ function createPmtSection(
     streams: readonly { readonly type: number; readonly pid: number }[] = [
         { type: 0xdb, pid: 0x100 },
         { type: 0xcf, pid: 0x101 },
-    ]
+    ],
 ): Buffer {
     const entries = Buffer.concat(
-        streams.map(({ type, pid }) => Buffer.from([type, 0xe0 | (pid >> 8), pid & 0xff, 0xf0, 0x00]))
+        streams.map(({ type, pid }) => Buffer.from([type, 0xe0 | (pid >> 8), pid & 0xff, 0xf0, 0x00])),
     );
     const section = Buffer.alloc(12 + entries.length + 4);
     const sectionLength = section.length - 3;

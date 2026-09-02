@@ -50,7 +50,7 @@ export function decryptSampleAesAudio(payload: Buffer, codec: SampleAesAudioCode
             const encryptedLength = Math.floor((frame.length - frame.headerLength - 16) / 16) * 16;
             const blockOffsets = Array.from(
                 { length: encryptedLength / 16 },
-                (_value, index) => encryptedOffset + index * 16
+                (_value, index) => encryptedOffset + index * 16,
             );
             if (codec === "eac3") {
                 // Apple §2.3.1.3: the IV does not reset between syncframes in one E-AC-3 audio frame.
@@ -136,7 +136,7 @@ function parseAc3FrameLength(data: Buffer, offset: number): number {
 
 function parseEac3FrameInfo(
     data: Buffer,
-    offset: number
+    offset: number,
 ): { length: number; streamType: number; substreamId: number; numBlocks: number } {
     // ETSI TS 102 366 Annex E, §E.1.2.2/§E.1.3.1: after the 16-bit syncword come strmtyp(2),
     // substreamid(3), frmsiz(11), fscod(2), and numblkscod/fscod2(2), all most-significant-bit first.

@@ -35,7 +35,7 @@ export class EncryptionHandlerRegistry {
     resolve(
         encryption: DownloadEncryption,
         source: EncryptionKeySource,
-        missingKeyMessage: (keyId: string) => string = (keyId) => `Missing encryption key for ${keyId}`
+        missingKeyMessage: (keyId: string) => string = (keyId) => `Missing encryption key for ${keyId}`,
     ): ResolvedEncryption {
         const handler = this.require(encryption.scheme);
         const keys = new Map<string, string>();

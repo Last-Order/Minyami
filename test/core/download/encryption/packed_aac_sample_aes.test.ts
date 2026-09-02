@@ -75,8 +75,8 @@ describe("PackedAacSampleAesHandler", () => {
         expect(() =>
             handler.validate(
                 { scheme: "packed-aac-sample-aes", keyId: "skd://fixture", iv: invalidIv },
-                new Map([["skd://fixture", invalidKey]])
-            )
+                new Map([["skd://fixture", invalidKey]]),
+            ),
         ).toThrow(message);
     });
 });

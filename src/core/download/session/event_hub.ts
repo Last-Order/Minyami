@@ -58,7 +58,7 @@ export class DownloadEventHub {
     private add<TEvent extends DownloadEvent>(
         event: TEvent,
         listener: DownloadEventListener<TEvent>,
-        once: boolean
+        once: boolean,
     ): void {
         const subscriptions = this.subscriptions.get(event) ?? [];
         subscriptions.push({ listener, once });

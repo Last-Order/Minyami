@@ -5,8 +5,8 @@ import { describe, expect, test } from "@jest/globals";
 import { createDownloader } from "@/core/download/downloader";
 import { MPEG_TS_CONTAINER } from "@/core/media_container";
 import { DownloadItemNamingContext, DownloadSource, SourceTrack } from "@/core/source/types";
-import { close, listen } from "../../helpers/http";
 import { withTempDirectory } from "../../helpers/filesystem";
+import { close, listen } from "../../helpers/http";
 
 describe("multi-track downloads", () => {
     test("shares scheduling while preserving independent track order and output", async () => {
@@ -231,7 +231,7 @@ describe("multi-track downloads", () => {
                 const output = path.join(directory, "media.ts");
                 const downloader = createDownloader(
                     createTwoTrackSource(baseUrl, { video: ["video-only"], audio: [] }),
-                    { output, tempDir: directory }
+                    { output, tempDir: directory },
                 );
 
                 await downloader.download();
@@ -278,7 +278,7 @@ describe("multi-track downloads", () => {
             };
 
             await expect(createDownloader(source, { noMerge: true, tempDir: directory }).download()).rejects.toThrow(
-                "Invalid output filename"
+                "Invalid output filename",
             );
             expect(fs.existsSync(path.join(directory, "escape.ts"))).toBe(false);
         });
@@ -313,7 +313,7 @@ describe("multi-track downloads", () => {
             };
 
             await expect(createDownloader(source, { noMerge: true, tempDir: directory }).download()).rejects.toThrow(
-                "Download byte range"
+                "Download byte range",
             );
         });
     });
@@ -365,7 +365,7 @@ describe("multi-track downloads", () => {
             };
 
             await expect(createDownloader(source, { noMerge: true, tempDir: directory }).download()).rejects.toThrow(
-                "unknown track"
+                "unknown track",
             );
         });
     });
@@ -382,7 +382,7 @@ function createTrack(id: string, type: SourceTrack["mediaTrack"]["type"] = "vide
 function createTwoTrackSource(
     baseUrl: string,
     items: { readonly video: readonly string[]; readonly audio: readonly string[] },
-    itemNamer?: SourceTrack["itemNamer"]
+    itemNamer?: SourceTrack["itemNamer"],
 ): DownloadSource {
     return {
         sourcePath: "custom://two-tracks",

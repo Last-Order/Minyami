@@ -31,7 +31,7 @@ describe("Packed AAC SAMPLE-AES HLS", () => {
                             '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Main",DEFAULT=YES,AUTOSELECT=YES,URI="/audio.m3u8"',
                             '#EXT-X-STREAM-INF:BANDWIDTH=1000000,CODECS="avc1.4d401f,mp4a.40.2",AUDIO="audio"',
                             "/video.m3u8",
-                        ].join("\n")
+                        ].join("\n"),
                     );
                     break;
                 case "/video.m3u8":
@@ -42,12 +42,12 @@ describe("Packed AAC SAMPLE-AES HLS", () => {
                         [
                             "#EXTM3U",
                             `#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://asset",KEYFORMAT="com.apple.streamingkeydelivery",IV=0x${iv.toString(
-                                "hex"
+                                "hex",
                             )}`,
                             "#EXTINF:1,",
                             "/audio.aac",
                             "#EXT-X-ENDLIST",
-                        ].join("\n")
+                        ].join("\n"),
                     );
                     break;
                 case "/video.ts":
@@ -75,7 +75,7 @@ describe("Packed AAC SAMPLE-AES HLS", () => {
                         output: path.join(directory, "media.ts"),
                         tempDir: directory,
                         muxers: [],
-                    }
+                    },
                 );
 
                 await downloader.download();

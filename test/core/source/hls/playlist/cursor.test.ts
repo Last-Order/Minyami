@@ -1,17 +1,17 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
 import { normalizeDownloaderConfig } from "@/core/download/config";
 import { DownloadHttpClient } from "@/core/download/infrastructure/http_client";
 import { KeyStore } from "@/core/download/infrastructure/key_store";
 import { HLSMediaPlaylistCursor } from "@/core/source/hls/playlist/cursor";
+import { PlaylistLoader } from "@/core/source/hls/playlist/loader";
 import {
     HLSKeyReferenceKind,
     HLSMediaPlaylist,
     HLSPlaylistKind,
     HLSSegmentKind,
 } from "@/core/source/hls/playlist/parser";
-import { PlaylistLoader } from "@/core/source/hls/playlist/loader";
 import { DownloadSourceContext, SourceBatch } from "@/core/source/types";
+import { iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
 
 describe("HLSMediaPlaylistCursor", () => {
     test("publishes track metadata and tagged snapshot batches", async () => {
@@ -366,7 +366,7 @@ function createContext(): DownloadSourceContext {
 function prepare(
     cursor: HLSMediaPlaylistCursor,
     context: DownloadSourceContext,
-    signal = new AbortController().signal
+    signal = new AbortController().signal,
 ) {
     return runWithAbortSignal(signal, () => cursor.prepare(context));
 }
@@ -374,7 +374,7 @@ function prepare(
 function discover(
     cursor: HLSMediaPlaylistCursor,
     context: DownloadSourceContext,
-    signal = new AbortController().signal
+    signal = new AbortController().signal,
 ): AsyncIterable<SourceBatch> {
     return iterateWithAbortSignal(signal, () => cursor.discover(context));
 }
@@ -384,7 +384,7 @@ function createCursor(
     playlist: HLSMediaPlaylist,
     context: DownloadSourceContext,
     mode: "snapshot" | "follow" = "snapshot",
-    explicitKeys: readonly { readonly key: string }[] = []
+    explicitKeys: readonly { readonly key: string }[] = [],
 ): HLSMediaPlaylistCursor {
     return new HLSMediaPlaylistCursor({
         id,
@@ -460,7 +460,7 @@ function outputContexts(batches: readonly SourceBatch[]): string[][] {
                 return `init:${item.output?.replayablePrefix?.identity}`;
             }
             return `media:${item.output?.requiredPrefixes?.[0]?.identity}`;
-        })
+        }),
     );
 }
 

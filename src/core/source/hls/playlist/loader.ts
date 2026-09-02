@@ -1,7 +1,7 @@
 import * as fs from "fs";
-import logger from "@/utils/log";
-import { getAbortSignal } from "@/utils/abort";
 import { DownloadSourceHttpClient } from "@/core/source/types";
+import { getAbortSignal } from "@/utils/abort";
+import logger from "@/utils/log";
 import { HLSPlaylist, parseHLSPlaylist } from "./parser";
 
 export interface LoadPlaylistOptions {

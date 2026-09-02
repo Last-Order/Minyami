@@ -36,7 +36,7 @@ describe("SAMPLE-AES elementary audio", () => {
 
     test("rejects an E-AC-3 payload that starts with a dependent syncframe", () => {
         expect(() => decryptSampleAesAudio(createEac3Frame(1, 7), "eac3", key, iv)).toThrow(
-            "does not start with independent substream 0"
+            "does not start with independent substream 0",
         );
     });
 });

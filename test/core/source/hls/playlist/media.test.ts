@@ -129,7 +129,7 @@ describe("parseMediaPlaylist", () => {
 
         for (const lines of invalidPlaylists) {
             expect(() => parseMediaPlaylist({ content: lines.join("\n") })).toThrow(
-                new HLSParseError("Cannot derive byte-range offset for media segment")
+                new HLSParseError("Cannot derive byte-range offset for media segment"),
             );
         }
     });
@@ -138,7 +138,7 @@ describe("parseMediaPlaylist", () => {
         expect(() =>
             parseMediaPlaylist({
                 content: '#EXT-X-MAP:URI="https://cdn.example/init.mp4",BYTERANGE="100"',
-            })
+            }),
         ).toThrow(new HLSParseError("Missing byte-range offset for initialization segment"));
     });
 
@@ -152,7 +152,7 @@ describe("parseMediaPlaylist", () => {
                     "#EXT-X-BYTERANGE:32@16",
                     "https://cdn.example/media.ts",
                 ].join("\n"),
-            })
+            }),
         ).toThrow(new HLSParseError("Encrypted I-frame byte ranges are not supported"));
     });
 
@@ -168,7 +168,7 @@ describe("parseMediaPlaylist", () => {
                     "#EXT-X-I-FRAMES-ONLY",
                     "#EXT-X-ENDLIST",
                 ].join("\n"),
-            })
+            }),
         ).toThrow(new HLSParseError("Encrypted I-frame byte ranges are not supported"));
     });
 
@@ -441,7 +441,7 @@ describe("parseMediaPlaylist", () => {
                     "#EXTINF:1,",
                     "https://cdn.example/0.m4s",
                 ].join("\n"),
-            })
+            }),
         ).toThrow(new HLSParseError("SAMPLE-AES-CTR encryption is not supported"));
     });
 

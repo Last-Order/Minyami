@@ -1,8 +1,7 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { runWithAbortSignal } from "@/utils/abort";
 import { fmp4HLSProfile } from "@/core/source/hls/adapters/profiles/fmp4";
-import { packedAacHLSProfile } from "@/core/source/hls/adapters/profiles/packed_aac";
 import { mpegTsHLSProfile } from "@/core/source/hls/adapters/profiles/mpeg_ts";
+import { packedAacHLSProfile } from "@/core/source/hls/adapters/profiles/packed_aac";
 import { selectHLSProfile as selectHLSProfileWithContext } from "@/core/source/hls/adapters/profiles/selector";
 import {
     HLSKeyReferenceKind,
@@ -11,6 +10,7 @@ import {
     HLSSegmentKind,
 } from "@/core/source/hls/playlist/parser";
 import { DownloadSourceHttpClient } from "@/core/source/types";
+import { runWithAbortSignal } from "@/utils/abort";
 import { createClearInitialization } from "../../../../../helpers/isobmff";
 
 describe("HLS profile selection", () => {
@@ -32,8 +32,8 @@ describe("HLS profile selection", () => {
             selectHLSProfile(
                 createMappedPlaylist("https://media.example/init", "https://media.example/0"),
                 createHttp(request),
-                signal()
-            )
+                signal(),
+            ),
         ).resolves.toBe(fmp4HLSProfile);
         expect(request).toHaveBeenCalledTimes(1);
     });
@@ -69,8 +69,8 @@ describe("HLS profile selection", () => {
             selectHLSProfile(
                 createMappedPlaylist("https://media.example/init", "https://media.example/0"),
                 createHttp(request),
-                signal()
-            )
+                signal(),
+            ),
         ).rejects.toThrow("must contain a PAT followed by a PMT");
     });
 
@@ -84,8 +84,8 @@ describe("HLS profile selection", () => {
             selectHLSProfile(
                 createMappedPlaylist("https://media.example/init", "https://media.example/0"),
                 createHttp(request),
-                signal()
-            )
+                signal(),
+            ),
         ).rejects.toThrow("ftyp box followed by a moov box");
     });
 
@@ -94,14 +94,14 @@ describe("HLS profile selection", () => {
             selectHLSProfile(
                 createMappedPlaylist("https://media.example/init", "https://media.example/0.aac"),
                 unusedHttp(),
-                signal()
-            )
+                signal(),
+            ),
         ).rejects.toThrow("Packed Audio HLS must not contain an EXT-X-MAP");
     });
 
     test("rejects fMP4 locators without EXT-X-MAP", async () => {
         await expect(
-            selectHLSProfile(createClearPlaylist("https://media.example/0.m4s"), unusedHttp(), signal())
+            selectHLSProfile(createClearPlaylist("https://media.example/0.m4s"), unusedHttp(), signal()),
         ).rejects.toThrow("fMP4 HLS media requires an EXT-X-MAP");
     });
 
@@ -127,7 +127,7 @@ describe("HLS profile selection", () => {
         const http = unusedHttp();
 
         await expect(
-            selectHLSProfile(createClearPlaylist("https://media.example/opaque"), http, signal())
+            selectHLSProfile(createClearPlaylist("https://media.example/opaque"), http, signal()),
         ).resolves.toBe(mpegTsHLSProfile);
         expect(http.request).not.toHaveBeenCalled();
     });
@@ -141,7 +141,7 @@ describe("HLS profile selection", () => {
         const http = createHttp(request);
 
         await expect(
-            selectHLSProfile(createSampleAesPlaylist("https://media.example/opaque"), http, signal())
+            selectHLSProfile(createSampleAesPlaylist("https://media.example/opaque"), http, signal()),
         ).resolves.toBe(packedAacHLSProfile);
         expect(request).toHaveBeenCalledTimes(1);
     });
@@ -157,7 +157,7 @@ describe("HLS profile selection", () => {
         })) as DownloadSourceHttpClient["request"];
 
         await expect(
-            selectHLSProfile(createSampleAesPlaylist("https://media.example/opaque"), createHttp(request), signal())
+            selectHLSProfile(createSampleAesPlaylist("https://media.example/opaque"), createHttp(request), signal()),
         ).resolves.toBe(mpegTsHLSProfile);
     });
 
@@ -168,7 +168,7 @@ describe("HLS profile selection", () => {
         })) as DownloadSourceHttpClient["request"];
 
         await expect(
-            selectHLSProfile(createSampleAesPlaylist("https://media.example/opaque"), createHttp(request), signal())
+            selectHLSProfile(createSampleAesPlaylist("https://media.example/opaque"), createHttp(request), signal()),
         ).rejects.toThrow("Unable to determine");
     });
 });
@@ -187,7 +187,7 @@ function createClearPlaylist(url: string): HLSMediaPlaylist {
 function createMappedPlaylist(
     initializationUrl: string,
     mediaUrl: string,
-    initializationOptions: { readonly byteRange?: { readonly offset: number; readonly length: number } } = {}
+    initializationOptions: { readonly byteRange?: { readonly offset: number; readonly length: number } } = {},
 ): HLSMediaPlaylist {
     const initializationId = "init";
     return createPlaylist([
@@ -228,7 +228,7 @@ function createSampleAesPlaylist(url: string): HLSMediaPlaylist {
                 },
             },
         ],
-        [key]
+        [key],
     );
 }
 

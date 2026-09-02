@@ -13,6 +13,6 @@ export function createLiveDownloader(sourcePath: string, config: LiveDownloaderC
     const { streamSelector, explicitKeys, ...downloaderConfig } = config;
     return createDownloader(
         createHLSSource(sourcePath, { mode: "follow", streamSelector, explicitKeys }),
-        downloaderConfig
+        downloaderConfig,
     );
 }

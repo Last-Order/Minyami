@@ -6,11 +6,11 @@ import { DownloadController } from "./core/download/downloader";
 import { createLiveDownloader } from "./core/live";
 import { parseHLSExplicitKeyInputs } from "./core/source/hls/explicit_key";
 import { selectStreamInteractively } from "./core/source/stream_selector";
-import { readConfigFile } from "./utils/system";
-import logger from "./utils/log";
-import { timeStringToSeconds } from "./utils/time";
 import ProxyAgentHelper from "./utils/agent";
 import { createErii } from "./utils/erii";
+import logger from "./utils/log";
+import { readConfigFile } from "./utils/system";
+import { timeStringToSeconds } from "./utils/time";
 
 interface CliOptions {
     [key: string]: unknown;
@@ -51,7 +51,7 @@ Erii.bind(
     },
     (ctx) => {
         ctx.showHelp();
-    }
+    },
 );
 
 Erii.bind(
@@ -61,7 +61,7 @@ Erii.bind(
     },
     (ctx) => {
         ctx.showVersion();
-    }
+    },
 );
 
 Erii.bind(
@@ -136,7 +136,7 @@ Erii.bind(
                 dispose();
             }
         }
-    }
+    },
 );
 
 Erii.addOption({
@@ -298,13 +298,13 @@ Erii.okite();
 function installCliDownloadControls(
     downloader: DownloadController,
     verbose: boolean,
-    handleSignals: boolean
+    handleSignals: boolean,
 ): () => void {
     const verboseTimer = verbose
         ? setInterval(() => {
               const snapshot = downloader.getSnapshot();
               logger.debug(
-                  `Waiting tasks: ${snapshot.pendingTaskCount}, completed chunks: ${snapshot.completedChunkCount}, successful chunks: ${snapshot.successfulChunkCount}, dropped chunks: ${snapshot.droppedChunkCount}, total discovered chunks: ${snapshot.totalChunkCount}`
+                  `Waiting tasks: ${snapshot.pendingTaskCount}, completed chunks: ${snapshot.completedChunkCount}, successful chunks: ${snapshot.successfulChunkCount}, dropped chunks: ${snapshot.droppedChunkCount}, total discovered chunks: ${snapshot.totalChunkCount}`,
               );
           }, 3000)
         : undefined;

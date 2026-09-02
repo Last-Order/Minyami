@@ -1,6 +1,6 @@
-import { DownloadItemNamer, DownloadSourceHttpClient } from "@/core/source/types";
 import { HLSExplicitKey } from "@/core/source/hls/explicit_key";
 import { HLSMediaPlaylist, HLSSegment } from "@/core/source/hls/playlist/parser";
+import { DownloadItemNamer, DownloadSourceHttpClient } from "@/core/source/types";
 
 export interface HLSSiteAdapterOptions {
     readonly sourcePath: string;

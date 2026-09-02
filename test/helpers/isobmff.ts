@@ -28,8 +28,8 @@ export function createProtectedInitialization(trackId = 1, scheme = "cbcs"): Buf
             Buffer.concat([
                 fullBox("tkhd", trackHeader.subarray(4)),
                 box("mdia", box("minf", box("stbl", sampleDescription))),
-            ])
-        )
+            ]),
+        ),
     );
     return Buffer.concat([box("ftyp", Buffer.from("iso600000001iso6")), movie]);
 }
@@ -48,8 +48,8 @@ export function createClearInitialization(trackId = 1): Buffer {
             Buffer.concat([
                 fullBox("tkhd", trackHeader.subarray(4)),
                 box("mdia", box("minf", box("stbl", sampleDescription))),
-            ])
-        )
+            ]),
+        ),
     );
     return Buffer.concat([box("ftyp", Buffer.from("iso600000001iso6")), movie]);
 }

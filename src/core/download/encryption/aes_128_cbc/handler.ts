@@ -19,7 +19,7 @@ export class Aes128CbcHandler implements EncryptionHandler {
 
     validate(
         encryption: DownloadEncryption,
-        keys: ReadonlyMap<string, string>
+        keys: ReadonlyMap<string, string>,
     ): asserts encryption is Aes128CbcEncryption {
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
@@ -46,7 +46,7 @@ export class Aes128CbcHandler implements EncryptionHandler {
         const decipher = crypto.createDecipheriv(
             this.scheme,
             Buffer.from(key, "hex"),
-            Buffer.from(normalizedIv, "hex")
+            Buffer.from(normalizedIv, "hex"),
         );
 
         try {

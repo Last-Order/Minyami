@@ -1,6 +1,4 @@
 import { hasAdtsHeader, parseLeadingId3Tags } from "@/core/packed_audio";
-import { getAbortSignal } from "@/utils/abort";
-import { DownloadSourceHttpClient } from "@/core/source/types";
 import {
     HLSInitializationSegment,
     HLSMediaPlaylist,
@@ -8,9 +6,11 @@ import {
     HLSSegment,
     HLSSegmentKind,
 } from "@/core/source/hls/playlist/parser";
+import { DownloadSourceHttpClient } from "@/core/source/types";
+import { getAbortSignal } from "@/utils/abort";
 import { fmp4HLSProfile } from "./fmp4";
-import { packedAacHLSProfile } from "./packed_aac";
 import { mpegTsHLSProfile } from "./mpeg_ts";
+import { packedAacHLSProfile } from "./packed_aac";
 import { HLSProfileAdapter } from "./types";
 
 const PROBE_BYTE_COUNT = 16 * 1024;
@@ -30,15 +30,15 @@ interface IsoBmffBoxHeader {
 /** Analyzes one effective media playlist and selects its profile exactly once. */
 export async function selectHLSProfile(
     playlist: HLSMediaPlaylist,
-    http: DownloadSourceHttpClient
+    http: DownloadSourceHttpClient,
 ): Promise<HLSProfileAdapter> {
     // Partition the immutable snapshot once so every later decision evaluates locator and content evidence against
     // the same playlist shape.
     const initializations = playlist.segments.filter(
-        (segment): segment is HLSInitializationSegment => segment.kind === HLSSegmentKind.Initialization
+        (segment): segment is HLSInitializationSegment => segment.kind === HLSSegmentKind.Initialization,
     );
     const media = playlist.segments.filter(
-        (segment): segment is HLSMediaSegment => segment.kind === HLSSegmentKind.Media
+        (segment): segment is HLSMediaSegment => segment.kind === HLSSegmentKind.Media,
     );
     if (initializations.length === 0) {
         // Preserve the cheap historical path when there is no MAP. Only opaque SAMPLE-AES media needs probing,
@@ -82,7 +82,7 @@ export async function selectHLSProfile(
         playlist.segments.flatMap((segment) => {
             const hint = profileHintFromUrl(segment.url);
             return hint ? [hint] : [];
-        })
+        }),
     );
     if (locatorHints.size > 1) {
         throw new Error("HLS playlist locators indicate conflicting media profiles.");
@@ -145,7 +145,7 @@ export async function selectHLSProfile(
                     const packetCount = Math.min(4, Math.floor(prefix.length / TS_PACKET_SIZE));
                     for (let packet = 1; packet < packetCount; packet++) {
                         const pmt = readPsiSection(
-                            prefix.subarray(packet * TS_PACKET_SIZE, (packet + 1) * TS_PACKET_SIZE)
+                            prefix.subarray(packet * TS_PACKET_SIZE, (packet + 1) * TS_PACKET_SIZE),
                         );
                         if (pmt?.pid === programMapPid && pmt.data[0] === 0x02 && pmt.data.length >= 16) {
                             mpegTsInitialization = true;
@@ -185,14 +185,14 @@ export async function selectHLSProfile(
         }
     }
     throw new Error(
-        "Unable to determine the HLS media profile: the initialization and media signatures are unavailable."
+        "Unable to determine the HLS media profile: the initialization and media signatures are unavailable.",
     );
 }
 
 function validateProfileShape(
     profile: HLSProfileKind,
     initializations: readonly HLSInitializationSegment[],
-    media: readonly HLSMediaSegment[]
+    media: readonly HLSMediaSegment[],
 ): HLSProfileAdapter {
     if (profile === "packed-aac") {
         // RFC 8216 section 3.4 defines Packed Audio as having no Media Initialization Section.

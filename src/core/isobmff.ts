@@ -77,7 +77,7 @@ export function readIsoBmffDecryptionTrackIds(data: Uint8Array): readonly number
         if (
             !sampleDescription ||
             !readSampleEntries(buffer, sampleDescription, false).some(
-                (entry) => entry.type === "encv" || entry.type === "enca"
+                (entry) => entry.type === "encv" || entry.type === "enca",
             )
         ) {
             continue;

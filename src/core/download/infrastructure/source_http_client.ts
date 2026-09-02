@@ -4,7 +4,10 @@ import { DownloadHttpClient } from "./http_client";
 
 /** Applies the configured source-attempt policy outside protocol implementations. */
 export class RetryingSourceHttpClient implements DownloadSourceHttpClient {
-    constructor(private readonly http: DownloadHttpClient, private readonly maxAttempts: number) {}
+    constructor(
+        private readonly http: DownloadHttpClient,
+        private readonly maxAttempts: number,
+    ) {}
 
     get<T = any>(url: string, options: AxiosRequestConfig = {}): Promise<AxiosResponse<T>> {
         return this.try(() => this.http.get<T>(url, options), options.signal);

@@ -205,7 +205,7 @@ function decryptProtectedPid(
     pid: number,
     codec: ProtectedCodec,
     key: Buffer,
-    iv: Buffer
+    iv: Buffer,
 ): void {
     let current: PayloadPacket[] = [];
     let previousContinuity: number | undefined;

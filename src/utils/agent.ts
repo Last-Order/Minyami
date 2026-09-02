@@ -1,7 +1,7 @@
-import { Agent } from "agent-base";
 import { execFile } from "child_process";
-import { HttpsProxyAgent } from "https-proxy-agent";
 import * as path from "path";
+import { Agent } from "agent-base";
+import { HttpsProxyAgent } from "https-proxy-agent";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import logger from "./log";
 
@@ -34,7 +34,7 @@ const readWindowsInternetSettings = (): Promise<ReadonlyMap<string, string>> => 
                     return;
                 }
                 resolve(parseWindowsInternetSettings(stdout));
-            }
+            },
         );
     });
 };

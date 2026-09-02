@@ -24,7 +24,7 @@ export function runWithAbortSignal<T>(signal: AbortSignal, operation: () => T): 
  */
 export async function* iterateWithAbortSignal<T>(
     signal: AbortSignal,
-    createIterable: () => AsyncIterable<T>
+    createIterable: () => AsyncIterable<T>,
 ): AsyncIterable<T> {
     const iterator = runWithAbortSignal(signal, () => createIterable()[Symbol.asyncIterator]());
     try {

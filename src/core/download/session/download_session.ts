@@ -1,8 +1,9 @@
 import * as path from "path";
-import logger from "@/utils/log";
-import { iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
-import { DownloadItem, DownloadSource, DownloadSourceContext, SourceTrack } from "@/core/source/types";
 import { MediaContainer } from "@/core/media_container";
+import { DownloadItem, DownloadSource, DownloadSourceContext, SourceTrack } from "@/core/source/types";
+import { iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
+import logger from "@/utils/log";
+import { NormalizedDownloaderConfig, normalizeDownloaderConfig } from "../config";
 import {
     ChunkDownloadedInfo,
     DownloadEvent,
@@ -10,20 +11,19 @@ import {
     DownloadStatus,
     SourceDownloadSnapshot,
 } from "../controller";
+import { createDefaultEncryptionHandlerRegistry } from "../encryption/registry";
+import { FatalDecryptionError } from "../encryption/types";
 import { ChunkExecutor, ChunkResult } from "../execution/chunk_executor";
 import { DownloadTask } from "../execution/task";
 import { TaskScheduler } from "../execution/task_scheduler";
-import { normalizeDownloaderConfig, NormalizedDownloaderConfig } from "../config";
-import { createDefaultEncryptionHandlerRegistry } from "../encryption/registry";
-import { FatalDecryptionError } from "../encryption/types";
-import { DownloadEventHub } from "./event_hub";
 import { DownloadHttpClient } from "../infrastructure/http_client";
 import { KeyStore } from "../infrastructure/key_store";
 import { RetryingSourceHttpClient } from "../infrastructure/source_http_client";
-import { DownloadManifest } from "./manifest";
 import { OutputSession } from "../output/output_session";
 import { TaskMetadata } from "../output/task_metadata";
 import { DownloaderConfig } from "../types";
+import { DownloadEventHub } from "./event_hub";
+import { DownloadManifest } from "./manifest";
 
 type SessionState =
     | { readonly kind: "idle" }
@@ -61,7 +61,10 @@ export class DownloadSession {
     private schedulerCompletion?: Promise<void>;
     private schedulerFailure?: { readonly error: unknown };
 
-    constructor(private readonly source: DownloadSource, config: DownloaderConfig = {}) {
+    constructor(
+        private readonly source: DownloadSource,
+        config: DownloaderConfig = {},
+    ) {
         this.config = normalizeDownloaderConfig(config);
         this.http = new DownloadHttpClient(this.config);
         this.executor = new ChunkExecutor(this.http, this.keys, this.encryptionHandlers);
@@ -92,7 +95,7 @@ export class DownloadSession {
             let metadata;
             try {
                 metadata = await runWithAbortSignal(this.sourceAbort.signal, () =>
-                    this.source.prepare(this.sourceContext, this.sourceAbort.signal)
+                    this.source.prepare(this.sourceContext, this.sourceAbort.signal),
                 );
             } catch (error) {
                 // A controller-requested cancellation is a terminal command, not a source failure.
@@ -130,7 +133,7 @@ export class DownloadSession {
 
             try {
                 const batches = iterateWithAbortSignal(this.sourceAbort.signal, () =>
-                    this.source.discover(this.sourceContext, this.sourceAbort.signal)
+                    this.source.discover(this.sourceContext, this.sourceAbort.signal),
                 );
                 for await (const batch of batches) {
                     if (this.getCancellation() === "hard") {
@@ -275,7 +278,7 @@ export class DownloadSession {
                         itemTimeout: this.manifest.getTrack(task.trackId).itemTimeout ?? 60000,
                         keepEncryptedChunks: this.config.keepEncryptedChunks,
                         attempt,
-                    })
+                    }),
                 ),
             onSuccess: (task, result) => this.commitTaskSuccess(task, result),
             onError: (task, error, attempt) => this.commitTaskError(task, error, attempt),
@@ -350,7 +353,7 @@ export class DownloadSession {
         const { handler, keys } = this.encryptionHandlers.resolve(
             item.encryption,
             this.keys,
-            (keyId) => `Encryption key is not registered: ${keyId}`
+            (keyId) => `Encryption key is not registered: ${keyId}`,
         );
         // Algorithm validation happens before a broken item can consume execution attempts.
         handler.validate(item.encryption, keys);
@@ -391,7 +394,7 @@ export class DownloadSession {
         const progress = this.manifest.snapshot;
         const subject = this.source.continuous ? "discovered chunks" : "chunks";
         logger.info(
-            `All ${subject} processed. Successful: ${progress.successfulChunkCount}; dropped: ${progress.droppedChunkCount}.`
+            `All ${subject} processed. Successful: ${progress.successfulChunkCount}; dropped: ${progress.droppedChunkCount}.`,
         );
 
         if (this.config.noMerge) {
@@ -526,7 +529,7 @@ export class DownloadSession {
     private logTaskSuccess(info: ChunkDownloadedInfo): void {
         if (this.source.continuous) {
             logger.info(
-                `Processing ${info.taskName} finished. (Completed: ${info.completedChunkCount} / ${info.totalChunkCount} discovered | Successful: ${info.successfulChunkCount} | Dropped: ${info.droppedChunkCount} | Avg successful speed: ${info.successfulChunksPerSecond} chunks/s or ${info.successfulDurationRatio}x)`
+                `Processing ${info.taskName} finished. (Completed: ${info.completedChunkCount} / ${info.totalChunkCount} discovered | Successful: ${info.successfulChunkCount} | Dropped: ${info.droppedChunkCount} | Avg successful speed: ${info.successfulChunksPerSecond} chunks/s or ${info.successfulDurationRatio}x)`,
             );
             return;
         }
@@ -535,7 +538,7 @@ export class DownloadSession {
                 ? "100.00"
                 : ((info.completedChunkCount / info.totalChunkCount) * 100).toFixed(2);
         logger.info(
-            `Processing ${info.taskName} finished. (Completed: ${info.completedChunkCount} / ${info.totalChunkCount} or ${percentage}% | Successful: ${info.successfulChunkCount} | Dropped: ${info.droppedChunkCount} | Avg successful speed: ${info.successfulChunksPerSecond} chunks/s or ${info.successfulDurationRatio}x | Completion ETA: ${info.completionEta})`
+            `Processing ${info.taskName} finished. (Completed: ${info.completedChunkCount} / ${info.totalChunkCount} or ${percentage}% | Successful: ${info.successfulChunkCount} | Dropped: ${info.droppedChunkCount} | Avg successful speed: ${info.successfulChunksPerSecond} chunks/s or ${info.successfulDurationRatio}x | Completion ETA: ${info.completionEta})`,
         );
     }
 
@@ -548,7 +551,7 @@ export class DownloadSession {
             logger.info(
                 `All finished. Please checkout your files at ${outputPaths
                     .map((outputPath) => `[${path.resolve(outputPath)}]`)
-                    .join(", ")}.`
+                    .join(", ")}.`,
             );
         }
     }

@@ -21,13 +21,14 @@
                 "minyami": "dist/index.mjs"
             },
             "devDependencies": {
+                "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
                 "@types/jest": "^30.0.0",
                 "@types/node": "^24.13.3",
                 "@types/prompts": "^2.4.9",
                 "husky": "^7.0.2",
                 "jest": "^30.4.2",
                 "lint-staged": "^11.1.2",
-                "prettier": "^2.3.2",
+                "prettier": "^3.9.6",
                 "ts-jest": "^29.4.12",
                 "tsdown": "^0.22.14",
                 "typescript": "^6.0.3"
@@ -589,6 +590,54 @@
             "dev": true,
             "license": "0BSD",
             "optional": true
+        },
+        "node_modules/@ianvs/prettier-plugin-sort-imports": {
+            "version": "4.7.1",
+            "resolved": "https://registry.npmjs.org/@ianvs/prettier-plugin-sort-imports/-/prettier-plugin-sort-imports-4.7.1.tgz",
+            "integrity": "sha512-jmTNYGlg95tlsoG3JLCcuC4BrFELJtLirLAkQW/71lXSyOhVt/Xj7xWbbGcuVbNq1gwWgSyMrPjJc9Z30hynVw==",
+            "dev": true,
+            "license": "Apache-2.0",
+            "dependencies": {
+                "@babel/generator": "^7.26.2",
+                "@babel/parser": "^7.26.2",
+                "@babel/traverse": "^7.25.9",
+                "@babel/types": "^7.26.0",
+                "semver": "^7.5.2"
+            },
+            "peerDependencies": {
+                "@prettier/plugin-oxc": "^0.0.4 || ^0.1.0",
+                "@vue/compiler-sfc": "2.7.x || 3.x",
+                "content-tag": "^4.0.0",
+                "prettier": "2 || 3 || ^4.0.0-0",
+                "prettier-plugin-ember-template-tag": "^2.1.0"
+            },
+            "peerDependenciesMeta": {
+                "@prettier/plugin-oxc": {
+                    "optional": true
+                },
+                "@vue/compiler-sfc": {
+                    "optional": true
+                },
+                "content-tag": {
+                    "optional": true
+                },
+                "prettier-plugin-ember-template-tag": {
+                    "optional": true
+                }
+            }
+        },
+        "node_modules/@ianvs/prettier-plugin-sort-imports/node_modules/semver": {
+            "version": "7.8.5",
+            "resolved": "https://registry.npmjs.org/semver/-/semver-7.8.5.tgz",
+            "integrity": "sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==",
+            "dev": true,
+            "license": "ISC",
+            "bin": {
+                "semver": "bin/semver.js"
+            },
+            "engines": {
+                "node": ">=10"
+            }
         },
         "node_modules/@isaacs/cliui": {
             "version": "8.0.2",
@@ -7128,15 +7177,19 @@
             }
         },
         "node_modules/prettier": {
-            "version": "2.4.1",
-            "resolved": "https://registry.npmjs.org/prettier/-/prettier-2.4.1.tgz",
-            "integrity": "sha512-9fbDAXSBcc6Bs1mZrDYb3XKzDLm4EXXL9sC1LqKP5rZkT6KRr/rf9amVUcODVXgguK/isJz0d0hP72WeaKWsvA==",
+            "version": "3.9.6",
+            "resolved": "https://registry.npmjs.org/prettier/-/prettier-3.9.6.tgz",
+            "integrity": "sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==",
             "dev": true,
+            "license": "MIT",
             "bin": {
-                "prettier": "bin-prettier.js"
+                "prettier": "bin/prettier.cjs"
             },
             "engines": {
-                "node": ">=10.13.0"
+                "node": ">=14"
+            },
+            "funding": {
+                "url": "https://github.com/prettier/prettier?sponsor=1"
             }
         },
         "node_modules/pretty-format": {
@@ -8956,6 +9009,27 @@
                     "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==",
                     "dev": true,
                     "optional": true
+                }
+            }
+        },
+        "@ianvs/prettier-plugin-sort-imports": {
+            "version": "4.7.1",
+            "resolved": "https://registry.npmjs.org/@ianvs/prettier-plugin-sort-imports/-/prettier-plugin-sort-imports-4.7.1.tgz",
+            "integrity": "sha512-jmTNYGlg95tlsoG3JLCcuC4BrFELJtLirLAkQW/71lXSyOhVt/Xj7xWbbGcuVbNq1gwWgSyMrPjJc9Z30hynVw==",
+            "dev": true,
+            "requires": {
+                "@babel/generator": "^7.26.2",
+                "@babel/parser": "^7.26.2",
+                "@babel/traverse": "^7.25.9",
+                "@babel/types": "^7.26.0",
+                "semver": "^7.5.2"
+            },
+            "dependencies": {
+                "semver": {
+                    "version": "7.8.5",
+                    "resolved": "https://registry.npmjs.org/semver/-/semver-7.8.5.tgz",
+                    "integrity": "sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==",
+                    "dev": true
                 }
             }
         },
@@ -13288,9 +13362,9 @@
             }
         },
         "prettier": {
-            "version": "2.4.1",
-            "resolved": "https://registry.npmjs.org/prettier/-/prettier-2.4.1.tgz",
-            "integrity": "sha512-9fbDAXSBcc6Bs1mZrDYb3XKzDLm4EXXL9sC1LqKP5rZkT6KRr/rf9amVUcODVXgguK/isJz0d0hP72WeaKWsvA==",
+            "version": "3.9.6",
+            "resolved": "https://registry.npmjs.org/prettier/-/prettier-3.9.6.tgz",
+            "integrity": "sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==",
             "dev": true
         },
         "pretty-format": {

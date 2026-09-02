@@ -1,6 +1,6 @@
-import logger from "@/utils/log";
-import { getAbortSignal } from "@/utils/abort";
 import { DownloadSourceContext, DownloadSourceHttpClient } from "@/core/source/types";
+import { getAbortSignal } from "@/utils/abort";
+import logger from "@/utils/log";
 import { HLSExplicitKey } from "./explicit_key";
 import { HLSKeyReference, HLSKeyReferenceKind, HLSMediaEncryption, HLSMediaPlaylist } from "./playlist/parser";
 
@@ -9,7 +9,7 @@ export interface HLSKeyResolver {
     ensure(
         playlist: HLSMediaPlaylist,
         context: DownloadSourceContext,
-        method?: HLSMediaEncryption["method"]
+        method?: HLSMediaEncryption["method"],
     ): Promise<void>;
 }
 
@@ -21,7 +21,7 @@ export interface HLSKeyResolver {
  */
 export function createHLSKeyResolver(
     explicitKeys: readonly HLSExplicitKey[],
-    http: DownloadSourceHttpClient
+    http: DownloadSourceHttpClient,
 ): HLSKeyResolver {
     const explicitKeyByReference = new Map<string, string>();
     const seenReferences = new Set<string>();
@@ -38,7 +38,7 @@ export function createHLSKeyResolver(
 
             if (
                 missingKeys.some(
-                    (key) => !explicitKeyByReference.has(key.id) && key.kind === HLSKeyReferenceKind.External
+                    (key) => !explicitKeyByReference.has(key.id) && key.kind === HLSKeyReferenceKind.External,
                 )
             ) {
                 // Reject the whole batch before fetching anything so opaque identities never become network targets.
@@ -61,7 +61,7 @@ export function createHLSKeyResolver(
                         {
                             responseType: "arraybuffer",
                             signal: getAbortSignal(),
-                        }
+                        },
                     );
                     resolved[key.id] = Buffer.from(response.data).toString("hex");
                 } catch (error) {
@@ -96,7 +96,7 @@ export function createHLSKeyResolver(
 
 function collectReferencedKeys(
     playlist: HLSMediaPlaylist,
-    method?: HLSMediaEncryption["method"]
+    method?: HLSMediaEncryption["method"],
 ): readonly HLSKeyReference[] {
     const referencedKeys = new Map<string, HLSKeyReference>();
     for (const segment of playlist.segments) {

@@ -59,7 +59,7 @@ function parseAnnexB(payload: Buffer): AnnexBPayload {
     // ITU-T H.264 Annex B §B.1.1: a delimiter is zero_byte (optional) plus the 0x000001
     // start_code_prefix_one_3bytes; any additional preceding zeroes are leading/trailing_zero_8bits.
     // https://www.itu.int/rec/dologin_pub.asp?id=T-REC-H.264-202108-S%21%21PDF-E&lang=e&type=items
-    for (let index = 0; index + 3 <= payload.length; ) {
+    for (let index = 0; index + 3 <= payload.length;) {
         if (payload[index] === 0 && payload[index + 1] === 0 && payload[index + 2] === 1) {
             let prefixOffset = index;
             while (prefixOffset > 0 && payload[prefixOffset - 1] === 0) {

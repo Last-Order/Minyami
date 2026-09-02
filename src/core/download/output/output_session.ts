@@ -1,12 +1,12 @@
 import { randomBytes } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
-import { getAvailableOutputPath } from "@/utils/common";
-import logger from "@/utils/log";
 import { createContainerOutputPath, MediaContainer } from "@/core/media_container";
 import { Muxer, MuxInput, selectAvailableMuxer } from "@/core/muxer";
 import { MediaTrack } from "@/core/source/stream_selection";
 import { DownloadTrackId, SourceTrack } from "@/core/source/types";
+import { getAvailableOutputPath } from "@/utils/common";
+import logger from "@/utils/log";
 import { TrackArtifact } from "../controller";
 import { DownloadTask } from "../execution/task";
 import FileConcentrator from "./file_concentrator";
@@ -63,7 +63,7 @@ export class OutputSession {
         for (const track of metadata) {
             const trackTempPath = path.resolve(this.tempPath, track.id);
             const plannedOutputPath = getAvailableOutputPath(
-                this.createTrackOutputPath(track, metadata.length, container)
+                this.createTrackOutputPath(track, metadata.length, container),
             );
             this.tracks.set(track.id, {
                 metadata: track,
@@ -111,7 +111,7 @@ export class OutputSession {
                 } catch (error) {
                     errors.push(error);
                 }
-            })
+            }),
         );
         if (errors.length > 0) {
             throw errors[0];
@@ -181,7 +181,7 @@ export class OutputSession {
         return createContainerOutputPath(
             this.outputBasePath,
             track.container ?? sourceContainer,
-            trackCount === 1 ? undefined : track.id
+            trackCount === 1 ? undefined : track.id,
         );
     }
 
@@ -209,7 +209,7 @@ export class OutputSession {
             inputPath: artifact.outputPaths[0],
         }));
         const outputPath = getAvailableOutputPath(
-            createContainerOutputPath(this.outputBasePath, muxer.outputContainer)
+            createContainerOutputPath(this.outputBasePath, muxer.outputContainer),
         );
         logger.info(`Muxing audio and video tracks with ${muxer.name}...`);
         try {

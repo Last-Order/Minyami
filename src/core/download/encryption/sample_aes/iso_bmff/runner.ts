@@ -49,8 +49,8 @@ export class SystemMp4DecryptRunner implements Mp4DecryptRunner {
                             new Error(
                                 `mp4decrypt exited with code ${code === null ? "unknown" : code}${
                                     detail ? `: ${detail}` : "."
-                                }`
-                            )
+                                }`,
+                            ),
                         );
                         return;
                     }

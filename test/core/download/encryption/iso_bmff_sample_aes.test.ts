@@ -1,10 +1,10 @@
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { runWithAbortSignal } from "@/utils/abort";
 import { IsoBmffSampleAesHandler } from "@/core/download/encryption/sample_aes/iso_bmff/handler";
 import { Mp4DecryptRunner, Mp4DecryptRunResult } from "@/core/download/encryption/sample_aes/iso_bmff/runner";
 import { FatalDecryptionError } from "@/core/download/encryption/types";
+import { runWithAbortSignal } from "@/utils/abort";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import {
     createClearInitialization,
@@ -16,7 +16,10 @@ class CopyingRunner implements Mp4DecryptRunner {
     readonly calls: readonly string[][] = [];
     fragmentsInfo?: Buffer;
 
-    constructor(private readonly clearInitialization: Buffer, private readonly fail = false) {}
+    constructor(
+        private readonly clearInitialization: Buffer,
+        private readonly fail = false,
+    ) {}
 
     async run(arguments_: readonly string[]): Promise<Mp4DecryptRunResult> {
         (this.calls as string[][]).push([...arguments_]);
@@ -68,7 +71,7 @@ describe("IsoBmffSampleAesHandler", () => {
                     outputPath: clearInitialization,
                     encryption: initializationEncryption,
                     keys,
-                })
+                }),
             );
             await runWithAbortSignal(signal, () =>
                 handler.decrypt({
@@ -76,7 +79,7 @@ describe("IsoBmffSampleAesHandler", () => {
                     outputPath: clearFragment,
                     encryption: fragmentEncryption,
                     keys,
-                })
+                }),
             );
 
             expect(runner.calls[0].slice(0, 2)).toEqual(["--key", `1:${key}`]);
@@ -101,8 +104,8 @@ describe("IsoBmffSampleAesHandler", () => {
                         outputPath,
                         encryption: initializationEncryption,
                         keys: new Map([["fixture:key", key]]),
-                    })
-                )
+                    }),
+                ),
             ).rejects.toBeInstanceOf(FatalDecryptionError);
             expect(fs.existsSync(inputPath)).toBe(true);
             expect(fs.existsSync(outputPath)).toBe(false);

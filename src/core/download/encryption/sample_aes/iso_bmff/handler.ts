@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
 import * as fs from "fs";
+import { DecryptionRequest, EncryptionHandler, FatalDecryptionError } from "@/core/download/encryption/types";
 import { validateClearIsoBmffFragment, validateClearIsoBmffInitialization } from "@/core/isobmff";
 import { DownloadEncryption, IsoBmffSampleAesEncryption } from "@/core/source/types";
-import { DecryptionRequest, EncryptionHandler, FatalDecryptionError } from "@/core/download/encryption/types";
 import { getAbortSignal } from "@/utils/abort";
 import { Mp4DecryptRunner, SystemMp4DecryptRunner } from "./runner";
 
@@ -22,7 +22,7 @@ export class IsoBmffSampleAesHandler implements EncryptionHandler {
 
     validate(
         encryption: DownloadEncryption,
-        keys: ReadonlyMap<string, string>
+        keys: ReadonlyMap<string, string>,
     ): asserts encryption is IsoBmffSampleAesEncryption {
         this.requireDescriptor(encryption);
         if (encryption.keys.length === 0) {
@@ -74,7 +74,7 @@ export class IsoBmffSampleAesHandler implements EncryptionHandler {
                 await fs.promises.writeFile(
                     fragmentsInfoPath,
                     this.requireFragmentsInfo(encryption.fragmentsInfoBase64),
-                    { flag: "wx" }
+                    { flag: "wx" },
                 );
             }
             await this.runner.run(arguments_);
@@ -115,7 +115,7 @@ export class IsoBmffSampleAesHandler implements EncryptionHandler {
     }
 
     private requireDescriptor(
-        encryption: DownloadEncryption
+        encryption: DownloadEncryption,
     ): asserts encryption is Extract<DownloadEncryption, { scheme: "iso-bmff-sample-aes" }> {
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
