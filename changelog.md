@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed
+
+-   Limited live playlist refresh recovery to playlist HTTP request failures. Parsing, adaptation, and key preparation
+    errors now fail the download; key HTTP errors no longer masquerade as normal stream completion.
+-   Removed the implicit five-second HLS segment-duration fallback. Zero durations are preserved, and malformed
+    or non-finite `EXTINF` durations now fail parsing instead of producing incorrect timing.
+
 ### Added
 
 -   Added a versioned `task.json` to retained temporary workspaces with non-sensitive source, output, execution, and

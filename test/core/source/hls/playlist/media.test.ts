@@ -3,6 +3,27 @@ import { parseMediaPlaylist } from "@/core/source/hls/playlist/media";
 import { HLSKeyReferenceKind, HLSParseError, HLSPlaylistKind, HLSSegmentKind } from "@/core/source/hls/playlist/parser";
 
 describe("parseMediaPlaylist", () => {
+    test.each(["", "invalid", "NaN", "Infinity", "-1", "1junk", "0x10", "1e2", "9".repeat(400)])(
+        "rejects invalid media duration %s instead of inventing timing",
+        (duration) => {
+            const content = [`#EXTINF:${duration},`, "https://cdn.example/0.ts"].join("\n");
+
+            expect(() => parseMediaPlaylist({ content })).toThrow(
+                new HLSParseError("Invalid duration for media segment"),
+            );
+        },
+    );
+
+    test("preserves zero and fractional durations in playlist timing", () => {
+        const playlist = parseMediaPlaylist({
+            content: ["#EXTINF:0,", "https://cdn.example/0.ts", "#EXTINF:0.25,", "https://cdn.example/1.ts"].join("\n"),
+        });
+
+        expect(playlist.segments).toMatchObject([{ duration: 0 }, { duration: 0.25 }]);
+        expect(playlist.totalDuration).toBe(0.25);
+        expect(playlist.averageSegmentDuration).toBe(0.125);
+    });
+
     test("parses sequence, initialization, segment, end, and duration metadata", () => {
         const initializationId = '["https://cdn.example/live/init.mp4",null,null]';
         const playlist = parseMediaPlaylist({

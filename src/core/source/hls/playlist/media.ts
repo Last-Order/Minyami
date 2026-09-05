@@ -91,7 +91,13 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
             if (pending.duration !== undefined) {
                 throw new HLSParseError("Multiple duration tags apply to one media segment");
             }
-            pending.duration = parseFloat(getTagBody(currentLine).split(",")[0]) || 5.0;
+            const value = getTagBody(currentLine).split(",")[0];
+            const duration = Number(value);
+            // Inventing a duration changes slice boundaries and progress for every following segment.
+            if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(value) || !Number.isFinite(duration)) {
+                throw new HLSParseError("Invalid duration for media segment");
+            }
+            pending.duration = duration;
             continue;
         }
         if (!currentLine.startsWith("#")) {

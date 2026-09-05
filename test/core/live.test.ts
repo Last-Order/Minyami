@@ -8,6 +8,151 @@ import { withTempDirectory } from "../helpers/filesystem";
 import { close, listen, masterVariantChunks, withMasterPlaylistServer } from "../helpers/http";
 
 describe("createLiveDownloader", () => {
+    test.each([
+        ["key HTTP failure", '#EXT-X-KEY:METHOD=AES-128,URI="/key"', "Request failed with status code 404", 2],
+        ["invalid duration", "#EXTINF:invalid,\n/1.ts", "Invalid duration for media segment", 0],
+        ["nested master", "#EXT-X-STREAM-INF:BANDWIDTH=1000\n/other.m3u8", "another master playlist", 0],
+        ["missing explicit key", '#EXT-X-KEY:METHOD=AES-128,URI="skd://asset"', "explicit decryption key", 0],
+    ] as const)("fails on refresh %s without admitting unprepared media", async (_name, tag, message, keyAttempts) => {
+        let playlistRequests = 0;
+        let keyRequests = 0;
+        let refreshedChunkRequests = 0;
+        const server = http.createServer((request, response) => {
+            if (request.url === "/key") {
+                keyRequests++;
+                response.writeHead(404).end();
+                return;
+            }
+            if (request.url === "/0.ts" || request.url === "/1.ts") {
+                if (request.url === "/1.ts") {
+                    refreshedChunkRequests++;
+                }
+                response.end("chunk");
+                return;
+            }
+            playlistRequests++;
+            response.end(
+                playlistRequests === 1
+                    ? "#EXTM3U\n#EXTINF:0.01,\n/0.ts"
+                    : `#EXTM3U\n${tag}\n#EXTINF:0.01,\n/1.ts\n#EXT-X-ENDLIST`,
+            );
+        });
+        const baseUrl = await listen(server);
+        try {
+            await withTempDirectory("minyami-live-refresh-failure-", async (directory) => {
+                const downloader = createLiveDownloader(`${baseUrl}/playlist.m3u8`, {
+                    output: path.join(directory, "live"),
+                    tempDir: directory,
+                    sourceRequestAttempts: 2,
+                });
+
+                await expect(downloader.download()).rejects.toThrow(message);
+
+                expect(downloader.getSnapshot()).toMatchObject({ status: "failed", totalChunkCount: 1 });
+                expect(playlistRequests).toBe(2);
+                expect(keyRequests).toBe(keyAttempts);
+                expect(refreshedChunkRequests).toBe(0);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
+    test.each(["disconnect", 404, 503] as const)("preserves playlist request policy for %s", async (failure) => {
+        let playlistRequests = 0;
+        const server = http.createServer((request, response) => {
+            if (request.url === "/0.ts" || request.url === "/1.ts") {
+                response.end(request.url);
+                return;
+            }
+            playlistRequests++;
+            if (playlistRequests === 2) {
+                if (failure === "disconnect") {
+                    response.destroy();
+                } else {
+                    response.writeHead(failure).end();
+                }
+                return;
+            }
+            response.end(
+                playlistRequests === 1
+                    ? "#EXTM3U\n#EXTINF:0.01,\n/0.ts"
+                    : "#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:1\n#EXTINF:0.01,\n/1.ts\n#EXT-X-ENDLIST",
+            );
+        });
+        const baseUrl = await listen(server);
+        try {
+            await withTempDirectory("minyami-live-refresh-http-", async (directory) => {
+                const downloader = createLiveDownloader(`${baseUrl}/playlist.m3u8`, {
+                    output: path.join(directory, "live"),
+                    tempDir: directory,
+                    sourceRequestAttempts: 1,
+                });
+
+                await downloader.download();
+
+                const recovered = failure === "disconnect";
+                expect(playlistRequests).toBe(recovered ? 3 : 2);
+                expect(downloader.getSnapshot()).toMatchObject({
+                    status: "finished",
+                    completedChunkCount: recovered ? 2 : 1,
+                    droppedChunkCount: 0,
+                });
+                expect(fs.readFileSync(downloader.getSnapshot().outputPaths[0], "utf8")).toBe(
+                    recovered ? "/0.ts/1.ts" : "/0.ts",
+                );
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
+    test.each(["stop", "abort"] as const)("honors %s during refreshed key acquisition", async (command) => {
+        let playlistRequests = 0;
+        let keyRequests = 0;
+        let cancel: () => void;
+        const server = http.createServer((request, response) => {
+            if (request.url === "/key") {
+                keyRequests++;
+                cancel();
+                response.writeHead(404).end();
+                return;
+            }
+            if (request.url === "/0.ts") {
+                response.end("chunk");
+                return;
+            }
+            playlistRequests++;
+            response.end(
+                playlistRequests === 1
+                    ? "#EXTM3U\n#EXTINF:0.01,\n/0.ts"
+                    : '#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:1\n#EXT-X-KEY:METHOD=AES-128,URI="/key"\n#EXTINF:0.01,\n/1.ts',
+            );
+        });
+        const baseUrl = await listen(server);
+        try {
+            await withTempDirectory("minyami-live-refresh-cancel-", async (directory) => {
+                const downloader = createLiveDownloader(`${baseUrl}/playlist.m3u8`, {
+                    output: path.join(directory, "live"),
+                    tempDir: directory,
+                    sourceRequestAttempts: 2,
+                });
+                cancel = () => downloader[command]();
+
+                await downloader.download();
+
+                expect(downloader.getSnapshot()).toMatchObject({
+                    status: command === "stop" ? "finished" : "aborted",
+                    totalChunkCount: 1,
+                });
+                expect(keyRequests).toBe(1);
+                expect(playlistRequests).toBe(2);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test("discovers new segments across playlist refreshes and downloads each once", async () => {
         let playlistRequests = 0;
         const chunkRequests = new Map<string, number>();

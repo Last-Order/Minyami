@@ -1,3 +1,4 @@
+import { isAxiosError } from "axios";
 import { MediaContainer } from "@/core/media_container";
 import { MediaTrack } from "@/core/source/stream_selection";
 import { DownloadItem, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceTrack } from "@/core/source/types";
@@ -109,25 +110,40 @@ export class HLSMediaPlaylistCursor {
                 return;
             }
 
+            let loaded: HLSMediaPlaylist;
             try {
-                this.playlist = this.adaptationPlan.adaptPlaylist(await this.loadMediaPlaylist());
-                await this.adaptationPlan.ensureKeys(this.playlist, context);
+                loaded = await this.loadMediaPlaylist();
             } catch (error) {
                 if (getAbortSignal().aborted) {
                     return;
                 }
-                // Before useful output a refresh failure is fatal; afterwards an unavailable live manifest ends the track.
-                if (this.discoveredItemCount === 0) {
+                // Only HTTP request failures may recover; malformed playlists and local loading errors are fatal.
+                // Before useful output even a request failure is fatal.
+                if (!isAxiosError(error) || this.discoveredItemCount === 0) {
                     throw error;
                 }
-                const status = (error as any)?.response?.status;
-                if (status >= 400 && status <= 599) {
+                const status = error.response?.status;
+                if (status !== undefined && status >= 400 && status <= 599) {
                     logger.info(`HLS playlist for track ${this.options.id} is no longer available.`);
                     return;
                 }
                 logger.warning(
                     `Unable to refresh track ${this.options.id}. Keep the current playlist and retry later.`,
                 );
+                continue;
+            }
+
+            // Adaptation and key failures must not inherit the playlist request's retry/end policy.
+            // Publish the new snapshot only after its keys are ready for discovery.
+            try {
+                const playlist = this.adaptationPlan.adaptPlaylist(loaded);
+                await this.adaptationPlan.ensureKeys(playlist, context);
+                this.playlist = playlist;
+            } catch (error) {
+                if (getAbortSignal().aborted) {
+                    return;
+                }
+                throw error;
             }
         }
     }
