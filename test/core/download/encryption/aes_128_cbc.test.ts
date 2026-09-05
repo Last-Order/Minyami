@@ -38,6 +38,8 @@ describe("Aes128CbcHandler", () => {
     });
 
     test.each([
+        ["an empty key", "", "1", "Missing encryption key for test:key"],
+        ["an empty IV", keyHex, "", "AES-128-CBC IV"],
         ["an invalid key", "z".repeat(32), "1", "AES-128 key"],
         ["a short key", "00", "1", "AES-128 key"],
         ["a non-hexadecimal IV", keyHex, "xy", "AES-128-CBC IV"],

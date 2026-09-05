@@ -68,6 +68,8 @@ describe("PackedAacSampleAesHandler", () => {
     });
 
     test.each([
+        ["empty key", "", iv.toString("hex"), "Missing encryption key for skd://fixture"],
+        ["empty IV", key.toString("hex"), "", "SAMPLE-AES IV"],
         ["invalid key", "z".repeat(32), iv.toString("hex"), "SAMPLE-AES key"],
         ["invalid IV", key.toString("hex"), "xy", "SAMPLE-AES IV"],
     ])("rejects an %s", (_name, invalidKey, invalidIv, message) => {

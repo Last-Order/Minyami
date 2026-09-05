@@ -1,12 +1,10 @@
 import { randomUUID } from "crypto";
 import * as fs from "fs";
+import { validateSingleKeyEncryption } from "@/core/download/encryption/single_key_validation";
 import { DecryptionRequest, EncryptionHandler } from "@/core/download/encryption/types";
 import { parseLeadingId3Tags } from "@/core/packed_audio";
 import { DownloadEncryption, PackedAacSampleAesEncryption } from "@/core/source/types";
 import { decryptSampleAesAudio } from "../shared/audio";
-
-const AES_128_KEY = /^[0-9a-fA-F]{32}$/;
-const AES_128_IV = /^[0-9a-fA-F]{1,32}$/;
 
 export class PackedAacSampleAesHandler implements EncryptionHandler {
     readonly scheme = "packed-aac-sample-aes" as const;
@@ -25,16 +23,7 @@ export class PackedAacSampleAesHandler implements EncryptionHandler {
         if (encryption.scheme !== this.scheme) {
             throw new Error(`Invalid encryption descriptor for ${this.scheme}`);
         }
-        const key = keys.get(encryption.keyId);
-        if (!key) {
-            throw new Error(`Missing encryption key for ${encryption.keyId}`);
-        }
-        if (!AES_128_KEY.test(key)) {
-            throw new Error("SAMPLE-AES key must contain exactly 16 bytes of hexadecimal data.");
-        }
-        if (!AES_128_IV.test(encryption.iv)) {
-            throw new Error("SAMPLE-AES IV must contain 1 to 16 bytes of hexadecimal data.");
-        }
+        validateSingleKeyEncryption(encryption, keys);
     }
 
     async decrypt(request: DecryptionRequest): Promise<void> {
