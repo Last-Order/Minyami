@@ -89,7 +89,7 @@ export async function selectHLSProfile(
     }
     const locatorHint = [...locatorHints][0];
     if (locatorHint) {
-        return validateProfileShape(locatorHint, initializations, media);
+        return validateProfileShape(locatorHint, media);
     }
 
     // RFC 8216 sections 3.1-3.4 make EXT-X-MAP format-neutral: MPEG-TS and fMP4 both have initialization
@@ -171,7 +171,7 @@ export async function selectHLSProfile(
             }
             throw new Error("Unable to determine the HLS media profile from the EXT-X-MAP initialization section.");
         }
-        return validateProfileShape(profile, initializations, media);
+        return validateProfileShape(profile, media);
     }
 
     // Whole-section AES-128 can hide the MAP signature. A media segment whose framing remains visible is the only
@@ -181,7 +181,7 @@ export async function selectHLSProfile(
         const prefix = await probeSegmentPrefix(probeableMedia, http);
         const profile = classifyMedia(prefix);
         if (profile) {
-            return validateProfileShape(profile, initializations, media);
+            return validateProfileShape(profile, media);
         }
     }
     throw new Error(
@@ -189,11 +189,7 @@ export async function selectHLSProfile(
     );
 }
 
-function validateProfileShape(
-    profile: HLSProfileKind,
-    initializations: readonly HLSInitializationSegment[],
-    media: readonly HLSMediaSegment[],
-): HLSProfileAdapter {
+function validateProfileShape(profile: HLSProfileKind, media: readonly HLSMediaSegment[]): HLSProfileAdapter {
     if (profile === "packed-aac") {
         // RFC 8216 section 3.4 defines Packed Audio as having no Media Initialization Section.
         // https://www.rfc-editor.org/rfc/rfc8216.html#section-3.4
@@ -262,7 +258,7 @@ function classifyMedia(data: Buffer): HLSProfileKind | undefined {
         if (box.type === "moof") {
             return "fmp4";
         }
-        if (box.end <= offset || box.end > data.length) {
+        if (box.end > data.length) {
             break;
         }
         offset = box.end;

@@ -433,6 +433,23 @@ describe("parseMediaPlaylist", () => {
         });
     });
 
+    test.each(["AES-128", "SAMPLE-AES"])("validates shared key fields for %s", (method) => {
+        expect(() => parseMediaPlaylist({ content: `#EXT-X-KEY:METHOD=${method}` })).toThrow(
+            "Missing URL for encryption key",
+        );
+        expect(() =>
+            parseMediaPlaylist({
+                content: `#EXT-X-KEY:METHOD=${method},URI="https://cdn.example/key",IV=invalid`,
+            }),
+        ).toThrow("Invalid IV for encryption key");
+    });
+
+    test.each(["", "\n#EXT-X-ENDLIST"])("rejects unfinished media at playlist end %j", (ending) => {
+        for (const pending of ["#EXTINF:1,", "#EXT-X-BYTERANGE:10@0"]) {
+            expect(() => parseMediaPlaylist({ content: pending + ending })).toThrow("Invalid HLS playlist.");
+        }
+    });
+
     test("rejects SAMPLE-AES-CTR explicitly", () => {
         expect(() =>
             parseMediaPlaylist({

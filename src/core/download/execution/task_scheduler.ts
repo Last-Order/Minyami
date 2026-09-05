@@ -1,4 +1,4 @@
-export interface TaskSchedulerOptions<T, TResult> {
+interface TaskSchedulerOptions<T, TResult> {
     concurrency: number;
     /** Attempt numbers start at one and are scheduler-owned rather than stored on tasks. */
     execute: (task: T, attempt: number) => Promise<TResult>;

@@ -10,15 +10,9 @@ export class SystemExecutableRunner implements ExecutableRunner {
     async isAvailable(command: string, versionArguments: readonly string[]): Promise<boolean> {
         return new Promise<boolean>((resolve) => {
             const child = spawn(command, versionArguments, { stdio: "ignore" });
-            let settled = false;
-            const settle = (available: boolean) => {
-                if (!settled) {
-                    settled = true;
-                    resolve(available);
-                }
-            };
-            child.once("error", () => settle(false));
-            child.once("close", (code) => settle(code === 0));
+            // Spawn failure may also emit close; the promise preserves the first result.
+            child.once("error", () => resolve(false));
+            child.once("close", (code) => resolve(code === 0));
         });
     }
 

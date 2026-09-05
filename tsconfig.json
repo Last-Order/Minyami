@@ -14,7 +14,6 @@
         "types": ["node"],
         "strict": true,
         "stableTypeOrdering": true,
-        "experimentalDecorators": true,
         "esModuleInterop": true,
         "newLine": "LF"
     },

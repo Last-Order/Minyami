@@ -8,7 +8,7 @@ import { DownloadHttpClient } from "../infrastructure/http_client";
 import { KeyStore } from "../infrastructure/key_store";
 import { DownloadTask } from "./task";
 
-export interface ExecuteChunkOptions {
+interface ExecuteChunkOptions {
     tempPath: string;
     itemTimeout: number;
     keepEncryptedChunks: boolean;

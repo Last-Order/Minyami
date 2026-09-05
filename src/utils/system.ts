@@ -3,7 +3,7 @@ import * as os from "os";
 import * as path from "path";
 import logger from "./log";
 
-export const initMinyamiDirectory = () => {
+const initMinyamiDirectory = () => {
     const minyamiPath = path.resolve(os.homedir(), "./.minyami/");
     if (!fs.existsSync(minyamiPath)) {
         fs.mkdirSync(minyamiPath);

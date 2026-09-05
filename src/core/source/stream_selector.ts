@@ -99,10 +99,6 @@ async function selectVideo(choices: readonly VideoChoice[]): Promise<VideoChoice
 
 async function selectAudioOnlyOption(catalog: StreamCatalog): Promise<TrackSelection | undefined> {
     const choices = createStreamOptionChoices(catalog);
-    if (choices.length === 1) {
-        return choices[0].value.tracks;
-    }
-
     const response = await prompts({
         type: "select",
         name: "option",
@@ -170,7 +166,7 @@ function formatStreamOption(option: StreamOption): string {
     if (option.bandwidth !== undefined) {
         details.push(formatBandwidth(option.bandwidth));
     }
-    return details.join(" | ") || "unnamed stream option";
+    return details.join(" | ");
 }
 
 function formatVideoTrack(track: VideoTrack): string {

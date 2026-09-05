@@ -84,9 +84,6 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
             continue;
         }
         if (currentLine.startsWith(ENDLIST_TAG)) {
-            if (pending.duration !== undefined || pending.byteRange !== undefined) {
-                throw new HLSParseError("Invalid HLS playlist.");
-            }
             hasEndList = true;
             break;
         }
@@ -139,7 +136,8 @@ export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOption
         }
     }
 
-    if (!hasEndList && (pending.duration !== undefined || pending.byteRange !== undefined)) {
+    // Both ENDLIST and input exhaustion must leave no unfinished media segment.
+    if (pending.duration !== undefined || pending.byteRange !== undefined) {
         throw new HLSParseError("Invalid HLS playlist.");
     }
     return {
@@ -160,38 +158,19 @@ function parseEncryption(
     const attributes = parseAttributeList(tagBody);
     const method = attributes["METHOD"];
 
-    if (method === "AES-128") {
+    if (method === "AES-128" || method === "SAMPLE-AES") {
         const keyUri = attributes["URI"];
         if (!keyUri) {
             throw new HLSParseError("Missing URL for encryption key");
         }
         const key = parseKeyReference(resolvePlaylistUri(playlistUrl, keyUri));
         const iv = attributes["IV"] ? parseIv(attributes["IV"]) : undefined;
+        const base = { key, ...(iv ? { iv } : {}) };
         return {
-            encryption: {
-                method,
-                key,
-                ...(iv ? { iv } : {}),
-            },
-            warned,
-        };
-    }
-
-    if (method === "SAMPLE-AES") {
-        const keyUri = attributes["URI"];
-        if (!keyUri) {
-            throw new HLSParseError("Missing URL for encryption key");
-        }
-        const key = parseKeyReference(resolvePlaylistUri(playlistUrl, keyUri));
-        const iv = attributes["IV"] ? parseIv(attributes["IV"]) : undefined;
-        const keyFormat = attributes["KEYFORMAT"] || "identity";
-        return {
-            encryption: {
-                method,
-                key,
-                ...(iv ? { iv } : {}),
-                keyFormat,
-            },
+            encryption:
+                method === "AES-128"
+                    ? { ...base, method }
+                    : { ...base, method, keyFormat: attributes["KEYFORMAT"] || "identity" },
             warned,
         };
     }
@@ -259,10 +238,11 @@ function parseInitializationSegment(
         }
         byteRange = { offset: parsedByteRange.offset, length: parsedByteRange.length };
     }
+    const url = resolvePlaylistUri(playlistUrl, uri);
     const base = {
         kind: HLSSegmentKind.Initialization,
-        initializationId: initializationSegmentIdentity(resolvePlaylistUri(playlistUrl, uri), byteRange),
-        url: resolvePlaylistUri(playlistUrl, uri),
+        initializationId: initializationSegmentIdentity(url, byteRange),
+        url,
         ...(byteRange ? { byteRange } : {}),
     } as const;
     if (!encryption) {

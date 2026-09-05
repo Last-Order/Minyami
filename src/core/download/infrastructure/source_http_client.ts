@@ -18,19 +18,17 @@ export class RetryingSourceHttpClient implements DownloadSourceHttpClient {
     }
 
     private async try<T>(operation: () => Promise<T>, signal?: { readonly aborted: boolean }): Promise<T> {
-        let lastError: unknown;
         // `maxAttempts` includes the initial request, matching task-attempt semantics exactly.
-        for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
+        // Configuration normalization guarantees a positive attempt budget.
+        for (let attempt = 1; ; attempt++) {
             try {
                 return await operation();
             } catch (error) {
-                lastError = error;
                 // Cancellation is a lifecycle decision, never another source attempt.
-                if (signal?.aborted) {
+                if (signal?.aborted || attempt >= this.maxAttempts) {
                     throw error;
                 }
             }
         }
-        throw lastError;
     }
 }

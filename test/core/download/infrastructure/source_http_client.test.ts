@@ -4,6 +4,16 @@ import { DownloadHttpClient } from "@/core/download/infrastructure/http_client";
 import { RetryingSourceHttpClient } from "@/core/download/infrastructure/source_http_client";
 
 describe("RetryingSourceHttpClient", () => {
+    test.each([1, 3])("preserves the final request error after %i attempts", async (maxAttempts) => {
+        const http = new DownloadHttpClient(normalizeDownloaderConfig());
+        const failure = new Error("source unavailable");
+        const request = jest.spyOn(http, "request").mockRejectedValue(failure);
+        const sourceHttp = new RetryingSourceHttpClient(http, maxAttempts);
+
+        await expect(sourceHttp.request("https://example.com/key")).rejects.toBe(failure);
+        expect(request).toHaveBeenCalledTimes(maxAttempts);
+    });
+
     test("applies one consistent maximum-attempt policy outside sources", async () => {
         const http = new DownloadHttpClient(normalizeDownloaderConfig());
         const get = jest

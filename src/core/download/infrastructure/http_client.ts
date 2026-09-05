@@ -49,7 +49,7 @@ export class DownloadHttpClient {
             ...options,
             headers: {
                 ...this.hostHeader(url),
-                ...(options.headers || {}),
+                ...options.headers,
             },
         });
     }
@@ -61,7 +61,7 @@ export class DownloadHttpClient {
             ...options,
             headers: {
                 ...this.hostHeader(url),
-                ...(options.headers || {}),
+                ...options.headers,
             },
         });
     }
@@ -79,7 +79,7 @@ export class DownloadHttpClient {
                 ...(byteRange
                     ? {
                           headers: {
-                              ...(requestOptions.headers || {}),
+                              ...requestOptions.headers,
                               Range: `bytes=${byteRange.offset}-${byteRange.offset + byteRange.length - 1}`,
                               "Accept-Encoding": "identity",
                           },
