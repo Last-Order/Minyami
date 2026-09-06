@@ -11,6 +11,8 @@
 
 ### Added
 
+-   Added `minyami <input> [options]` as shorthand for `minyami -d <input> [options]`, with the URL or local path
+    immediately after `minyami`. Existing explicit download commands remain supported.
 -   Added a versioned `task.json` to retained temporary workspaces with non-sensitive source, output, execution, and
     selected-track metadata for future recovery tooling.
 

@@ -29,7 +29,7 @@ yarn global add minyami
 下载播放列表：
 
 ```shell
-minyami --download "https://example.com/video.m3u8" --output "./video.ts"
+minyami "https://example.com/video.m3u8" --output "./video.ts"
 ```
 
 常用示例：

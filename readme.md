@@ -29,7 +29,7 @@ For convenient playlist detection in Chrome, install the [Minyami Chrome extensi
 Download a playlist:
 
 ```shell
-minyami --download "https://example.com/video.m3u8" --output "./video.ts"
+minyami "https://example.com/video.m3u8" --output "./video.ts"
 ```
 
 Useful examples:

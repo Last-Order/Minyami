@@ -7,6 +7,7 @@ import { createLiveDownloader } from "./core/live";
 import { parseHLSExplicitKeyInputs } from "./core/source/hls/explicit_key";
 import { selectStreamInteractively } from "./core/source/stream_selector";
 import ProxyAgentHelper from "./utils/agent";
+import { normalizeCliArguments } from "./utils/cli_arguments";
 import { createErii } from "./utils/erii";
 import logger from "./utils/log";
 import { readConfigFile } from "./utils/system";
@@ -31,6 +32,7 @@ interface CliOptions {
     slice?: string;
 }
 
+process.argv = [...process.argv.slice(0, 2), ...normalizeCliArguments(process.argv.slice(2))];
 const Erii = createErii<CliOptions>();
 
 Erii.setMetaInfo({
