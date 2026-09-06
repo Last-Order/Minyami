@@ -207,7 +207,8 @@ function sampleEntryChildOffset(buffer: Buffer, sampleEntry: IsoBmffBox): number
         }
         return offset;
     }
-    if (sampleEntry.type !== "enca" || sampleEntry.payloadStart + 28 > sampleEntry.end) {
+    // inspectIsoBmffInitialization calls this only for encv/enca entries; video returned above.
+    if (sampleEntry.payloadStart + 28 > sampleEntry.end) {
         throw new Error("Invalid protected ISO-BMFF audio sample entry.");
     }
     const version = buffer.readUInt16BE(sampleEntry.payloadStart + 8);

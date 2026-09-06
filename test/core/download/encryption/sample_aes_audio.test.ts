@@ -6,6 +6,11 @@ const key = Buffer.from("00112233445566778899aabbccddeeff", "hex");
 const iv = Buffer.from("ffeeddccbbaa99887766554433221100", "hex");
 
 describe("SAMPLE-AES elementary audio", () => {
+    test.each(["ac3", "eac3"] as const)("rejects a truncated %s frame", (codec) => {
+        const frame = codec === "ac3" ? createAc3Frame(3) : createEac3Frame(0, 5);
+        expect(() => decryptSampleAesAudio(frame.subarray(0, -1), codec, key, iv)).toThrow("frame length");
+    });
+
     test("resets CBC for every AC-3 syncframe", () => {
         const first = createAc3Frame(3);
         const second = createAc3Frame(17);

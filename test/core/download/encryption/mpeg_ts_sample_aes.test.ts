@@ -59,6 +59,55 @@ describe("MpegTsSampleAesHandler", () => {
         expect(() => decryptMpegTsSampleAes(badContinuity, key, iv)).toThrow("MPEG-TS continuity error");
     });
 
+    test("preserves the maximum declared PES length and packet capacity", () => {
+        // A clear non-slice NAL in a protected PID exercises the largest 16-bit PES count without shrinking.
+        const video = Buffer.alloc(0xffff - 3, 0x55);
+        video.set([0, 0, 1, 0x06]);
+        const encrypted = Buffer.concat([
+            ...packetizePsi(0, createPatSection(0x64)),
+            ...packetizePsi(0x64, createPmtSection([{ type: 0xdb, pid: 0x100 }])),
+            ...packetizePes(0x100, createPes(0xe0, video)),
+        ]);
+
+        const clear = decryptMpegTsSampleAes(encrypted, key, iv);
+
+        expect(clear).toHaveLength(encrypted.length);
+        expect(readPesPayload(clear, 0x100)).toEqual(video);
+        expect(packetsForPid(clear, 0x100)[0].readUInt16BE(8)).toBe(0xffff);
+    });
+
+    test("replaces removed H.264 escape bytes with transport stuffing", () => {
+        const nal = Buffer.alloc(1200);
+        nal[0] = 0x65;
+        nal[nal.length - 1] = 0x55;
+        const encryptedNal = Buffer.from(nal);
+        encryptCbcBlocks(encryptedNal, sampleAesH264BlockOffsets(nal.length));
+        const prefix = Buffer.from([0, 0, 1]);
+        const escaped = applyEmulationPrevention(encryptedNal);
+        expect(escaped.length).toBeGreaterThan(nal.length + 184);
+        const encrypted = Buffer.concat([
+            ...packetizePsi(0, createPatSection(0x64)),
+            ...packetizePsi(0x64, createPmtSection([{ type: 0xdb, pid: 0x100 }])),
+            ...packetizePes(0x100, createPes(0xe0, Buffer.concat([prefix, escaped]))),
+        ]);
+
+        const clear = decryptMpegTsSampleAes(encrypted, key, iv);
+
+        expect(clear).toHaveLength(encrypted.length);
+        expect(readPesPayload(clear, 0x100)).toEqual(Buffer.concat([prefix, nal]));
+        expect(packetsForPid(clear, 0x100).some((packet) => packet[4] === 183)).toBe(true);
+    });
+
+    test.each([
+        [183, "does not contain a payload"],
+        [182, "Invalid MPEG-TS PSI section"],
+    ])("rejects PSI with adaptation length %i", (adaptationLength, message) => {
+        const packet = Buffer.alloc(188);
+        packet.set([0x47, 0x40, 0, 0x30, adaptationLength]);
+
+        expect(() => decryptMpegTsSampleAes(packet, key, iv)).toThrow(message);
+    });
+
     test("keeps Annex-B leading and trailing zero bytes outside the encrypted NAL unit", () => {
         const nal = Buffer.alloc(240);
         nal[0] = 0x65;

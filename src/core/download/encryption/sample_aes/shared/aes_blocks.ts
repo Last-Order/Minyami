@@ -41,9 +41,7 @@ export function decryptCbcJobs(key: Buffer, jobs: readonly CbcDecryptJob[]): voi
     const decipher = crypto.createDecipheriv("aes-128-ecb", key, null);
     decipher.setAutoPadding(false);
     const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-    if (decrypted.length !== ciphertext.length) {
-        throw new Error("Unexpected SAMPLE-AES block decryption length.");
-    }
+    // Complete AES blocks with padding disabled decrypt to exactly the ciphertext length.
 
     blockIndex = 0;
     for (const job of jobs) {

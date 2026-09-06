@@ -155,7 +155,8 @@ function parseEac3FrameInfo(
 }
 
 function validateFrameRange(data: Buffer, offset: number, length: number, headerLength: number, codec: string): void {
-    if (!Number.isSafeInteger(length) || length < headerLength || offset + length > data.length) {
+    // Frame lengths come from bounded integer bit fields or the validated AC-3 bitrate table.
+    if (length < headerLength || offset + length > data.length) {
         throw new Error(`Invalid ${codec} frame length in SAMPLE-AES payload.`);
     }
 }

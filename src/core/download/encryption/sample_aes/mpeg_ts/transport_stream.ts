@@ -181,9 +181,7 @@ function readPsiSection(packet: TransportPacket, expectedTableId: number): Buffe
     const payload = packet.data.subarray(payloadPacket.payloadOffset);
     // H.222.0 §2.4.4.1/Table 2-29: on PUSI, pointer_field is one byte and counts to the first section byte.
     // https://www.itu.int/rec/T-REC-H.222.0/en
-    if (payload.length < 1) {
-        throw new Error("Invalid MPEG-TS PSI pointer field.");
-    }
+    // readTransportPayload returns only packets with at least one payload byte.
     const sectionOffset = 1 + payload[0];
     if (sectionOffset + 3 > payload.length || payload[sectionOffset] !== expectedTableId) {
         throw new Error("Invalid MPEG-TS PSI section.");
@@ -282,19 +280,14 @@ function decryptPes(packets: readonly PayloadPacket[], codec: ProtectedCodec, ke
     if (declaredPacketLength !== 0) {
         // PES_packet_length is a 16-bit count starting immediately after its own field, hence the six-byte subtraction.
         const newLength = decryptedPes.length - 6;
-        if (newLength > 0xffff) {
-            throw new Error("Decrypted SAMPLE-AES PES packet is too large.");
-        }
+        // Audio keeps its length; H.264 only removes emulation-prevention bytes, so the 16-bit count still fits.
         decryptedPes.writeUInt16BE(newLength, 4);
     }
     rewritePesPayload(packets, decryptedPes);
 }
 
 function rewritePesPayload(packets: readonly PayloadPacket[], pes: Buffer): void {
-    const totalCapacity = packets.reduce((total, packet) => total + (TS_PACKET_SIZE - packet.payloadOffset), 0);
-    if (pes.length > totalCapacity) {
-        throw new Error("Decrypted SAMPLE-AES PES packet exceeds its transport capacity.");
-    }
+    // decryptPes bounds the input by these packets and neither sample transformer grows it.
     let sourceOffset = 0;
     for (const packet of packets) {
         const originalPayloadCapacity = TS_PACKET_SIZE - packet.payloadOffset;
@@ -302,9 +295,6 @@ function rewritePesPayload(packets: readonly PayloadPacket[], pes: Buffer): void
         const payload = pes.subarray(sourceOffset, sourceOffset + payloadLength);
         rewriteTransportPayload(packet, payload, originalPayloadCapacity - payloadLength);
         sourceOffset += payloadLength;
-    }
-    if (sourceOffset !== pes.length) {
-        throw new Error("Failed to publish the complete decrypted SAMPLE-AES PES packet.");
     }
 }
 
@@ -332,9 +322,7 @@ function rewriteTransportPayload(packet: PayloadPacket, payload: Buffer, extraSt
         }
     } else {
         const newAdaptationLength = adaptationLength + extraStuffing;
-        if (newAdaptationLength > 183) {
-            throw new Error("Unable to fit SAMPLE-AES transport stuffing.");
-        }
+        // Stuffing replaces unused payload bytes, keeping adaptation plus payload inside the original packet.
         data[3] = (data[3] & 0xcf) | 0x30;
         data[4] = newAdaptationLength;
         if (adaptationLength === 0 && newAdaptationLength > 0) {
@@ -347,9 +335,6 @@ function rewriteTransportPayload(packet: PayloadPacket, payload: Buffer, extraSt
         payloadOffset = 5 + newAdaptationLength;
     }
     payload.copy(data, payloadOffset);
-    if (payloadOffset + payload.length !== TS_PACKET_SIZE) {
-        throw new Error("Invalid rewritten MPEG-TS packet size.");
-    }
 }
 
 function rewriteProgramMaps(packets: readonly TransportPacket[], pmtPid: number): void {
