@@ -1,4 +1,3 @@
-import * as path from "path";
 import { DownloadItem, DownloadTrackId, SourceBatch, SourceTrack } from "@/core/source/types";
 import { DownloadTask } from "../execution/task";
 import { mixedItemNamer } from "../output/item_naming";
@@ -190,14 +189,7 @@ export class DownloadManifest {
 
     private validateFilename(trackId: DownloadTrackId, filename: string): void {
         // Source-provided namers may label files but cannot escape the downloader-owned track directory.
-        if (
-            !filename ||
-            filename === "." ||
-            filename === ".." ||
-            path.isAbsolute(filename) ||
-            filename.includes("/") ||
-            filename.includes("\\")
-        ) {
+        if (!filename || filename === "." || filename === ".." || filename.includes("/") || filename.includes("\\")) {
             throw new Error(`Invalid output filename for track ${trackId}: ${filename}`);
         }
     }

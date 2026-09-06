@@ -299,7 +299,7 @@ async function probeSegmentPrefix(segment: HLSSegment, http: DownloadSourceHttpC
 function readIsoBmffBoxHeader(data: Buffer, offset: number): IsoBmffBoxHeader | undefined {
     // ISO/IEC 14496-12 defines the size/type box header and its 64-bit largesize form used by this bounded parser.
     // https://www.iso.org/standard/83102.html
-    if (offset < 0 || offset + 8 > data.length) {
+    if (offset + 8 > data.length) {
         return undefined;
     }
     const size32 = data.readUInt32BE(offset);

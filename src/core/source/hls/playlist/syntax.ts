@@ -83,7 +83,7 @@ export function resolvePlaylistUri(playlistUrl: string, uri: string): string {
  */
 export function findNextUri(lines: string[], startIndex: number): string | undefined {
     for (let index = startIndex; index < lines.length; index++) {
-        if (lines[index] && !lines[index].startsWith("#")) {
+        if (!lines[index].startsWith("#")) {
             return lines[index];
         }
     }
