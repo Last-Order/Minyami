@@ -29,10 +29,10 @@ type SessionState =
     | { readonly kind: "idle" }
     | { readonly kind: "preparing" }
     | { readonly kind: "running" }
-    | { readonly kind: "draining"; readonly reason: "source-ended" | "graceful-stop" | "hard-stop" }
+    | { readonly kind: "draining" }
     | { readonly kind: "finalizing"; readonly merging: boolean }
     | { readonly kind: "finished" }
-    | { readonly kind: "failed"; readonly error: unknown }
+    | { readonly kind: "failed" }
     | { readonly kind: "aborted" };
 
 type Cancellation = "none" | "graceful" | "hard";
@@ -43,7 +43,6 @@ type Cancellation = "none" | "graceful" | "hard";
  */
 export class DownloadSession {
     private readonly config: NormalizedDownloaderConfig;
-    private readonly http: DownloadHttpClient;
     private readonly keys = new KeyStore();
     private readonly encryptionHandlers = createDefaultEncryptionHandlerRegistry();
     private readonly executor: ChunkExecutor;
@@ -66,12 +65,12 @@ export class DownloadSession {
         config: DownloaderConfig = {},
     ) {
         this.config = normalizeDownloaderConfig(config);
-        this.http = new DownloadHttpClient(this.config);
-        this.executor = new ChunkExecutor(this.http, this.keys, this.encryptionHandlers);
+        const http = new DownloadHttpClient(this.config);
+        this.executor = new ChunkExecutor(http, this.keys, this.encryptionHandlers);
         this.output = new OutputSession(this.config);
         this.sourceContext = {
             // Sources receive policy-aware capabilities, never the downloader's scheduler or raw configuration.
-            http: new RetryingSourceHttpClient(this.http, this.config.sourceRequestAttempts),
+            http: new RetryingSourceHttpClient(http, this.config.sourceRequestAttempts),
             keys: this.keys,
         };
     }
@@ -156,9 +155,7 @@ export class DownloadSession {
             }
 
             const cancellation = this.getCancellation();
-            const drainReason =
-                cancellation === "hard" ? "hard-stop" : cancellation === "graceful" ? "graceful-stop" : "source-ended";
-            this.state = { kind: "draining", reason: drainReason };
+            this.state = { kind: "draining" };
             if (cancellation === "hard") {
                 this.scheduler.abort();
             } else {
@@ -449,7 +446,7 @@ export class DownloadSession {
     }
 
     private fail(error: unknown): void {
-        this.state = { kind: "failed", error };
+        this.state = { kind: "failed" };
         logger.error("Aborted due to critical error.", error as Error);
         if (this.source.continuous && this.output.tempPath) {
             logger.info(`Your temporary files are located at [${path.resolve(this.output.tempPath)}]`);

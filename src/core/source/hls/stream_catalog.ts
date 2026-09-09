@@ -63,12 +63,10 @@ export function createHLSStreamCatalogPlan(master: HLSMasterPlaylist): HLSStream
     return { catalog: freezeStreamCatalog({ tracks, options }), mediaTracks };
 
     function addTrack(track: MediaTrack, sourcePath: string): void {
-        if (!tracks.includes(track)) {
-            tracks.push(track);
-            // HLS-generated logical ids are already safe, but the private plan owns
-            // the execution identity so future protocols need not reuse manifest ids.
-            mediaTracks.set(track, { sourceTrackId: track.id, sourcePath });
-        }
+        tracks.push(track);
+        // HLS-generated logical ids are already safe, but the private plan owns
+        // the execution identity so future protocols need not reuse manifest ids.
+        mediaTracks.set(track, { sourceTrackId: track.id, sourcePath });
     }
 }
 

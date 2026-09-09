@@ -117,26 +117,17 @@ Erii.bind(
             explicitKeys: options.key ? parseHLSExplicitKeyInputs(options.key) : undefined,
             streamSelector: selectStreamInteractively,
         };
-        if (options.live) {
-            const downloader = createLiveDownloader(path, downloadOptions);
-            const dispose = installCliDownloadControls(downloader, !!options.verbose, true);
-            try {
-                await downloader.download();
-            } catch {
-                process.exitCode = 1;
-            } finally {
-                dispose();
-            }
-        } else {
-            const downloader = createArchiveDownloader(path, { ...downloadOptions, slice: options.slice });
-            const dispose = installCliDownloadControls(downloader, !!options.verbose, false);
-            try {
-                await downloader.download();
-            } catch {
-                process.exitCode = 1;
-            } finally {
-                dispose();
-            }
+        const live = !!options.live;
+        const downloader = live
+            ? createLiveDownloader(path, downloadOptions)
+            : createArchiveDownloader(path, { ...downloadOptions, slice: options.slice });
+        const dispose = installCliDownloadControls(downloader, !!options.verbose, live);
+        try {
+            await downloader.download();
+        } catch {
+            process.exitCode = 1;
+        } finally {
+            dispose();
         }
     },
 );

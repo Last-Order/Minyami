@@ -6,7 +6,6 @@ export interface IsoBmffInitializationInfo {
 
 interface IsoBmffBox {
     readonly type: string;
-    readonly start: number;
     readonly payloadStart: number;
     readonly end: number;
 }
@@ -135,7 +134,7 @@ function readBoxes(buffer: Buffer, start: number, end: number): IsoBmffBox[] {
         if (size < headerSize || offset + size > end) {
             throw new Error(`Invalid ISO-BMFF ${type} box size.`);
         }
-        boxes.push({ type, start: offset, payloadStart: offset + headerSize, end: offset + size });
+        boxes.push({ type, payloadStart: offset + headerSize, end: offset + size });
         offset += size;
     }
     return boxes;
