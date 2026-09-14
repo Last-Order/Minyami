@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, jest, test } from "@jest/globals";
 import prompts from "prompts";
+import { selectStreamInteractively } from "@/cli/interactive_stream_selector";
 import { AudioTrack, StreamCatalog, VideoTrack } from "@/core/source/stream_selection";
-import { selectStreamInteractively } from "@/core/source/stream_selector";
 import logger from "@/utils/log";
 
 jest.mock("prompts");
@@ -45,7 +45,7 @@ afterEach(() => {
     delete (process.stdout as NodeJS.WriteStream & { isTTY?: boolean }).isTTY;
 });
 
-describe("stream selector", () => {
+describe("interactive stream selector", () => {
     test("selects video first and then multiple compatible audio tracks in manifest order", async () => {
         setTTY(true);
         promptMock.mockImplementation(async (question) => {

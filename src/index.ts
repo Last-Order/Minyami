@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import * as fs from "fs";
 import * as path from "path";
+import { selectStreamInteractively } from "./cli/interactive_stream_selector";
 import { createArchiveDownloader } from "./core/archive";
 import { DownloadController } from "./core/download/downloader";
 import { createLiveDownloader } from "./core/live";
 import { parseHLSExplicitKeyInputs } from "./core/source/hls/explicit_key";
-import { selectStreamInteractively } from "./core/source/stream_selector";
 import ProxyAgentHelper from "./utils/agent";
 import { normalizeCliArguments } from "./utils/cli_arguments";
 import { createErii } from "./utils/erii";

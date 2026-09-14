@@ -1,8 +1,8 @@
 import { getAbortSignal, iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
 import logger from "@/utils/log";
+import { selectDefaultStream } from "../default_stream_selector";
 import { mergeAsyncIterables } from "../merge_async_iterables";
 import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } from "../stream_selection";
-import { selectDefaultStream } from "../stream_selector";
 import { DownloadSource, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceMetadata } from "../types";
 import { HLSExplicitKey } from "./explicit_key";
 import { HLSMediaPlaylistCursor, HLSMediaPlaylistCursorMode, HLSSlice } from "./playlist/cursor";

@@ -1,6 +1,14 @@
 import prompts from "prompts";
+import { selectDefaultStream } from "@/core/source/default_stream_selector";
+import {
+    AudioTrack,
+    MediaTrack,
+    StreamCatalog,
+    StreamOption,
+    TrackSelection,
+    VideoTrack,
+} from "@/core/source/stream_selection";
 import logger from "@/utils/log";
-import { AudioTrack, MediaTrack, StreamCatalog, StreamOption, TrackSelection, VideoTrack } from "./stream_selection";
 
 interface StreamOptionChoice {
     readonly title: string;
@@ -25,11 +33,7 @@ interface AudioChoice {
 
 const TRACK_DETAIL_SEPARATOR = " · ";
 
-export function selectDefaultStream(catalog: StreamCatalog): TrackSelection | undefined {
-    return createStreamOptionChoices(catalog)[0]?.value.tracks;
-}
-
-/** Selects tracks in protocol-compatible stages while keeping API selection output track-based. */
+/** Selects tracks through the CLI while preserving source-defined compatibility boundaries. */
 export async function selectStreamInteractively(catalog: StreamCatalog): Promise<TrackSelection | undefined> {
     const defaultSelection = selectDefaultStream(catalog);
     if (!defaultSelection) {
