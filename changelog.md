@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 6.0.0-beta.6 - 2026-09-15
 
 ### Fixed
 
