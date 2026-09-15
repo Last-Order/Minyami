@@ -2,8 +2,6 @@
 
 [English](readme.md)
 
-> **维护说明：** Minyami 已进入维护模式，后续仅接受问题修复。新安装建议使用 [iori](https://github.com/iori-rs/iori)。
-
 ## 运行要求
 
 - Node.js 24 或更高版本，推荐使用活跃的 LTS 版本。
