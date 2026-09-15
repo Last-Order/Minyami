@@ -1,23 +1,6 @@
-import {
-    AudioTrack,
-    freezeStreamCatalog,
-    MediaTrack,
-    StreamCatalog,
-    StreamOption,
-    VideoTrack,
-} from "../stream_selection";
-import { DownloadTrackId } from "../types";
+import { AudioTrack, freezeStreamCatalog, MediaTrack, StreamOption, VideoTrack } from "../stream_selection";
 import { HLSAudioRendition, HLSMasterPlaylist, HLSVariant } from "./playlist/models";
-
-export interface HLSMediaTrackPlan {
-    readonly sourceTrackId: DownloadTrackId;
-    readonly sourcePath: string;
-}
-
-export interface HLSStreamCatalogPlan {
-    readonly catalog: StreamCatalog;
-    readonly mediaTracks: ReadonlyMap<MediaTrack, HLSMediaTrackPlan>;
-}
+import { HLSMediaTrackPlan, HLSStreamCatalogPlan } from "./types";
 
 /** Normalizes HLS linkage while retaining playlist URLs only in the private plan. */
 export function createHLSStreamCatalogPlan(master: HLSMasterPlaylist): HLSStreamCatalogPlan {

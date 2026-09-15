@@ -2,21 +2,13 @@ import { getAbortSignal, iterateWithAbortSignal, runWithAbortSignal } from "@/ut
 import logger from "@/utils/log";
 import { selectDefaultStream } from "../default_stream_selector";
 import { mergeAsyncIterables } from "../merge_async_iterables";
-import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } from "../stream_selection";
+import { MediaTrack, TrackSelection, validateTrackSelection } from "../stream_selection";
 import { DownloadSource, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceMetadata } from "../types";
-import { HLSMediaPlaylistCursor, HLSMediaPlaylistCursorMode, HLSSlice } from "./playlist/cursor";
+import { HLSMediaPlaylistCursor } from "./playlist/cursor";
 import { PlaylistLoader } from "./playlist/loader";
 import { HLSMediaPlaylist, HLSPlaylistKind } from "./playlist/parser";
-import { createHLSStreamCatalogPlan, HLSStreamCatalogPlan } from "./stream_catalog";
-import { HLSExplicitKey } from "./types";
-
-export type HLSSourceMode = HLSMediaPlaylistCursorMode;
-export interface HLSSourceOptions {
-    mode: HLSSourceMode;
-    streamSelector?: StreamSelector;
-    slice?: HLSSlice;
-    explicitKeys?: readonly HLSExplicitKey[];
-}
+import { createHLSStreamCatalogPlan } from "./stream_catalog";
+import { HLSSourceOptions, HLSStreamCatalogPlan } from "./types";
 
 interface SelectedHLSMediaTrack {
     readonly sourceTrackId: DownloadTrackId;

@@ -1,26 +1,7 @@
-import { DownloadItem, DownloadItemNamer, DownloadSourceContext, DownloadSourceHttpClient } from "@/core/source/types";
-import { HLSMediaPlaylist, HLSSegment } from "../playlist/parser";
-import { HLSExplicitKey } from "../types";
+import { HLSMediaPlaylist } from "../playlist/parser";
+import { HLSAdaptationOptions, HLSAdaptationPlan } from "../types";
 import { selectHLSProfile } from "./profiles/selector";
-import { HLSProfilePlan } from "./profiles/types";
 import { hlsSiteAdapters } from "./sites/registry";
-
-export interface HLSAdaptationOptions {
-    readonly sourcePath: string;
-    readonly playlist: HLSMediaPlaylist;
-    readonly explicitKeys: readonly HLSExplicitKey[];
-    readonly http: DownloadSourceHttpClient;
-}
-
-export interface HLSAdaptationPlan {
-    readonly profileId: string;
-    readonly container: HLSProfilePlan["container"];
-    readonly siteId?: string;
-    readonly itemNamer?: DownloadItemNamer;
-    adaptPlaylist(playlist: HLSMediaPlaylist): HLSMediaPlaylist;
-    ensureKeys(playlist: HLSMediaPlaylist, context: DownloadSourceContext): Promise<void>;
-    toDownloadItem(segment: HLSSegment): DownloadItem;
-}
 
 export interface PreparedHLSAdaptation {
     readonly playlist: HLSMediaPlaylist;

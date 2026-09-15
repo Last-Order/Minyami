@@ -1,8 +1,8 @@
 import { timeStringToSeconds } from "../utils/time";
 import { createDownloader, DownloadController } from "./download/downloader";
 import { DownloaderConfig } from "./download/types";
-import { createHLSSource, HLSSourceOptions } from "./source/hls";
-import { HLSExplicitKey } from "./source/hls/types";
+import { createHLSSource } from "./source/hls";
+import { HLSExplicitKey, HLSSourceOptions } from "./source/hls/types";
 import { StreamSelector } from "./source/stream_selection";
 
 export interface ArchiveDownloaderConfig extends DownloaderConfig {

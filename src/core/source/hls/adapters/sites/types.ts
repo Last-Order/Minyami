@@ -1,13 +1,6 @@
-import { HLSMediaPlaylist, HLSSegment } from "@/core/source/hls/playlist/parser";
-import { HLSExplicitKey } from "@/core/source/hls/types";
-import { DownloadItemNamer, DownloadSourceHttpClient } from "@/core/source/types";
-
-export interface HLSSiteAdapterOptions {
-    readonly sourcePath: string;
-    readonly playlist: HLSMediaPlaylist;
-    readonly explicitKeys: readonly HLSExplicitKey[];
-    readonly http: DownloadSourceHttpClient;
-}
+import { HLSSegment } from "@/core/source/hls/playlist/parser";
+import { HLSAdaptationOptions } from "@/core/source/hls/types";
+import { DownloadItemNamer } from "@/core/source/types";
 
 export interface HLSSitePlan {
     readonly adaptSegments?: (segments: readonly HLSSegment[]) => readonly HLSSegment[];
@@ -16,6 +9,6 @@ export interface HLSSitePlan {
 
 export interface HLSSiteAdapter {
     readonly id: string;
-    matches(options: HLSSiteAdapterOptions): boolean;
-    prepare(options: HLSSiteAdapterOptions): HLSSitePlan | Promise<HLSSitePlan>;
+    matches(options: HLSAdaptationOptions): boolean;
+    prepare(options: HLSAdaptationOptions): HLSSitePlan | Promise<HLSSitePlan>;
 }

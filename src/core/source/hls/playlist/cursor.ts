@@ -4,23 +4,16 @@ import { MediaTrack } from "@/core/source/stream_selection";
 import { DownloadItem, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceTrack } from "@/core/source/types";
 import { getAbortSignal } from "@/utils/abort";
 import logger from "@/utils/log";
-import { HLSAdaptationPlan, prepareHLSAdaptation } from "../adapters/adaptation";
-import { HLSExplicitKey } from "../types";
+import { prepareHLSAdaptation } from "../adapters/adaptation";
+import { HLSAdaptationPlan, HLSExplicitKey, HLSSlice, HLSSourceMode } from "../types";
 import { PlaylistLoader } from "./loader";
 import { HLSInitializationSegment, HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
-
-export type HLSMediaPlaylistCursorMode = "snapshot" | "follow";
-
-export interface HLSSlice {
-    readonly start: number;
-    readonly end: number;
-}
 
 export interface HLSMediaPlaylistCursorOptions {
     readonly id: DownloadTrackId;
     readonly mediaTrack: MediaTrack;
     readonly sourcePath: string;
-    readonly mode: HLSMediaPlaylistCursorMode;
+    readonly mode: HLSSourceMode;
     readonly initialPlaylist: HLSMediaPlaylist;
     readonly loader: PlaylistLoader;
     readonly slice?: HLSSlice;
