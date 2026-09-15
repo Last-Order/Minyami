@@ -1,5 +1,5 @@
-import { HLSExplicitKey } from "@/core/source/hls/explicit_key";
 import { HLSMediaPlaylist, HLSSegment } from "@/core/source/hls/playlist/parser";
+import { HLSExplicitKey } from "@/core/source/hls/types";
 import { DownloadItemNamer, DownloadSourceHttpClient } from "@/core/source/types";
 
 export interface HLSSiteAdapterOptions {

@@ -5,7 +5,7 @@ import { DownloadItem, DownloadSourceContext, DownloadTrackId, SourceBatch, Sour
 import { getAbortSignal } from "@/utils/abort";
 import logger from "@/utils/log";
 import { HLSAdaptationPlan, prepareHLSAdaptation } from "../adapters/adaptation";
-import { HLSExplicitKey } from "../explicit_key";
+import { HLSExplicitKey } from "../types";
 import { PlaylistLoader } from "./loader";
 import { HLSInitializationSegment, HLSMediaPlaylist, HLSPlaylistKind, HLSSegment, HLSSegmentKind } from "./parser";
 

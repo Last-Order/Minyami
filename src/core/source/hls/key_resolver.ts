@@ -1,8 +1,8 @@
 import { DownloadSourceContext, DownloadSourceHttpClient } from "@/core/source/types";
 import { getAbortSignal } from "@/utils/abort";
 import logger from "@/utils/log";
-import { HLSExplicitKey } from "./explicit_key";
 import { HLSKeyReference, HLSKeyReferenceKind, HLSMediaEncryption, HLSMediaPlaylist } from "./playlist/parser";
+import { HLSExplicitKey } from "./types";
 
 export interface HLSKeyResolver {
     /** Registers every effective key reference before the corresponding items are published. */

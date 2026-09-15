@@ -1,6 +1,6 @@
 import { DownloadItem, DownloadItemNamer, DownloadSourceContext, DownloadSourceHttpClient } from "@/core/source/types";
-import { HLSExplicitKey } from "../explicit_key";
 import { HLSMediaPlaylist, HLSSegment } from "../playlist/parser";
+import { HLSExplicitKey } from "../types";
 import { selectHLSProfile } from "./profiles/selector";
 import { HLSProfilePlan } from "./profiles/types";
 import { hlsSiteAdapters } from "./sites/registry";

@@ -1,6 +1,5 @@
 import { readIsoBmffDecryptionTrackIds } from "@/core/isobmff";
 import { MP4_CONTAINER } from "@/core/media_container";
-import { HLSExplicitKey } from "@/core/source/hls/explicit_key";
 import { createHLSKeyResolver } from "@/core/source/hls/key_resolver";
 import {
     HLSByteRange,
@@ -9,6 +8,7 @@ import {
     HLSSegment,
     HLSSegmentKind,
 } from "@/core/source/hls/playlist/parser";
+import { HLSExplicitKey } from "@/core/source/hls/types";
 import { DownloadSourceContext, IsoBmffSampleAesKey } from "@/core/source/types";
 import { getAbortSignal } from "@/utils/abort";
 import { toDownloadItem } from "./download_item";

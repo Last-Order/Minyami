@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import * as fs from "fs";
 import * as path from "path";
+import { parseExplicitKeyArguments } from "./cli/explicit_key_arguments";
 import { selectStreamInteractively } from "./cli/interactive_stream_selector";
 import { createArchiveDownloader } from "./core/archive";
 import { DownloadController } from "./core/download/downloader";
 import { createLiveDownloader } from "./core/live";
-import { parseHLSExplicitKeyInputs } from "./core/source/hls/explicit_key";
 import ProxyAgentHelper from "./utils/agent";
 import { normalizeCliArguments } from "./utils/cli_arguments";
 import { createErii } from "./utils/erii";
@@ -114,7 +114,7 @@ Erii.bind(
             noMerge: !!options.noMerge,
             keepTemporaryFiles: !!options.keep,
             keepEncryptedChunks: !!options.keepEncryptedChunks,
-            explicitKeys: options.key ? parseHLSExplicitKeyInputs(options.key) : undefined,
+            explicitKeys: options.key ? parseExplicitKeyArguments(options.key) : undefined,
             streamSelector: selectStreamInteractively,
         };
         const live = !!options.live;

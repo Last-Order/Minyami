@@ -4,15 +4,13 @@ import { selectDefaultStream } from "../default_stream_selector";
 import { mergeAsyncIterables } from "../merge_async_iterables";
 import { MediaTrack, StreamSelector, TrackSelection, validateTrackSelection } from "../stream_selection";
 import { DownloadSource, DownloadSourceContext, DownloadTrackId, SourceBatch, SourceMetadata } from "../types";
-import { HLSExplicitKey } from "./explicit_key";
 import { HLSMediaPlaylistCursor, HLSMediaPlaylistCursorMode, HLSSlice } from "./playlist/cursor";
 import { PlaylistLoader } from "./playlist/loader";
 import { HLSMediaPlaylist, HLSPlaylistKind } from "./playlist/parser";
 import { createHLSStreamCatalogPlan, HLSStreamCatalogPlan } from "./stream_catalog";
+import { HLSExplicitKey } from "./types";
 
 export type HLSSourceMode = HLSMediaPlaylistCursorMode;
-export type { HLSExplicitKey } from "./explicit_key";
-
 export interface HLSSourceOptions {
     mode: HLSSourceMode;
     streamSelector?: StreamSelector;

@@ -1,6 +1,6 @@
 import { MediaContainer } from "@/core/media_container";
-import { HLSExplicitKey } from "@/core/source/hls/explicit_key";
 import { HLSMediaPlaylist, HLSSegment } from "@/core/source/hls/playlist/parser";
+import { HLSExplicitKey } from "@/core/source/hls/types";
 import { DownloadItem, DownloadSourceContext, DownloadSourceHttpClient } from "@/core/source/types";
 
 export const SAMPLE_AES_EXPLICIT_KEY_REQUIRED = "This HLS content is protected. Provide an explicit decryption key.";
