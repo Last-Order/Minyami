@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { normalizeCliArguments } from "@/utils/cli_arguments";
+import { normalizeCliArguments } from "@/cli/arguments";
 
 describe("normalizeCliArguments", () => {
     test.each(["https://example.com/video.m3u8", "./video.m3u8", "C:\\Videos\\my video.m3u8"])(

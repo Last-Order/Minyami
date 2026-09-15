@@ -1,36 +1,10 @@
 #!/usr/bin/env node
 import * as fs from "fs";
 import * as path from "path";
-import { parseExplicitKeyArguments } from "./cli/explicit_key_arguments";
-import { selectStreamInteractively } from "./cli/interactive_stream_selector";
-import { createArchiveDownloader } from "./core/archive";
-import { DownloadController } from "./core/download/downloader";
-import { createLiveDownloader } from "./core/live";
-import ProxyAgentHelper from "./utils/agent";
-import { normalizeCliArguments } from "./utils/cli_arguments";
-import { createErii } from "./utils/erii";
-import logger from "./utils/log";
-import { readConfigFile } from "./utils/system";
+import { CliOptions, normalizeCliArguments } from "./cli/arguments";
+import { runDownloadCommand } from "./cli/download_command";
+import { createErii } from "./cli/erii";
 import { timeStringToSeconds } from "./utils/time";
-
-interface CliOptions {
-    [key: string]: unknown;
-    verbose?: boolean;
-    noProxy?: boolean;
-    threads?: number;
-    retries?: number;
-    output?: string;
-    tempDir?: string;
-    cookies?: string;
-    headers?: string | string[];
-    proxy?: string;
-    noMerge?: boolean;
-    keep?: boolean;
-    keepEncryptedChunks?: boolean;
-    key?: string | string[];
-    live?: boolean;
-    slice?: string;
-}
 
 process.argv = [...process.argv.slice(0, 2), ...normalizeCliArguments(process.argv.slice(2))];
 const Erii = createErii<CliOptions>();
@@ -76,59 +50,7 @@ Erii.bind(
         },
     },
     async (ctx, options) => {
-        const path = ctx.getArgument().toString();
-        if (options.verbose) {
-            logger.enableDebugMode();
-        }
-
-        const disableProxy = options.noProxy || process.env.NO_PROXY;
-
-        if (!disableProxy) {
-            if (process.platform === "win32") {
-                await ProxyAgentHelper.readWindowsSystemProxy();
-            }
-            ProxyAgentHelper.readProxyConfigurationFromEnv();
-        } else {
-            ProxyAgentHelper.disableProxy();
-        }
-        const fileOptions = readConfigFile();
-        if (Object.keys(fileOptions).length > 0) {
-            logger.debug(`Read config file: ${JSON.stringify(fileOptions)}`);
-        }
-        for (const key of Object.keys(fileOptions)) {
-            if (options[key] === undefined) {
-                options[key] = fileOptions[key];
-            }
-        }
-        // Explicit adaptation prevents CLI-only state and unknown config-file keys from entering the core API.
-        const downloadOptions = {
-            threads: options.threads,
-            output: options.output,
-            tempDir: options.tempDir,
-            cookies: options.cookies,
-            headers: options.headers,
-            // The CLI keeps one retry knob while the core enforces separate source-I/O and task budgets.
-            sourceRequestAttempts: options.retries,
-            taskAttempts: options.retries,
-            proxy: options.proxy,
-            noMerge: !!options.noMerge,
-            keepTemporaryFiles: !!options.keep,
-            keepEncryptedChunks: !!options.keepEncryptedChunks,
-            explicitKeys: options.key ? parseExplicitKeyArguments(options.key) : undefined,
-            streamSelector: selectStreamInteractively,
-        };
-        const live = !!options.live;
-        const downloader = live
-            ? createLiveDownloader(path, downloadOptions)
-            : createArchiveDownloader(path, { ...downloadOptions, slice: options.slice });
-        const dispose = installCliDownloadControls(downloader, !!options.verbose, live);
-        try {
-            await downloader.download();
-        } catch {
-            process.exitCode = 1;
-        } finally {
-            dispose();
-        }
+        await runDownloadCommand(ctx.getArgument().toString(), options);
     },
 );
 
@@ -287,39 +209,3 @@ Erii.default(() => {
 });
 
 Erii.okite();
-
-function installCliDownloadControls(
-    downloader: DownloadController,
-    verbose: boolean,
-    handleSignals: boolean,
-): () => void {
-    const verboseTimer = verbose
-        ? setInterval(() => {
-              const snapshot = downloader.getSnapshot();
-              logger.debug(
-                  `Waiting tasks: ${snapshot.pendingTaskCount}, completed chunks: ${snapshot.completedChunkCount}, successful chunks: ${snapshot.successfulChunkCount}, dropped chunks: ${snapshot.droppedChunkCount}, total discovered chunks: ${snapshot.totalChunkCount}`,
-              );
-          }, 3000)
-        : undefined;
-
-    let sigintCount = 0;
-    const onSigint = () => {
-        sigintCount++;
-        if (sigintCount === 1) {
-            logger.info("Ctrl+C pressed, waiting for known tasks to finish.");
-            downloader.stop();
-            return;
-        }
-        downloader.abort();
-    };
-    if (handleSignals) {
-        process.on("SIGINT", onSigint);
-    }
-
-    return () => {
-        if (verboseTimer) {
-            clearInterval(verboseTimer);
-        }
-        process.off("SIGINT", onSigint);
-    };
-}

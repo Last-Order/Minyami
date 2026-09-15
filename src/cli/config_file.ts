@@ -1,17 +1,17 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import logger from "./log";
+import logger from "@/utils/log";
 
-const initMinyamiDirectory = () => {
+function initMinyamiDirectory(): string {
     const minyamiPath = path.resolve(os.homedir(), "./.minyami/");
     if (!fs.existsSync(minyamiPath)) {
         fs.mkdirSync(minyamiPath);
     }
     return minyamiPath;
-};
+}
 
-export const readConfigFile = (): Record<string, unknown> => {
+export function readConfigFile(): Record<string, unknown> {
     const minyamiPath = initMinyamiDirectory();
     const availableConfigFilenames = [".minyamirc", ".minyamirc.json", "minyami.config.json"];
     for (const filename of availableConfigFilenames) {
@@ -30,4 +30,4 @@ export const readConfigFile = (): Record<string, unknown> => {
         }
     }
     return {};
-};
+}
