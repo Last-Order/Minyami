@@ -11,11 +11,13 @@ module.exports = {
     testTimeout: 10000,
     moduleNameMapper: {
         "^@/(.*)$": "<rootDir>/src/$1",
+        // Erii only exports an import entry; resolve it explicitly for the CommonJS test runner.
+        "^erii$": "<rootDir>/node_modules/erii/dist/index.mjs",
     },
     transform: {
         "^.+\\.tsx?$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.test.json" }],
-        // Tests remain CommonJS, so the ESM-only proxy stack must cross that boundary through ts-jest.
-        "^.+\\.js$": [
+        // Tests remain CommonJS, so ESM-only dependencies must cross that boundary through ts-jest.
+        "^.+\\.m?js$": [
             "ts-jest",
             {
                 diagnostics: false,
@@ -29,6 +31,6 @@ module.exports = {
         ],
     },
     transformIgnorePatterns: [
-        "/node_modules/(?!https-proxy-agent|socks-proxy-agent|agent-base|proxy-agent-negotiate)/",
+        "/node_modules/(?!https-proxy-agent|socks-proxy-agent|agent-base|proxy-agent-negotiate|erii|chalk)/",
     ],
 };

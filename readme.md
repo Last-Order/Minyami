@@ -53,6 +53,9 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 
 ### Options
 
+The download command requires a URL or local playlist path; missing input displays an error and help.
+`--output` and `--slice` require string values. Invalid values are reported and omitted while other valid options remain active.
+
 | Option | Description |
 | --- | --- |
 | `--help`, `-h` | Show help. Pass a command name to show command-specific help. |

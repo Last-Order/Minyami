@@ -1,11 +1,12 @@
 import * as path from "path";
+import type { Erii } from "erii";
 import { timeStringToSeconds } from "../utils/time";
 import type { CliOptions } from "./arguments";
-import type { Erii } from "./erii";
+import type { MinyamiCliSchema } from "./schema";
 
 /** Share the production command definitions with parser tests without starting a download. */
 export function configureCli(
-    Erii: Erii<CliOptions>,
+    Erii: Erii<MinyamiCliSchema>,
     download: (sourcePath: string, options: CliOptions) => Promise<void>,
 ): void {
     Erii.bind(
@@ -42,7 +43,14 @@ export function configureCli(
             },
         },
         async (ctx, options) => {
-            await download(ctx.getArgument().toString(), options);
+            const input = ctx.getArgument();
+            // Bare command flags parse as booleans; neither they nor missing values identify an input.
+            if (input === undefined || typeof input === "boolean") {
+                console.error("A download URL or local playlist path is required.");
+                ctx.showHelp();
+                return;
+            }
+            await download(input.toString(), options);
         },
     );
 
@@ -80,7 +88,11 @@ export function configureCli(
         argument: {
             name: "path",
             description: "(Optional) Output basename, defaults to ./output",
-            validate: (outputPath: string, validateLogger) => {
+            validate: (outputPath, validateLogger) => {
+                if (typeof outputPath !== "string") {
+                    validateLogger("Output basename must be a string.");
+                    return false;
+                }
                 if (path.basename(outputPath).match(/[\*\:|\?<>]/)) {
                     validateLogger("Filename should't contain :, |, <, >.");
                     return false;
@@ -159,8 +171,8 @@ export function configureCli(
         argument: {
             name: "range",
             description: 'Set time range in [<hh:mm:ss>-<hh:mm:ss> format]. eg. --slice "45:00-53:00"',
-            validate: (timeString: string, logger) => {
-                if (!timeString.includes("-")) {
+            validate: (timeString, logger) => {
+                if (typeof timeString !== "string" || !timeString.includes("-")) {
                     logger(`Invalid time range`);
                     return false;
                 }

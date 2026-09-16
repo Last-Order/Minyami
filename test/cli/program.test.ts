@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from "@jest/globals";
+import { Erii } from "erii";
 import { CliOptions, normalizeCliArguments } from "@/cli/arguments";
-import type { Erii } from "@/cli/erii";
 import { configureCli } from "@/cli/program";
+import type { MinyamiCliSchema } from "@/cli/schema";
 
 // Only stub terminal layout: clui uses legacy escapes rejected by Jest's strict wrapper.
 jest.mock("clui", () => ({
@@ -17,9 +18,6 @@ jest.mock("clui", () => ({
         }
     },
 }));
-
-// Exercise Erii itself, including token parsing, validation, aliases, and option conversion.
-const EriiConstructor = (require("erii") as { Erii: new () => Erii<CliOptions> }).Erii;
 
 describe("CLI command parsing", () => {
     const originalArgv = process.argv;
@@ -38,7 +36,7 @@ describe("CLI command parsing", () => {
     function run(args: string[]) {
         // argv contains shell-tokenized values, so paths and headers with spaces stay single arguments.
         process.argv = [originalArgv[0], "minyami", ...normalizeCliArguments(args)];
-        const cli = new EriiConstructor();
+        const cli = new Erii<MinyamiCliSchema>();
         configureCli(cli, download);
         cli.setMetaInfo({ name: "Minyami", version: "test-version" });
         cli.okite();
@@ -65,6 +63,33 @@ describe("CLI command parsing", () => {
     test.each(["--output", "-o"])("parses %s and numeric options", (outputFlag) => {
         run(["video.m3u8", outputFlag, "my output", "--threads", "8", "--retries", "3"]);
         expect({ ...parsedOptions() }).toEqual({ output: "my output", threads: 8, retries: 3 });
+    });
+
+    test.each(["-d", "--download", "download"])("reports missing input for %s without downloading", (command) => {
+        run([command]);
+        expect(download).not.toHaveBeenCalled();
+        expect(console.error).toHaveBeenCalledWith("A download URL or local playlist path is required.");
+        expect(console.log).toHaveBeenCalledWith(expect.stringContaining("Help:"));
+    });
+
+    test("preserves numeric input paths after parser conversion", () => {
+        run(["-d", "123"]);
+        parsedOptions();
+        expect(download.mock.calls[0][0]).toBe("123");
+    });
+
+    test.each([
+        ["--output"],
+        ["--output", "123"],
+        ["--output", "first", "--output", "second"],
+        ["--slice"],
+        ["--slice", "123"],
+        ["--slice", "01:00-02:00", "--slice", "03:00-04:00"],
+    ])("rejects non-string validator input %j without interrupting dispatch", (...args) => {
+        run(["video.m3u8", ...args, "--live"]);
+        expect(download).toHaveBeenCalledTimes(1);
+        expect({ ...download.mock.calls[0][1] }).toEqual({ live: true });
+        expect(console.error).toHaveBeenCalledWith(expect.stringContaining("Argument validation failed for option"));
     });
 
     test.each([

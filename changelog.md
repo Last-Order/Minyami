@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+-   Upgraded erii to 3.0.0-beta.2 and switched CLI loading to its ESM entry point, preserving existing argument parsing.
+-   Replaced the local erii wrapper with its native schema and types for commands, aliases, and scoped options.
+
+### Fixed
+
+-   Reported missing download inputs with help, and rejected non-string output/slice values without interrupting command dispatch.
+
 ## 6.0.0-beta.6 - 2026-09-15
 
 ### Fixed
