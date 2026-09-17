@@ -9,6 +9,7 @@
 
 ### Fixed
 
+-   Retain only initialization segments needed by selected HLS media when slicing, avoiding initialization-only output files.
 -   Accept compressed chunk responses without comparing decoded data against the encoded `Content-Length`, while
     continuing to reject truncated HTTP responses before publishing files.
 -   Treat empty chunk responses (including `Content-Length: 0`) as download failures and apply the existing retry policy.

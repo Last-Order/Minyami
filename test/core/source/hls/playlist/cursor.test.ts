@@ -10,10 +10,61 @@ import {
     HLSPlaylistKind,
     HLSSegmentKind,
 } from "@/core/source/hls/playlist/parser";
+import { HLSSlice } from "@/core/source/hls/types";
 import { DownloadSourceContext, SourceBatch } from "@/core/source/types";
 import { iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
 
 describe("HLSMediaPlaylistCursor", () => {
+    test.each([
+        { start: 10, end: 20, expected: ["init:init-b", "media:init-b"] },
+        { start: 12, end: 18, expected: ["init:init-b", "media:init-b"] },
+        { start: 30, end: 40, expected: [] },
+        { start: 0, end: 10, expected: ["init:init-a", "media:init-a"] },
+        {
+            start: 5,
+            end: 25,
+            expected: ["init:init-a", "media:init-a", "init:init-b", "media:init-b", "init:init-a", "media:init-a"],
+        },
+    ])("retains only required initialization segments for slice [$start, $end)", async ({ start, end, expected }) => {
+        const context = createContext();
+        const playlist: HLSMediaPlaylist = {
+            kind: HLSPlaylistKind.Media,
+            segments: [
+                createInitialization("init-a"),
+                { ...createMedia(0, "init-a"), duration: 10 },
+                createInitialization("init-b"),
+                { ...createMedia(1, "init-b"), duration: 10 },
+                createInitialization("init-a"),
+                { ...createMedia(2, "init-a"), duration: 10 },
+            ],
+            keys: [],
+            hasEndList: true,
+            totalDuration: 30,
+            averageSegmentDuration: 10,
+        };
+        const cursor = createCursor("video", playlist, context, "snapshot", [], { start, end });
+        await prepare(cursor, context);
+
+        const batches = await collect(discover(cursor, context));
+
+        expect(outputContexts(batches)).toEqual([expected]);
+        expect(batches[0].totalItemCount).toBe(expected.length);
+    });
+
+    test("emits a shared initialization only once when slicing consecutive media", async () => {
+        const context = createContext();
+        const playlist = createLivePlaylist(
+            [createInitialization("init-a"), createMedia(0, "init-a"), createMedia(1, "init-a")],
+            true,
+        );
+        const cursor = createCursor("video", playlist, context, "snapshot", [], { start: 0, end: 1 });
+        await prepare(cursor, context);
+
+        expect(outputContexts(await collect(discover(cursor, context)))).toEqual([
+            ["init:init-a", "media:init-a", "media:init-a"],
+        ]);
+    });
+
     test("publishes track metadata and tagged snapshot batches", async () => {
         const context = createContext();
         const cursor = createCursor("video", createPlaylist(), context);
@@ -385,6 +436,7 @@ function createCursor(
     context: DownloadSourceContext,
     mode: "snapshot" | "follow" = "snapshot",
     explicitKeys: readonly { readonly key: string }[] = [],
+    slice?: HLSSlice,
 ): HLSMediaPlaylistCursor {
     return new HLSMediaPlaylistCursor({
         id,
@@ -394,6 +446,7 @@ function createCursor(
         initialPlaylist: playlist,
         loader: new PlaylistLoader(context.http),
         explicitKeys,
+        slice,
     });
 }
 

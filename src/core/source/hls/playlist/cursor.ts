@@ -215,20 +215,25 @@ function sliceItems(items: DownloadItem[], slice?: HLSSlice): DownloadItem[] {
     }
 
     const selected: DownloadItem[] = [];
+    let pendingInitialization: DownloadItem | undefined;
     let currentTime = 0;
     for (const item of items) {
         if (currentTime >= slice.end) {
             break;
         }
         if (item.kind === "init") {
-            // A fragmented-MP4 range is unusable without its initialization segment.
-            selected.push(item);
+            // Defer publication until selected media needs this context; skipped contexts must not create runs.
+            pendingInitialization = item;
             continue;
         }
         const itemStart = currentTime;
         const itemEnd = currentTime + item.duration;
         currentTime = itemEnd;
         if (itemEnd > slice.start && itemStart < slice.end) {
+            if (pendingInitialization) {
+                selected.push(pendingInitialization);
+                pendingInitialization = undefined;
+            }
             selected.push(item);
         }
     }
