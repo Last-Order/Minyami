@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
+import { gzipSync } from "zlib";
 import { describe, expect, test } from "@jest/globals";
 import axios from "axios";
 import { normalizeDownloaderConfig } from "@/core/download/config";
@@ -42,6 +43,61 @@ describe("DownloadHttpClient", () => {
             await close(server);
         }
     });
+
+    test("downloads gzip content using the decoded body rather than the encoded Content-Length", async () => {
+        const resource = Buffer.from("media-chunk".repeat(100));
+        const encoded = gzipSync(resource);
+        const server = http.createServer((_request, response) => {
+            response.setHeader("content-encoding", "gzip");
+            response.setHeader("content-length", encoded.length);
+            response.end(encoded);
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-http-gzip-", async (directory) => {
+                const destination = path.join(directory, "chunk.bin");
+                const client = new DownloadHttpClient(normalizeDownloaderConfig());
+
+                await client.download(`${baseUrl}/chunk`, destination);
+
+                expect(fs.readFileSync(destination)).toEqual(resource);
+                expect(fs.readdirSync(directory)).toEqual(["chunk.bin"]);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
+    test.each(["content-length", "chunked"])(
+        "rejects a truncated %s response without publishing a partial file",
+        async (framing) => {
+            const server = http.createServer((_request, response) => {
+                if (framing === "content-length") {
+                    response.setHeader("content-length", 1000);
+                } else {
+                    response.setHeader("transfer-encoding", "chunked");
+                }
+                // Flush partial data before disconnecting, without sending a complete HTTP response.
+                response.write(Buffer.alloc(100), () => response.destroy());
+            });
+            const baseUrl = await listen(server);
+
+            try {
+                await withTempDirectory("minyami-http-truncated-", async (directory) => {
+                    const destination = path.join(directory, "chunk.bin");
+                    const client = new DownloadHttpClient(normalizeDownloaderConfig());
+
+                    await expect(client.download(`${baseUrl}/chunk`, destination)).rejects.toMatchObject({
+                        code: "ERR_BAD_RESPONSE",
+                    });
+                    expect(fs.readdirSync(directory)).toEqual([]);
+                });
+            } finally {
+                await close(server);
+            }
+        },
+    );
 
     test("downloads an exact 206 byte range", async () => {
         const resource = Buffer.from("0123456789");

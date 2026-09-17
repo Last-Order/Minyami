@@ -92,10 +92,8 @@ export class DownloadHttpClient {
             if (body.length === 0) {
                 throw new Error("Downloaded response body is empty.");
             }
-            const contentLength = response.headers["content-length"];
-            if (contentLength && parseInt(String(contentLength)) !== body.length) {
-                throw new Error("Bad Response");
-            }
+            // Axios rejects truncated HTTP responses before resolving. Content-Length describes the
+            // encoded body, so comparing it with Axios's decoded data would reject valid compressed chunks.
             if (byteRange) {
                 if (response.status !== 206) {
                     throw new Error(`Unexpected response status for byte-range request: ${response.status}`);
