@@ -9,6 +9,7 @@
 
 ### Fixed
 
+-   Treat empty chunk responses (including `Content-Length: 0`) as download failures and apply the existing retry policy.
 -   Reported missing download inputs with help, and rejected non-string output/slice values without interrupting command dispatch.
 
 ## 6.0.0-beta.6 - 2026-09-15

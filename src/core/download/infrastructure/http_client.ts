@@ -88,6 +88,10 @@ export class DownloadHttpClient {
                 signal: abortScope.signal,
             });
             const body = Buffer.from(response.data);
+            // Empty chunks must retry instead of being admitted as successful output.
+            if (body.length === 0) {
+                throw new Error("Downloaded response body is empty.");
+            }
             const contentLength = response.headers["content-length"];
             if (contentLength && parseInt(String(contentLength)) !== body.length) {
                 throw new Error("Bad Response");

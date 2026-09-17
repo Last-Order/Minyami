@@ -21,6 +21,28 @@ describe("DownloadHttpClient", () => {
         expect(axios.defaults.headers.common["X-Minyami-Test"]).toBe(globalHeader);
     });
 
+    test("rejects Content-Length: 0 before publishing a file", async () => {
+        const server = http.createServer((_request, response) => {
+            response.setHeader("content-length", 0);
+            response.end();
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-http-empty-", async (directory) => {
+                const destination = path.join(directory, "chunk.bin");
+                const client = new DownloadHttpClient(normalizeDownloaderConfig());
+
+                await expect(client.download(`${baseUrl}/chunk`, destination)).rejects.toThrow(
+                    "Downloaded response body is empty.",
+                );
+                expect(fs.readdirSync(directory)).toEqual([]);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test("downloads an exact 206 byte range", async () => {
         const resource = Buffer.from("0123456789");
         let receivedRange: string | undefined;

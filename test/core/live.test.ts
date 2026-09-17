@@ -8,6 +8,62 @@ import { withTempDirectory } from "../helpers/filesystem";
 import { close, listen, masterVariantChunks, withMasterPlaylistServer } from "../helpers/http";
 
 describe("createLiveDownloader", () => {
+    test("retries an empty refreshed segment before merging a cumulative playlist", async () => {
+        let playlistRequests = 0;
+        let emptyChunkRequests = 0;
+        const server = http.createServer((request, response) => {
+            if (request.url === "/1.ts") {
+                emptyChunkRequests++;
+                if (emptyChunkRequests === 1) {
+                    response.setHeader("content-length", 0);
+                    response.end();
+                    return;
+                }
+            }
+            if (request.url === "/0.ts" || request.url === "/1.ts" || request.url === "/2.ts") {
+                response.end(request.url);
+                return;
+            }
+            playlistRequests++;
+            response.end(
+                playlistRequests === 1
+                    ? "#EXTM3U\n#EXTINF:0.01,\n/0.ts"
+                    : "#EXTM3U\n#EXTINF:0.01,\n/0.ts\n#EXTINF:0.01,\n/1.ts\n#EXTINF:0.01,\n/2.ts\n#EXT-X-ENDLIST",
+            );
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-live-empty-chunk-", async (directory) => {
+                const downloader = createLiveDownloader(`${baseUrl}/playlist.m3u8`, {
+                    output: path.join(directory, "live"),
+                    tempDir: directory,
+                    taskAttempts: 2,
+                });
+                const chunkErrors: string[] = [];
+                downloader.on("chunk-error", (error) => chunkErrors.push(error.message));
+
+                await downloader.download();
+
+                expect(playlistRequests).toBe(2);
+                expect(emptyChunkRequests).toBe(2);
+                expect(chunkErrors).toEqual(["Downloaded response body is empty."]);
+                const snapshot = downloader.getSnapshot();
+                expect(snapshot).toMatchObject({
+                    status: "finished",
+                    totalChunkCount: 3,
+                    completedChunkCount: 3,
+                    successfulChunkCount: 3,
+                    droppedChunkCount: 0,
+                });
+                expect(snapshot.outputPaths).toHaveLength(1);
+                expect(fs.readFileSync(snapshot.outputPaths[0], "utf8")).toBe("/0.ts/1.ts/2.ts");
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test.each([
         ["key HTTP failure", '#EXT-X-KEY:METHOD=AES-128,URI="/key"', "Request failed with status code 404", 2],
         ["invalid duration", "#EXTINF:invalid,\n/1.ts", "Invalid duration for media segment", 0],
