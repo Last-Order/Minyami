@@ -149,7 +149,8 @@ describe("fMP4 SAMPLE-AES HLS", () => {
                         throw new Error("Download finished before the blocked first fragment was released.");
                     }),
                 ]);
-                await waitForBuffer(path.join(directory, "media_0.mp4"), clearInitialization);
+                await waitForBuffer(path.join(downloader.getSnapshot().tempPath, "media_0.mp4"), clearInitialization);
+                expect(fs.readdirSync(directory)).toEqual([path.basename(downloader.getSnapshot().tempPath)]);
                 expect(fs.existsSync(output)).toBe(false);
                 releaseFirstFragment();
                 await download;

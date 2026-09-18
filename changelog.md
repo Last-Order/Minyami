@@ -4,11 +4,16 @@
 
 ### Changed
 
+-   Stage merged tracks and muxed outputs inside the task's `minyami_...` workspace, then move completed outputs to
+    the destination with exclusive conflict handling and numeric suffixes. Failed or aborted sessions retain staged files.
+    Output staging and `task.json` live at the workspace root; chunks stay in per-track subdirectories.
 -   Upgraded erii to 3.0.0-beta.2 and switched CLI loading to its ESM entry point, preserving existing argument parsing.
 -   Replaced the local erii wrapper with its native schema and types for commands, aliases, and scoped options.
 
 ### Fixed
 
+-   Keep undeletable intermediate tracks in the temporary workspace after successful muxing, without letting
+    attempts to move those leftovers fail an otherwise completed download.
 -   Retain only initialization segments needed by selected HLS media when slicing, avoiding initialization-only output files.
 -   Accept compressed chunk responses without comparing decoded data against the encoded `Content-Length`, while
     continuing to reject truncated HTTP responses before publishing files.

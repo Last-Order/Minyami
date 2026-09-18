@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 import { createDownloader } from "@/core/download/downloader";
 import { AAC_CONTAINER, MATROSKA_CONTAINER, MediaContainer, MPEG_TS_CONTAINER } from "@/core/media_container";
 import { Muxer, MuxRequest } from "@/core/muxer";
@@ -33,6 +33,58 @@ class TestMuxer implements Muxer {
 }
 
 describe("download output muxing", () => {
+    test("finishes with the muxed result when a leftover track cannot be deleted or published", async () => {
+        const server = http.createServer((request, response) => response.end(request.url!.slice(1)));
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-mux-cleanup-", async (directory) => {
+                const output = path.join(directory, "media.mkv");
+                const downloader = createDownloader(createTwoTrackSource(baseUrl), {
+                    output,
+                    tempDir: directory,
+                    muxers: [new TestMuxer("available", true)],
+                });
+                const originalUnlink = fs.promises.unlink;
+                const originalLink = fs.promises.link;
+                const lockedTrackError = Object.assign(new Error("Track file is locked"), { code: "EACCES" });
+                const unlink = jest.spyOn(fs.promises, "unlink").mockImplementation(async (file) => {
+                    if (path.basename(file.toString()) === "media.video.ts") {
+                        throw lockedTrackError;
+                    }
+                    return originalUnlink(file);
+                });
+                const link = jest.spyOn(fs.promises, "link").mockImplementation(async (source, destination) => {
+                    if (path.basename(source.toString()) === "media.video.ts") {
+                        throw lockedTrackError;
+                    }
+                    return originalLink(source, destination);
+                });
+                try {
+                    await downloader.download();
+
+                    const snapshot = downloader.getSnapshot();
+                    const retainedTrack = path.join(snapshot.tempPath, "media.video.ts");
+                    expect(snapshot).toMatchObject({
+                        status: "finished",
+                        outputPaths: [output],
+                        artifacts: [{ trackId: "video", outputPaths: [retainedTrack] }],
+                        tracks: [{ outputPaths: [retainedTrack] }, { outputPaths: [] }],
+                    });
+                    expect(fs.readFileSync(output, "utf8")).toBe("video+audio");
+                    expect(fs.readFileSync(retainedTrack, "utf8")).toBe("video");
+                    expect(fs.readdirSync(snapshot.tempPath).sort()).toEqual(["media.video.ts", "task.json"]);
+                    expect(fs.readdirSync(directory).sort()).toEqual(["media.mkv", path.basename(snapshot.tempPath)]);
+                } finally {
+                    unlink.mockRestore();
+                    link.mockRestore();
+                }
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test("muxes completed audio and video tracks with the first available muxer", async () => {
         const server = http.createServer((request, response) => response.end(request.url!.slice(1)));
         const baseUrl = await listen(server);
@@ -56,10 +108,18 @@ describe("download output muxing", () => {
                 expect(fs.readFileSync(output, "utf8")).toBe("video+audio");
                 expect(preferred.requests).toHaveLength(1);
                 expect(preferred.requests[0]).toMatchObject({
-                    outputPath: output,
+                    outputPath: path.join(downloader.getSnapshot().tempPath, "media.mkv"),
                     inputs: [
-                        { trackId: "video", mediaTrack: { type: "video" }, inputPath: videoOutput },
-                        { trackId: "audio", mediaTrack: { type: "audio" }, inputPath: audioOutput },
+                        {
+                            trackId: "video",
+                            mediaTrack: { type: "video" },
+                            inputPath: path.join(downloader.getSnapshot().tempPath, path.basename(videoOutput)),
+                        },
+                        {
+                            trackId: "audio",
+                            mediaTrack: { type: "audio" },
+                            inputPath: path.join(downloader.getSnapshot().tempPath, path.basename(audioOutput)),
+                        },
                     ],
                 });
                 expect(fallback.availabilityChecks).toBe(0);
@@ -99,11 +159,23 @@ describe("download output muxing", () => {
                 expect(fs.readFileSync(output, "utf8")).toBe("video+english+japanese");
                 expect(muxer.requests).toHaveLength(1);
                 expect(muxer.requests[0]).toMatchObject({
-                    outputPath: output,
+                    outputPath: path.join(downloader.getSnapshot().tempPath, "media.mkv"),
                     inputs: [
-                        { trackId: "video", mediaTrack: { type: "video" }, inputPath: videoOutput },
-                        { trackId: "audio-en", mediaTrack: { type: "audio" }, inputPath: englishOutput },
-                        { trackId: "audio-ja", mediaTrack: { type: "audio" }, inputPath: japaneseOutput },
+                        {
+                            trackId: "video",
+                            mediaTrack: { type: "video" },
+                            inputPath: path.join(downloader.getSnapshot().tempPath, path.basename(videoOutput)),
+                        },
+                        {
+                            trackId: "audio-en",
+                            mediaTrack: { type: "audio" },
+                            inputPath: path.join(downloader.getSnapshot().tempPath, path.basename(englishOutput)),
+                        },
+                        {
+                            trackId: "audio-ja",
+                            mediaTrack: { type: "audio" },
+                            inputPath: path.join(downloader.getSnapshot().tempPath, path.basename(japaneseOutput)),
+                        },
                     ],
                 });
                 expect(downloader.getSnapshot()).toMatchObject({
@@ -192,8 +264,8 @@ describe("download output muxing", () => {
                 await downloader.download();
 
                 expect(muxer.requests[0].inputs).toMatchObject([
-                    { inputPath: path.join(directory, "media.video.ts") },
-                    { inputPath: path.join(directory, "media.audio.aac") },
+                    { inputPath: path.join(downloader.getSnapshot().tempPath, "media.video.ts") },
+                    { inputPath: path.join(downloader.getSnapshot().tempPath, "media.audio.aac") },
                 ]);
                 expect(fs.readFileSync(path.join(directory, "media.mkv"), "utf8")).toBe("video+audio");
             });

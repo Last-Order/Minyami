@@ -214,6 +214,7 @@ describe("multi-track downloads", () => {
                 const snapshot = downloader.getSnapshot();
                 expect(snapshot.outputPaths).toEqual([]);
                 expect(snapshot.tracks.map((track) => track.outputPaths)).toEqual([[], []]);
+                expect(fs.readdirSync(snapshot.tempPath).sort()).toEqual(["audio", "task.json", "video"]);
                 expect(fs.readFileSync(path.join(snapshot.tempPath, "video", "same.bin"), "utf8")).toBe("same");
                 expect(fs.readFileSync(path.join(snapshot.tempPath, "audio", "same.bin"), "utf8")).toBe("same");
             });

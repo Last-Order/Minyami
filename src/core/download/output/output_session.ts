@@ -5,11 +5,11 @@ import { createContainerOutputPath, MediaContainer } from "@/core/media_containe
 import { Muxer, MuxInput, selectAvailableMuxer } from "@/core/muxer";
 import { MediaTrack } from "@/core/source/stream_selection";
 import { DownloadTrackId, SourceTrack } from "@/core/source/types";
-import { getAvailableOutputPath } from "@/utils/common";
 import logger from "@/utils/log";
 import { TrackArtifact } from "../controller";
 import { DownloadTask } from "../execution/task";
 import FileConcentrator from "./file_concentrator";
+import { publishOutput } from "./publish_output";
 import { TASK_METADATA_FILENAME, TaskMetadata, writeTaskMetadata } from "./task_metadata";
 
 export interface OutputSessionConfig {
@@ -62,9 +62,7 @@ export class OutputSession {
     configureTracks(metadata: readonly SourceTrack[], container: MediaContainer): void {
         for (const track of metadata) {
             const trackTempPath = path.resolve(this.tempPath, track.id);
-            const plannedOutputPath = getAvailableOutputPath(
-                this.createTrackOutputPath(track, metadata.length, container),
-            );
+            const plannedOutputPath = this.createTrackOutputPath(track, metadata.length, container);
             this.tracks.set(track.id, {
                 metadata: track,
                 tempPath: trackTempPath,
@@ -72,7 +70,7 @@ export class OutputSession {
                 writer: this.config.noMerge
                     ? undefined
                     : new FileConcentrator({
-                          outputPath: plannedOutputPath,
+                          outputPath: path.join(this.tempPath, path.basename(plannedOutputPath)),
                           deleteAfterWritten: !this.config.keepTemporaryFiles,
                       }),
                 outputPaths: [],
@@ -120,6 +118,7 @@ export class OutputSession {
         // Cross-track muxing starts only after every ordered writer has closed its immutable inputs.
         const artifacts = this.getTrackArtifacts();
         await this.muxTrackArtifacts(artifacts);
+        await this.publishOutputs();
         return this.getTrackArtifacts();
     }
 
@@ -208,8 +207,9 @@ export class OutputSession {
             mediaTrack: artifact.mediaTrack,
             inputPath: artifact.outputPaths[0],
         }));
-        const outputPath = getAvailableOutputPath(
-            createContainerOutputPath(this.outputBasePath, muxer.outputContainer),
+        const outputPath = createContainerOutputPath(
+            path.join(this.tempPath, path.basename(this.outputBasePath)),
+            muxer.outputContainer,
         );
         logger.info(`Muxing audio and video tracks with ${muxer.name}...`);
         try {
@@ -236,6 +236,22 @@ export class OutputSession {
             } catch {
                 // Cleanup failure does not invalidate the already verified muxed container.
                 logger.warning(`Failed to delete merged track file [${path.resolve(input.inputPath)}].`);
+            }
+        }
+    }
+
+    private async publishOutputs(): Promise<void> {
+        const publish = (source: string) =>
+            publishOutput(source, path.join(path.dirname(this.outputBasePath), path.basename(source)));
+        // Update each path as it moves so even a later publication failure leaves an accurate recovery snapshot.
+        if (this.muxedOutputPath) {
+            this.muxedOutputPath = await publish(this.muxedOutputPath);
+            // Undeletable mux inputs are recovery leftovers, not required outputs of a successful mux.
+            return;
+        }
+        for (const track of this.tracks.values()) {
+            for (let index = 0; index < track.outputPaths.length; index++) {
+                track.outputPaths[index] = await publish(track.outputPaths[index]);
             }
         }
     }
