@@ -51,6 +51,9 @@ export type StreamSelector = (
 /** Prevents selectors from mutating the canonical identities and compatibility graph they inspect. */
 export function freezeStreamCatalog(catalog: StreamCatalog): StreamCatalog {
     for (const track of catalog.tracks) {
+        if (track.codecs) {
+            Object.freeze(track.codecs);
+        }
         Object.freeze(track);
     }
     for (const option of catalog.options) {

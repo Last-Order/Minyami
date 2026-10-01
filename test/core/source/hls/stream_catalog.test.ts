@@ -51,6 +51,7 @@ describe("HLS stream catalog", () => {
         expect(Object.isFrozen(plan.catalog)).toBe(true);
         expect(Object.isFrozen(plan.catalog.options[0].tracks)).toBe(true);
         expect(plan.catalog.tracks.every(Object.isFrozen)).toBe(true);
+        expect(Object.isFrozen(plan.catalog.tracks[0].codecs)).toBe(true);
         expect(plan.catalog.tracks.every((track) => !("url" in track))).toBe(true);
         expect(plan.catalog.tracks.map((track) => plan.mediaTracks.get(track)?.sourcePath)).toEqual([
             "https://media.example/low.m3u8",
