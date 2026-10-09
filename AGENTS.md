@@ -3,7 +3,6 @@
 ## Scope and priorities
 
 - These instructions apply to the entire repository.
-- Minyami is a maintenance-mode Node.js HLS downloader. Prefer the smallest compatible fix that preserves existing CLI and library behavior. Do not broaden product scope or break public APIs unless the request explicitly requires it.
 - The supported runtime is Node.js 24 or newer. The package is ESM-only, uses strict TypeScript, and is built with `tsdown`.
 - Use npm and keep `npm-shrinkwrap.json` authoritative. Change the shrinkwrap only when dependencies actually change.
 - Keep this guide focused on module boundaries, ownership, dependency direction, and contribution practices. Document concrete behavior in the usage documentation, module-local comments, and tests.
