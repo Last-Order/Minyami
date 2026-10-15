@@ -11,21 +11,26 @@ function createChunk(directory: string, filename: string, content: string): stri
 }
 
 describe("FileConcentrator", () => {
-    test("writes out-of-order results in discovery order", async () => {
-        await withTempDirectory("minyami-concentrator-order-", async (directory) => {
-            const first = createChunk(directory, "first.chunk", "first");
-            const second = createChunk(directory, "second.chunk", "second");
-            const output = path.join(directory, "ordered.ts");
-            const concentrator = new FileConcentrator({ outputPath: output });
+    test.each([17, 2 * 1024 * 1024 + 17])(
+        "writes out-of-order results with %i-byte inputs in discovery order",
+        async (size) => {
+            await withTempDirectory("minyami-concentrator-order-", async (directory) => {
+                const firstContent = "a".repeat(size);
+                const secondContent = "b".repeat(size);
+                const first = createChunk(directory, "first.chunk", firstContent);
+                const second = createChunk(directory, "second.chunk", secondContent);
+                const output = path.join(directory, "ordered.ts");
+                const concentrator = new FileConcentrator({ outputPath: output });
 
-            concentrator.markTaskReady({ filePath: second, index: 1 });
-            concentrator.markTaskReady({ filePath: first, index: 0 });
-            await concentrator.waitAllFilesWritten(2);
+                concentrator.markTaskReady({ filePath: second, index: 1 });
+                concentrator.markTaskReady({ filePath: first, index: 0 });
+                await concentrator.waitAllFilesWritten(2);
 
-            expect(fs.readFileSync(output, "utf8")).toBe("firstsecond");
-            expect(concentrator.getOutputFilePaths()).toEqual([output]);
-        });
-    });
+                expect(fs.readFileSync(output, "utf8")).toBe(firstContent + secondContent);
+                expect(concentrator.getOutputFilePaths()).toEqual([output]);
+            });
+        },
+    );
 
     test("replays the required prefix when a dropped item starts a new run", async () => {
         await withTempDirectory("minyami-concentrator-fmp4-gap-", async (directory) => {
@@ -181,6 +186,7 @@ describe("FileConcentrator", () => {
     test("waits for the output write callback before deleting an input file", async () => {
         await withTempDirectory("minyami-concentrator-write-completion-", async (directory) => {
             const createWriteStream = fs.createWriteStream;
+            const content = "content".repeat(512 * 1024);
             let writeCallCount = 0;
             let notifyWriteCompleted: () => void;
             const writeCompleted = new Promise<void>((resolve) => {
@@ -198,14 +204,16 @@ describe("FileConcentrator", () => {
                     const callerCallback = typeof encoding === "function" ? encoding : callback;
                     const actualEncoding = typeof encoding === "string" ? encoding : undefined;
                     return write(chunk, actualEncoding, (error) => {
-                        notifyWriteCompleted();
+                        if (stream.bytesWritten === Buffer.byteLength(content)) {
+                            notifyWriteCompleted();
+                        }
                         void writeCallbackReleased.then(() => callerCallback?.(error));
                     });
                 }) as typeof stream.write;
                 return stream;
             });
 
-            const chunk = createChunk(directory, "input.chunk", "content".repeat(64 * 1024));
+            const chunk = createChunk(directory, "input.chunk", content);
             const concentrator = new FileConcentrator({
                 outputPath: path.join(directory, "output.ts"),
                 deleteAfterWritten: true,
@@ -220,6 +228,7 @@ describe("FileConcentrator", () => {
             releaseWriteCallback();
             await concentrator.waitAllFilesWritten(1);
             expect(fs.existsSync(chunk)).toBe(false);
+            expect(fs.readFileSync(path.join(directory, "output.ts"), "utf8")).toBe(content);
         });
     });
 

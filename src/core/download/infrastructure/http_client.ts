@@ -87,7 +87,8 @@ export class DownloadHttpClient {
                     : {}),
                 signal: abortScope.signal,
             });
-            const body = Buffer.from(response.data);
+            // The Node adapter already returns a Buffer; reuse it rather than copying a complete chunk.
+            const body = Buffer.isBuffer(response.data) ? response.data : Buffer.from(response.data);
             // Empty chunks must retry instead of being admitted as successful output.
             if (body.length === 0) {
                 throw new Error("Downloaded response body is empty.");
@@ -104,8 +105,10 @@ export class DownloadHttpClient {
             }
             // Publish by rename so executors never observe a partially written destination as a successful item.
             const temporaryPath = destination + ".t";
-            fs.writeFileSync(temporaryPath, body);
-            fs.renameSync(temporaryPath, destination);
+            await fs.promises.writeFile(temporaryPath, body, { signal: abortScope.signal });
+            // Cancellation may arrive during asynchronous disk I/O, before the complete file is published.
+            abortScope.signal.throwIfAborted();
+            await fs.promises.rename(temporaryPath, destination);
         } finally {
             abortScope.dispose();
         }

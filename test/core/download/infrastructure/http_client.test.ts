@@ -2,12 +2,16 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import { gzipSync } from "zlib";
-import { describe, expect, test } from "@jest/globals";
-import axios from "axios";
+import { describe, expect, jest, test } from "@jest/globals";
+import axios, { AxiosAdapter } from "axios";
 import { normalizeDownloaderConfig } from "@/core/download/config";
 import { DownloadHttpClient } from "@/core/download/infrastructure/http_client";
 import { withTempDirectory } from "../../../helpers/filesystem";
 import { close, listen } from "../../../helpers/http";
+
+function respondWith(data: Buffer | ArrayBuffer): AxiosAdapter {
+    return async (config) => ({ data, status: 200, statusText: "OK", headers: {}, config });
+}
 
 describe("DownloadHttpClient", () => {
     test("keeps configured headers on its isolated Axios instance", () => {
@@ -20,6 +24,94 @@ describe("DownloadHttpClient", () => {
 
         expect(client.axios.defaults.headers["X-Minyami-Test"]).toBe("isolated");
         expect(axios.defaults.headers.common["X-Minyami-Test"]).toBe(globalHeader);
+    });
+
+    test.each([
+        { kind: "Buffer", data: Buffer.from("complete downloaded chunk") },
+        { kind: "ArrayBuffer", data: Uint8Array.from(Buffer.from("complete downloaded chunk")).buffer },
+    ])("publishes a $kind response only after its pending disk write succeeds", async ({ data }) => {
+        await withTempDirectory("minyami-http-pending-write-", async (directory) => {
+            const destination = path.join(directory, "chunk.bin");
+            const writeFile = fs.promises.writeFile;
+            let notifyWriteStarted!: () => void;
+            const writeStarted = new Promise<void>((resolve) => {
+                notifyWriteStarted = resolve;
+            });
+            let releaseWrite!: () => void;
+            const writeReleased = new Promise<void>((resolve) => {
+                releaseWrite = resolve;
+            });
+            jest.spyOn(fs.promises, "writeFile").mockImplementationOnce(async (file, body, options) => {
+                await writeFile(file, "partial");
+                notifyWriteStarted();
+                await writeReleased;
+                await writeFile(file, body, options);
+            });
+            const client = new DownloadHttpClient(normalizeDownloaderConfig());
+            let settled = false;
+            const download = client
+                .download("https://example.com/chunk", destination, { adapter: respondWith(data) })
+                .then(() => {
+                    settled = true;
+                });
+
+            try {
+                await writeStarted;
+                expect(settled).toBe(false);
+                expect(fs.existsSync(destination)).toBe(false);
+                expect(fs.readFileSync(destination + ".t", "utf8")).toBe("partial");
+            } finally {
+                releaseWrite();
+                await download;
+            }
+
+            expect(fs.readFileSync(destination, "utf8")).toBe("complete downloaded chunk");
+            expect(fs.readdirSync(directory)).toEqual(["chunk.bin"]);
+        });
+    });
+
+    test("preserves a published destination on disk failure and replaces staged data on retry", async () => {
+        await withTempDirectory("minyami-http-write-failure-", async (directory) => {
+            const destination = path.join(directory, "chunk.bin");
+            fs.writeFileSync(destination, "previous complete chunk");
+            const writeFile = fs.promises.writeFile;
+            const failure = new Error("disk full");
+            jest.spyOn(fs.promises, "writeFile").mockImplementationOnce(async (file) => {
+                await writeFile(file, "partial");
+                throw failure;
+            });
+            const client = new DownloadHttpClient(normalizeDownloaderConfig());
+            const options = { adapter: respondWith(Buffer.from("retried complete chunk")) };
+
+            await expect(client.download("https://example.com/chunk", destination, options)).rejects.toBe(failure);
+            expect(fs.readFileSync(destination, "utf8")).toBe("previous complete chunk");
+
+            await client.download("https://example.com/chunk", destination, options);
+            expect(fs.readFileSync(destination, "utf8")).toBe("retried complete chunk");
+            expect(fs.readdirSync(directory)).toEqual(["chunk.bin"]);
+        });
+    });
+
+    test("does not publish a chunk cancelled while its disk write completes", async () => {
+        await withTempDirectory("minyami-http-write-abort-", async (directory) => {
+            const destination = path.join(directory, "chunk.bin");
+            const abort = new AbortController();
+            const writeFile = fs.promises.writeFile;
+            jest.spyOn(fs.promises, "writeFile").mockImplementationOnce(async (file, body, options) => {
+                await writeFile(file, body, options);
+                abort.abort();
+            });
+            const client = new DownloadHttpClient(normalizeDownloaderConfig());
+
+            await expect(
+                client.download("https://example.com/chunk", destination, {
+                    adapter: respondWith(Buffer.from("complete downloaded chunk")),
+                    signal: abort.signal,
+                }),
+            ).rejects.toMatchObject({ name: "AbortError" });
+            expect(fs.existsSync(destination)).toBe(false);
+            expect(fs.readFileSync(destination + ".t", "utf8")).toBe("complete downloaded chunk");
+        });
     });
 
     test("rejects Content-Length: 0 before publishing a file", async () => {

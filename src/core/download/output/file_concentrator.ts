@@ -3,9 +3,8 @@ import * as path from "path";
 import { DownloadOutputLayout, DownloadOutputPrefix } from "@/core/source/types";
 import logger from "@/utils/log";
 
-// Read streams produce 64 KiB chunks by default. A larger, finite output buffer
-// preserves read/write overlap and writev opportunities without unbounded queueing.
-const OUTPUT_HIGH_WATER_MARK = 1024 * 1024;
+// Large, finite buffers reduce merge I/O coordination overhead while keeping queued data bounded.
+const MERGE_HIGH_WATER_MARK = 1024 * 1024;
 
 interface FileConcentratorParams {
     /** Final public path; numbered staging paths are derived from it. */
@@ -314,7 +313,7 @@ class FileConcentrator {
         };
 
         try {
-            for await (const chunk of fs.createReadStream(filePath)) {
+            for await (const chunk of fs.createReadStream(filePath, { highWaterMark: MERGE_HIGH_WATER_MARK })) {
                 // A callback may fail while the input iterator is preparing its next chunk.
                 if (writeError) {
                     throw writeError;
@@ -385,7 +384,7 @@ class FileConcentrator {
         const stream = fs.createWriteStream(outputPath, {
             // Exclusive creation turns an output-name race into an error instead of truncation.
             flags: "wx",
-            highWaterMark: OUTPUT_HIGH_WATER_MARK,
+            highWaterMark: MERGE_HIGH_WATER_MARK,
         });
         this.writeStream = stream;
         // Keep an error observer attached between input writes so late stream errors are never unhandled.

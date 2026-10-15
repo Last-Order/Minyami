@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+-   Reduce download and merge I/O overhead with asynchronous chunk writes and renames, reuse of buffered HTTP
+    responses, and larger merge read buffers.
+
 ## 6.0.0-beta.7 - 2026-09-18
 
 ### Changed
