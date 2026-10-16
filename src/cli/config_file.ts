@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import logger from "@/utils/log";
 
 function initMinyamiDirectory(): string {
     const minyamiPath = path.resolve(os.homedir(), "./.minyami/");
@@ -12,7 +11,13 @@ function initMinyamiDirectory(): string {
 }
 
 export function readConfigFile(): Record<string, unknown> {
-    const minyamiPath = initMinyamiDirectory();
+    let minyamiPath: string;
+    try {
+        minyamiPath = initMinyamiDirectory();
+    } catch {
+        // Configuration is optional even when its directory cannot be accessed or created.
+        return {};
+    }
     const availableConfigFilenames = [".minyamirc", ".minyamirc.json", "minyami.config.json"];
     for (const filename of availableConfigFilenames) {
         const configFilePath = path.resolve(minyamiPath, filename);
@@ -22,10 +27,9 @@ export function readConfigFile(): Record<string, unknown> {
                 if (typeof content !== "object" || content === null || Array.isArray(content)) {
                     throw new Error("Configuration root must be an object.");
                 }
-                logger.debug(`Config file loaded: ${JSON.stringify(content)}`);
                 return content as Record<string, unknown>;
             } catch {
-                logger.debug(`Config file ${configFilePath} not exists or not valid, skip.`);
+                // Unreadable or malformed candidates behave like missing files; later defaults may still be usable.
             }
         }
     }

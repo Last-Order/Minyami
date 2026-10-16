@@ -77,6 +77,26 @@ The download command requires a URL or local playlist path; missing input displa
 | `--keep-encrypted-chunks` | Keep encrypted chunks after decryption. Use with `--keep`. |
 | `--verbose`, `--debug` | Enable debug output. |
 
+### Configuration file
+
+Place a JSON object in `~/.minyami/.minyamirc`, `~/.minyami/.minyamirc.json`, or
+`~/.minyami/minyami.config.json`. The first readable JSON object in this order supplies defaults. Use the CLI option names in
+camelCase, such as `noProxy`, `tempDir`, and `keepEncryptedChunks`:
+
+```json
+{
+    "threads": 8,
+    "noProxy": true,
+    "verbose": true
+}
+```
+
+Explicit CLI values override file defaults before validation. The merged `noProxy` and `verbose` settings also control
+proxy discovery and debug output. Use JSON booleans for flags, positive integers for `threads` and `retries`, strings for
+other values, and a string or string array for `headers` and `key`. Unreadable files, malformed JSON, and non-object roots
+are silently skipped; if no candidate is usable, the command proceeds without file defaults. Invalid merged option
+types stop the command with an error and exit code `1`.
+
 ## Use as a library
 
 Minyami is distributed as ESM and must be loaded with `import` rather than CommonJS `require()`.

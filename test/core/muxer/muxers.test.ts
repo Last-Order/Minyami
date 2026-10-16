@@ -1,5 +1,7 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 import { createDefaultMuxers, ExecutableRunner, FFmpegMuxer, MkvmergeMuxer, selectAvailableMuxer } from "@/core/muxer";
+import { ExecutableExitError } from "@/core/muxer/executable_runner";
+import logger from "@/utils/log";
 
 class RecordingRunner implements ExecutableRunner {
     readonly availabilityChecks: { command: string; arguments_: readonly string[] }[] = [];
@@ -56,6 +58,7 @@ describe("built-in muxers", () => {
             {
                 command: "mkvmerge",
                 arguments_: [
+                    "--quiet",
                     "--output",
                     "mixed output.mkv",
                     "video track.ts",
@@ -64,6 +67,36 @@ describe("built-in muxers", () => {
                 ],
             },
         ]);
+    });
+
+    test("reports mkvmerge warnings without rejecting completed muxing", async () => {
+        const runner = new RecordingRunner(["mkvmerge"]);
+        jest.spyOn(runner, "run").mockRejectedValue(
+            new ExecutableExitError("mkvmerge", 1, "Warning: check timestamps"),
+        );
+        const warning = jest.spyOn(logger, "warning").mockImplementation(() => undefined);
+
+        await expect(new MkvmergeMuxer(runner).mux(request)).resolves.toBeUndefined();
+        expect(warning).toHaveBeenCalledWith(expect.stringContaining("Warning: check timestamps"));
+    });
+
+    test.each([
+        new ExecutableExitError("mkvmerge", 2, "Invalid input"),
+        new ExecutableExitError("mkvmerge", null, "Process terminated"),
+        new Error("Executable could not be started"),
+    ])("preserves mkvmerge process failures: %s", async (failure) => {
+        const runner = new RecordingRunner(["mkvmerge"]);
+        jest.spyOn(runner, "run").mockRejectedValue(failure);
+
+        await expect(new MkvmergeMuxer(runner).mux(request)).rejects.toBe(failure);
+    });
+
+    test("continues to reject ffmpeg exit code 1", async () => {
+        const runner = new RecordingRunner(["ffmpeg"]);
+        const failure = new ExecutableExitError("ffmpeg", 1, "Invalid input");
+        jest.spyOn(runner, "run").mockRejectedValue(failure);
+
+        await expect(new FFmpegMuxer(runner).mux(request)).rejects.toBe(failure);
     });
 
     test("ffmpeg maps every input stream and copies codecs", async () => {

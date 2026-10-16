@@ -7,6 +7,14 @@
 -   Reduce download and merge I/O overhead with asynchronous chunk writes and renames, reuse of buffered HTTP
     responses, and larger merge read buffers.
 
+### Fixed
+
+-   Merge and validate CLI/config-file options before applying proxy discovery and debug settings. Continue ignoring
+    unreadable or malformed configuration files, and report invalid merged option types.
+-   Treat mkvmerge exit code 1 as a warning and display its diagnostics without discarding a completed output.
+    Fatal process errors and missing, empty, or non-file mux outputs still fail while preserving merged input tracks.
+-   Capture bounded stdout and stderr diagnostics from muxing tools so warnings printed to stdout remain visible.
+
 ## 6.0.0-beta.7 - 2026-09-18
 
 ### Changed

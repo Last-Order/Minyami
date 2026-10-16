@@ -75,6 +75,25 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 | `--keep-encrypted-chunks` | 解密后保留加密分块，需与 `--keep` 一起使用。 |
 | `--verbose`、`--debug` | 输出调试信息。 |
 
+### 配置文件
+
+可以在 `~/.minyami/.minyamirc`、`~/.minyami/.minyamirc.json` 或 `~/.minyami/minyami.config.json` 中放置 JSON
+对象。按上述顺序使用第一个可读取且能解析为 JSON 对象的文件作为默认配置。字段使用 CLI 参数的驼峰名称，例如 `noProxy`、`tempDir` 和
+`keepEncryptedChunks`：
+
+```json
+{
+    "threads": 8,
+    "noProxy": true,
+    "verbose": true
+}
+```
+
+显式传入的 CLI 参数会先覆盖文件中的默认值，再进行校验。合并后的 `noProxy` 和 `verbose` 也会控制代理探测和调试输出。
+开关使用 JSON 布尔值，`threads` 和 `retries` 使用正整数，其他值使用字符串；`headers` 和 `key` 可以使用字符串或字符串数组。
+文件无法读取、JSON 格式错误或根节点不是对象时会静默跳过；所有候选文件均不可用时，按没有配置文件继续执行。
+合并后的参数类型无效时，命令会明确报错，并以退出码 `1` 结束。
+
 
 ## 作为库使用
 

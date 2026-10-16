@@ -9,28 +9,34 @@ import { createCliDownloadConfiguration, mergeCliOptions } from "./download_opti
 
 /** Runs one download command while keeping process policy outside the reusable downloader. */
 export async function runDownloadCommand(sourcePath: string, commandOptions: CliOptions): Promise<void> {
-    if (commandOptions.verbose) {
-        logger.enableDebugMode();
-    }
-
-    await configureDefaultProxy(commandOptions.noProxy);
-
-    const fileOptions = readConfigFile();
-    if (Object.keys(fileOptions).length > 0) {
-        logger.debug(`Read config file: ${JSON.stringify(fileOptions)}`);
-    }
-    const options = mergeCliOptions(commandOptions, fileOptions);
-    const config = createCliDownloadConfiguration(options);
-    const downloader = config.live
-        ? createLiveDownloader(sourcePath, config.downloader)
-        : createArchiveDownloader(sourcePath, { ...config.downloader, slice: config.slice });
-    const dispose = installCliDownloadControls(downloader, !!options.verbose, config.live);
     try {
-        await downloader.download();
-    } catch {
+        // Apply process policy only after defaults and explicit CLI overrides have been validated together.
+        const fileOptions = readConfigFile();
+        const options = mergeCliOptions(commandOptions, fileOptions);
+        if (options.verbose) {
+            logger.enableDebugMode();
+        }
+        if (Object.keys(fileOptions).length > 0) {
+            logger.debug("Loaded configuration file defaults.");
+        }
+        const config = createCliDownloadConfiguration(options);
+        await configureDefaultProxy(options.noProxy);
+
+        const downloader = config.live
+            ? createLiveDownloader(sourcePath, config.downloader)
+            : createArchiveDownloader(sourcePath, { ...config.downloader, slice: config.slice });
+        const dispose = installCliDownloadControls(downloader, !!options.verbose, config.live);
+        try {
+            await downloader.download();
+        } catch {
+            // The session already reported runtime failures; initialization failures are reported below.
+            process.exitCode = 1;
+        } finally {
+            dispose();
+        }
+    } catch (error) {
+        logger.error("Unable to initialize download.", error instanceof Error ? error : new Error(String(error)));
         process.exitCode = 1;
-    } finally {
-        dispose();
     }
 }
 

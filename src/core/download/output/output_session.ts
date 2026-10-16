@@ -214,8 +214,17 @@ export class OutputSession {
         logger.info(`Muxing audio and video tracks with ${muxer.name}...`);
         try {
             await muxer.mux({ inputs, outputPath });
-            if (!fs.existsSync(outputPath)) {
+            const output = await fs.promises.stat(outputPath).catch((error: NodeJS.ErrnoException) => {
+                if (error.code === "ENOENT") {
+                    return undefined;
+                }
+                throw error;
+            });
+            if (!output) {
                 throw new Error(`Muxer ${muxer.name} did not create the requested output file: ${outputPath}`);
+            }
+            if (!output.isFile() || output.size === 0) {
+                throw new Error(`Muxer ${muxer.name} did not create a non-empty output file: ${outputPath}`);
             }
         } catch (error) {
             // A failed container must not be published; per-track artifacts remain recoverable.
