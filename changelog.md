@@ -1,6 +1,6 @@
 # Changelog
 
-## 6.0.0-beta.9 - Unreleased
+## 6.0.0-beta.9
 
 ### Added
 
