@@ -15,6 +15,7 @@ export interface HLSMediaPlaylistCursorOptions {
     readonly sourcePath: string;
     readonly mode: HLSSourceMode;
     readonly initialPlaylist: HLSMediaPlaylist;
+    readonly parentVariables?: Readonly<Record<string, string>>;
     readonly loader: PlaylistLoader;
     readonly slice?: HLSSlice;
     readonly explicitKeys: readonly HLSExplicitKey[];
@@ -163,8 +164,12 @@ export class HLSMediaPlaylistCursor {
     }
 
     private async loadMediaPlaylist(): Promise<HLSMediaPlaylist> {
+        // HLS 2nd Edition draft (rfc8216bis-22) section 4.4.2.3 resets declarations on each reload.
+        // Retain only the master snapshot for explicit IMPORT; the parser rebuilds this media snapshot's scope.
+        // https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis-22#section-4.4.2.3
         const loaded = await this.options.loader.load(this.options.sourcePath, {
             timeout: this.timeout,
+            parentVariables: this.options.parentVariables,
         });
         if (loaded.kind === HLSPlaylistKind.Master) {
             throw new Error("Selected HLS stream points to another master playlist.");

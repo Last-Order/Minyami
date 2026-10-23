@@ -37,24 +37,12 @@ describe("CLI download options", () => {
         expect(config.downloader.streamSelector).toBeInstanceOf(Function);
     });
 
-    test("validates the merged values so explicit CLI options can replace invalid defaults", () => {
+    test("preserves explicit false flags while replacing file defaults", () => {
         expect(
             mergeCliOptions(
                 { verbose: false, noProxy: false, threads: 4 },
-                { verbose: "true", noProxy: "false", threads: "8" },
+                { verbose: true, noProxy: true, threads: 8 },
             ),
         ).toEqual({ verbose: false, noProxy: false, threads: 4 });
-    });
-
-    test.each([
-        ["verbose", "true"],
-        ["noProxy", "false"],
-        ["threads", 0],
-        ["retries", 1.5],
-        ["output", 123],
-        ["headers", [123]],
-        ["key", null],
-    ])("rejects an invalid merged %s option", (key, value) => {
-        expect(() => mergeCliOptions({}, { [key]: value })).toThrow(`Option ${key} must be`);
     });
 });

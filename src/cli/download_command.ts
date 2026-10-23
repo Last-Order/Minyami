@@ -10,7 +10,7 @@ import { createCliDownloadConfiguration, mergeCliOptions } from "./download_opti
 /** Runs one download command while keeping process policy outside the reusable downloader. */
 export async function runDownloadCommand(sourcePath: string, commandOptions: CliOptions): Promise<void> {
     try {
-        // Apply process policy only after defaults and explicit CLI overrides have been validated together.
+        // Apply process policy only after defaults and explicit CLI overrides have been merged.
         const fileOptions = readConfigFile();
         const options = mergeCliOptions(commandOptions, fileOptions);
         if (options.verbose) {

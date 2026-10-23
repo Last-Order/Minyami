@@ -89,12 +89,6 @@ minyami -d "https://example.com/video.m3u8" --proxy "http://127.0.0.1:1080"
 }
 ```
 
-显式传入的 CLI 参数会先覆盖文件中的默认值，再进行校验。合并后的 `noProxy` 和 `verbose` 也会控制代理探测和调试输出。
-开关使用 JSON 布尔值，`threads` 和 `retries` 使用正整数，其他值使用字符串；`headers` 和 `key` 可以使用字符串或字符串数组。
-文件无法读取、JSON 格式错误或根节点不是对象时会静默跳过；所有候选文件均不可用时，按没有配置文件继续执行。
-合并后的参数类型无效时，命令会明确报错，并以退出码 `1` 结束。
-
-
 ## 作为库使用
 
 Minyami 以 ESM 格式发布，请使用 `import` 加载，不支持 CommonJS `require()`。

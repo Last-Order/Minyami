@@ -15,6 +15,7 @@ interface SelectedHLSMediaTrack {
     readonly mediaTrack: MediaTrack;
     readonly sourcePath: string;
     readonly initialPlaylist?: HLSMediaPlaylist;
+    readonly parentVariables?: Readonly<Record<string, string>>;
 }
 
 /** Resolves HLS manifests into protocol-neutral selected tracks and per-playlist cursors. */
@@ -59,14 +60,14 @@ export class HLSSource implements DownloadSource {
         // Each selected Media Playlist owns independent sequence/dedup state even when tracks share one master.
         this.cursors = await Promise.all(
             selectedTracks.map(async (selected) => {
-                const playlist =
-                    selected.initialPlaylist ?? (await this.loadSelectedMediaPlaylist(selected.sourcePath));
+                const playlist = selected.initialPlaylist ?? (await this.loadSelectedMediaPlaylist(selected));
                 return new HLSMediaPlaylistCursor({
                     id: selected.sourceTrackId,
                     mediaTrack: selected.mediaTrack,
                     sourcePath: selected.sourcePath,
                     mode: this.options.mode,
                     initialPlaylist: playlist,
+                    parentVariables: selected.parentVariables,
                     loader: this.loader!,
                     slice: this.options.slice,
                     explicitKeys: this.options.explicitKeys ?? [],
@@ -139,6 +140,7 @@ export class HLSSource implements DownloadSource {
                 sourceTrackId: mediaPlan.sourceTrackId,
                 mediaTrack: track,
                 sourcePath: mediaPlan.sourcePath,
+                parentVariables: loaded.variables,
             };
         });
     }
@@ -151,12 +153,13 @@ export class HLSSource implements DownloadSource {
         return validateTrackSelection(plan.catalog, selection);
     }
 
-    private async loadSelectedMediaPlaylist(sourcePath: string): Promise<HLSMediaPlaylist> {
-        const playlist = await this.loader!.load(sourcePath, {
+    private async loadSelectedMediaPlaylist(selected: SelectedHLSMediaTrack): Promise<HLSMediaPlaylist> {
+        const playlist = await this.loader!.load(selected.sourcePath, {
             timeout: 60000,
+            parentVariables: selected.parentVariables,
         });
         if (playlist.kind === HLSPlaylistKind.Master) {
-            throw new Error(`Selected HLS track ${sourcePath} points to another master playlist.`);
+            throw new Error(`Selected HLS track ${selected.sourcePath} points to another master playlist.`);
         }
         return playlist;
     }

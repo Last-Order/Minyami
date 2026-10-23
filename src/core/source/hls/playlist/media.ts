@@ -13,7 +13,8 @@ import {
     HLSSegment,
     HLSSegmentKind,
 } from "./models";
-import { getPlaylistLines, getTagBody, parseAttributeList, resolvePlaylistUri } from "./syntax";
+import { getTagBody, parseAttributeList, resolvePlaylistUri } from "./syntax";
+import { resolvePlaylistVariables } from "./variables";
 
 const MEDIA_SEQUENCE_TAG = "#EXT-X-MEDIA-SEQUENCE";
 const KEY_TAG = "#EXT-X-KEY";
@@ -38,8 +39,9 @@ const SEGMENT_NAMES: Record<HLSSegmentKind, string> = {
     [HLSSegmentKind.Media]: "media segment",
 };
 
-export function parseMediaPlaylist({ content, playlistUrl = "" }: HLSParseOptions): HLSMediaPlaylist {
-    const lines = getPlaylistLines(content);
+export function parseMediaPlaylist(options: HLSParseOptions): HLSMediaPlaylist {
+    const { playlistUrl = "" } = options;
+    const { lines } = resolvePlaylistVariables(options, HLSPlaylistKind.Media);
     const segments: HLSSegment[] = [];
     const keys = new Map<string, HLSKeyReference>();
     let encryption: HLSMediaEncryption | undefined;

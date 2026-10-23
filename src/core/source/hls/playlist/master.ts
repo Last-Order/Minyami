@@ -6,13 +6,15 @@ import {
     HLSPlaylistKind,
     HLSVariant,
 } from "./models";
-import { findNextUri, getPlaylistLines, getTagBody, parseAttributeList, resolvePlaylistUri } from "./syntax";
+import { findNextUri, getTagBody, parseAttributeList, resolvePlaylistUri } from "./syntax";
+import { resolvePlaylistVariables } from "./variables";
 
 const STREAM_TAG = "#EXT-X-STREAM-INF";
 const MEDIA_TAG = "#EXT-X-MEDIA:";
 
-export function parseMasterPlaylist({ content, playlistUrl = "" }: HLSParseOptions): HLSMasterPlaylist {
-    const lines = getPlaylistLines(content);
+export function parseMasterPlaylist(options: HLSParseOptions): HLSMasterPlaylist {
+    const { playlistUrl = "" } = options;
+    const { lines, variables } = resolvePlaylistVariables(options, HLSPlaylistKind.Master);
     const audioRenditions = parseAudioRenditions(lines, playlistUrl);
     const variants: HLSVariant[] = [];
 
@@ -41,7 +43,7 @@ export function parseMasterPlaylist({ content, playlistUrl = "" }: HLSParseOptio
         }
     }
 
-    return { kind: HLSPlaylistKind.Master, variants, audioRenditions };
+    return { kind: HLSPlaylistKind.Master, variants, audioRenditions, ...(variables ? { variables } : {}) };
 }
 
 function parseAudioRenditions(lines: readonly string[], playlistUrl: string): HLSAudioRendition[] {

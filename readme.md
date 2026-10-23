@@ -90,13 +90,6 @@ camelCase, such as `noProxy`, `tempDir`, and `keepEncryptedChunks`:
     "verbose": true
 }
 ```
-
-Explicit CLI values override file defaults before validation. The merged `noProxy` and `verbose` settings also control
-proxy discovery and debug output. Use JSON booleans for flags, positive integers for `threads` and `retries`, strings for
-other values, and a string or string array for `headers` and `key`. Unreadable files, malformed JSON, and non-object roots
-are silently skipped; if no candidate is usable, the command proceeds without file defaults. Invalid merged option
-types stop the command with an error and exit code `1`.
-
 ## Use as a library
 
 Minyami is distributed as ESM and must be loaded with `import` rather than CommonJS `require()`.

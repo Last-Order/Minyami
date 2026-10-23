@@ -4,6 +4,7 @@ export class HLSParseError extends Error {}
 export interface HLSParseOptions {
     readonly content: string;
     readonly playlistUrl?: string;
+    readonly parentVariables?: Readonly<Record<string, string>>;
 }
 
 export enum HLSPlaylistKind {
@@ -51,6 +52,7 @@ export interface HLSMasterPlaylist {
     readonly kind: HLSPlaylistKind.Master;
     readonly variants: readonly HLSVariant[];
     readonly audioRenditions: readonly HLSAudioRendition[];
+    readonly variables?: Readonly<Record<string, string>>;
 }
 
 export interface HLSHttpKeyReference {

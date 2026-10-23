@@ -6,6 +6,7 @@ import { HLSPlaylist, parseHLSPlaylist } from "./parser";
 
 export interface LoadPlaylistOptions {
     timeout?: number;
+    readonly parentVariables?: Readonly<Record<string, string>>;
 }
 
 export class PlaylistLoader {
@@ -21,6 +22,7 @@ export class PlaylistLoader {
             logger.info("Loading HLS playlist.");
             return parseHLSPlaylist({
                 content: fs.readFileSync(sourcePath).toString(),
+                parentVariables: options.parentVariables,
             });
         }
 
@@ -30,6 +32,8 @@ export class PlaylistLoader {
             const response = await this.http.get<string>(sourcePath, { timeout, signal: getAbortSignal() });
             content = response.data;
             // Relative playlist references must resolve against the final URL after redirects, not the requested URL.
+            // HLS 2nd Edition draft (rfc8216bis-22) section 4.4.2.3 also requires QUERYPARAM to use that final URI.
+            // https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis-22#section-4.4.2.3
             playlistUrl = response.request?.res?.responseUrl || sourcePath;
         } catch (error) {
             const e = error as any;
@@ -43,6 +47,6 @@ export class PlaylistLoader {
             logger.warning("Source request attempts exhausted. Abort.");
             throw error;
         }
-        return parseHLSPlaylist({ content, playlistUrl });
+        return parseHLSPlaylist({ content, playlistUrl, parentVariables: options.parentVariables });
     }
 }

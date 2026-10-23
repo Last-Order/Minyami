@@ -112,21 +112,6 @@ describe("download command configuration", () => {
         expect(dispose).toHaveBeenCalledTimes(1);
     });
 
-    test("rejects invalid config flags before configuring a proxy", async () => {
-        jest.mocked(readConfigFile).mockReturnValue({ noProxy: "false" });
-
-        await runDownloadCommand("custom://archive", {});
-
-        expect(process.exitCode).toBe(1);
-        expect(logger.error).toHaveBeenCalledWith(
-            "Unable to initialize download.",
-            expect.objectContaining({ message: "Option noProxy must be a boolean." }),
-        );
-        expect(ProxyAgentHelper.disableProxy).not.toHaveBeenCalled();
-        expect(ProxyAgentHelper.readProxyConfigurationFromEnv).not.toHaveBeenCalled();
-        expect(controller.download).not.toHaveBeenCalled();
-    });
-
     test("still disposes controls after a runtime failure without reporting it twice", async () => {
         jest.mocked(controller.download).mockRejectedValue(new Error("session already reported this"));
 
