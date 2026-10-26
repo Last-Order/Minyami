@@ -2,7 +2,7 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 import { normalizeDownloaderConfig } from "@/core/download/config";
 import { Aes128CbcHandler } from "@/core/download/encryption/aes_128_cbc/handler";
 import { EncryptionHandlerRegistry } from "@/core/download/encryption/registry";
@@ -16,13 +16,17 @@ import { close, listen } from "../../../helpers/http";
 
 describe("ChunkExecutor encryption lifecycle", () => {
     test.each([false, true])("retains the encrypted input when keepEncryptedChunks is %s", async (keep) => {
+        const clock = jest.spyOn(performance, "now").mockReturnValue(0);
         const key = Buffer.from("0123456789abcdef");
         const iv = Buffer.alloc(16);
         iv[15] = 1;
         const plaintext = Buffer.from("executor encrypted payload");
         const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
         const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
-        const server = http.createServer((_request, response) => response.end(encrypted));
+        const server = http.createServer((_request, response) => {
+            clock.mockReturnValue(1_000);
+            response.end(encrypted);
+        });
         const baseUrl = await listen(server);
 
         try {
@@ -30,10 +34,16 @@ describe("ChunkExecutor encryption lifecycle", () => {
                 const keys = new KeyStore();
                 keys.set("test:key", key.toString("hex"));
                 const config = normalizeDownloaderConfig({ tempDir: directory });
+                const handler = new Aes128CbcHandler();
+                const decrypt = handler.decrypt.bind(handler);
+                jest.spyOn(handler, "decrypt").mockImplementation(async (request) => {
+                    clock.mockReturnValue(10_000);
+                    await decrypt(request);
+                });
                 const executor = new ChunkExecutor(
                     new DownloadHttpClient(config),
                     keys,
-                    new EncryptionHandlerRegistry([new Aes128CbcHandler()]),
+                    new EncryptionHandlerRegistry([handler]),
                 );
                 const task: DownloadTask = {
                     id: 0,
@@ -58,6 +68,7 @@ describe("ChunkExecutor encryption lifecycle", () => {
                 );
 
                 expect(fs.readFileSync(result.outputPath)).toEqual(plaintext);
+                expect(result.transfer).toEqual({ bytes: encrypted.length, startedAt: 0, completedAt: 1_000 });
                 expect(fs.existsSync(path.join(directory, task.filename))).toBe(keep);
             });
         } finally {

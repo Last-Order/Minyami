@@ -4,7 +4,7 @@ import { getAbortSignal } from "@/utils/abort";
 import logger from "@/utils/log";
 import { EncryptionHandlerRegistry } from "../encryption/registry";
 import { FatalDecryptionError } from "../encryption/types";
-import { DownloadHttpClient } from "../infrastructure/http_client";
+import { DownloadHttpClient, DownloadTransfer } from "../infrastructure/http_client";
 import { KeyStore } from "../infrastructure/key_store";
 import { DownloadTask } from "./task";
 
@@ -16,7 +16,8 @@ interface ExecuteChunkOptions {
 }
 
 export interface ChunkResult {
-    outputPath: string;
+    readonly outputPath: string;
+    readonly transfer: DownloadTransfer;
 }
 
 export class ChunkExecutor {
@@ -35,14 +36,14 @@ export class ChunkExecutor {
         const timeout = Math.min(options.attempt * options.itemTimeout, options.itemTimeout * 5);
 
         try {
-            await this.http.download(item.url, downloadedPath, {
+            const transfer = await this.http.download(item.url, downloadedPath, {
                 timeout,
                 ...(item.byteRange ? { byteRange: item.byteRange } : {}),
             });
             logger.debug(`Downloading ${task.filename} succeed.`);
 
             if (!item.encryption) {
-                return { outputPath: downloadedPath };
+                return { outputPath: downloadedPath, transfer };
             }
 
             // Decrypt beside the encrypted input so a failed transform never replaces recoverable source bytes.
@@ -65,7 +66,7 @@ export class ChunkExecutor {
             }
             logger.debug(`Decrypting ${task.filename} succeed`);
             // Only the fully downloaded/decrypted path is admitted to ordered output by the session.
-            return { outputPath: decryptedPath };
+            return { outputPath: decryptedPath, transfer };
         } catch (error) {
             if (getAbortSignal().aborted) {
                 logger.debug(`Processing ${task.filename} was aborted.`);

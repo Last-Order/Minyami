@@ -2,14 +2,67 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 import { createDownloader } from "@/core/download/downloader";
 import { MPEG_TS_CONTAINER } from "@/core/media_container";
 import { DownloadSource } from "@/core/source/types";
+import logger from "@/utils/log";
 import { withTempDirectory } from "../../helpers/filesystem";
 import { close, listen, withMediaServer } from "../../helpers/http";
 
 describe("createDownloader", () => {
+    test.each([false, true])("logs current speed from long completed chunks for continuous=%s", async (continuous) => {
+        const clock = jest.spyOn(performance, "now").mockReturnValue(0);
+        const info = jest.spyOn(logger, "info").mockImplementation(() => undefined);
+        const payload = Buffer.alloc(125_000, "a");
+        let requests = 0;
+        const server = http.createServer((_request, response) => {
+            requests++;
+            clock.mockReturnValue(requests * 20_000);
+            response.statusCode = requests === 1 ? 500 : 200;
+            response.end(payload);
+        });
+        const baseUrl = await listen(server);
+
+        try {
+            await withTempDirectory("minyami-bandwidth-log-", async (directory) => {
+                const output = path.join(directory, "bandwidth.ts");
+                const source: DownloadSource = {
+                    sourcePath: "custom://bandwidth",
+                    continuous,
+                    async prepare() {
+                        return {
+                            container: MPEG_TS_CONTAINER,
+                            tracks: [
+                                {
+                                    id: "main",
+                                    mediaTrack: { id: "logical-main", type: "video" },
+                                    sourcePath: this.sourcePath,
+                                },
+                            ],
+                        };
+                    },
+                    async *discover() {
+                        yield {
+                            trackId: "main",
+                            items: [{ url: `${baseUrl}/chunk.ts`, kind: "media", duration: 1 }],
+                            totalItemCount: 1,
+                        };
+                    },
+                };
+                const downloader = createDownloader(source, { output, tempDir: directory, taskAttempts: 2 });
+
+                await downloader.download();
+
+                expect(requests).toBe(2);
+                expect(info).toHaveBeenCalledWith(expect.stringContaining("Current Speed: 0.05 Mbps"));
+                expect(fs.readFileSync(output)).toEqual(payload);
+            });
+        } finally {
+            await close(server);
+        }
+    });
+
     test("writes versioned recovery metadata before publishing parsed", async () => {
         await withTempDirectory("minyami-task-metadata-", async (directory) => {
             const output = path.join(directory, "metadata.ts");

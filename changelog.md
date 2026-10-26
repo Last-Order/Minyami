@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+-   Progress logs now show `Current Speed` in Mbps over a rolling five-second window across all tracks, estimated
+    from completed chunks and their actual download intervals. Compressed responses use the encoded `Content-Length`
+    when available, falling back to chunk size otherwise. This replaces average successful chunks per second and
+    media-duration ratio.
+
 ## 6.0.0-beta.9
 
 ### Added

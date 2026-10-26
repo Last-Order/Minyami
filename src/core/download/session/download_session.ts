@@ -22,6 +22,7 @@ import { RetryingSourceHttpClient } from "../infrastructure/source_http_client";
 import { OutputSession } from "../output/output_session";
 import { TaskMetadata } from "../output/task_metadata";
 import { DownloaderConfig } from "../types";
+import { BandwidthMonitor } from "./bandwidth_monitor";
 import { DownloadEventHub } from "./event_hub";
 import { DownloadManifest } from "./manifest";
 
@@ -47,6 +48,7 @@ export class DownloadSession {
     private readonly encryptionHandlers = createDefaultEncryptionHandlerRegistry();
     private readonly executor: ChunkExecutor;
     private readonly manifest = new DownloadManifest();
+    private readonly bandwidth = new BandwidthMonitor();
     private readonly output: OutputSession;
     private readonly events = new DownloadEventHub();
     private readonly sourceContext: DownloadSourceContext;
@@ -266,6 +268,7 @@ export class DownloadSession {
 
     private createScheduler(): TaskScheduler<DownloadTask, ChunkResult> {
         logger.info(`Start downloading with ${this.config.threads} thread(s).`);
+        this.bandwidth.start();
         return new TaskScheduler<DownloadTask, ChunkResult>({
             concurrency: this.config.threads,
             execute: (task, attempt) =>
@@ -295,6 +298,7 @@ export class DownloadSession {
         // Output admission precedes accounting so a rejected duplicate cannot inflate progress.
         this.output.markTaskReady(task, result.outputPath);
         this.manifest.recordSuccessful(task);
+        this.bandwidth.recordChunk(result.transfer);
         const progress = this.manifest.snapshot;
         const chunkInfo: ChunkDownloadedInfo = {
             taskName: task.filename,
@@ -524,9 +528,10 @@ export class DownloadSession {
     }
 
     private logTaskSuccess(info: ChunkDownloadedInfo): void {
+        const bandwidth = `${((this.bandwidth.bytesPerSecond() * 8) / 1_000_000).toFixed(2)} Mbps`;
         if (this.source.continuous) {
             logger.info(
-                `Processing ${info.taskName} finished. (Completed: ${info.completedChunkCount} / ${info.totalChunkCount} discovered | Successful: ${info.successfulChunkCount} | Dropped: ${info.droppedChunkCount} | Avg successful speed: ${info.successfulChunksPerSecond} chunks/s or ${info.successfulDurationRatio}x)`,
+                `Processing ${info.taskName} finished. (Completed: ${info.completedChunkCount} / ${info.totalChunkCount} discovered | Successful: ${info.successfulChunkCount} | Dropped: ${info.droppedChunkCount} | Current Speed: ${bandwidth})`,
             );
             return;
         }
@@ -535,7 +540,7 @@ export class DownloadSession {
                 ? "100.00"
                 : ((info.completedChunkCount / info.totalChunkCount) * 100).toFixed(2);
         logger.info(
-            `Processing ${info.taskName} finished. (Completed: ${info.completedChunkCount} / ${info.totalChunkCount} or ${percentage}% | Successful: ${info.successfulChunkCount} | Dropped: ${info.droppedChunkCount} | Avg successful speed: ${info.successfulChunksPerSecond} chunks/s or ${info.successfulDurationRatio}x | Completion ETA: ${info.completionEta})`,
+            `Processing ${info.taskName} finished. (Completed: ${info.completedChunkCount} / ${info.totalChunkCount} or ${percentage}% | Successful: ${info.successfulChunkCount} | Dropped: ${info.droppedChunkCount} | Current Speed: ${bandwidth} | Completion ETA: ${info.completionEta})`,
         );
     }
 

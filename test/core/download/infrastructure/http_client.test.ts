@@ -30,6 +30,7 @@ describe("DownloadHttpClient", () => {
         { kind: "Buffer", data: Buffer.from("complete downloaded chunk") },
         { kind: "ArrayBuffer", data: Uint8Array.from(Buffer.from("complete downloaded chunk")).buffer },
     ])("publishes a $kind response only after its pending disk write succeeds", async ({ data }) => {
+        const clock = jest.spyOn(performance, "now").mockReturnValue(1_000);
         await withTempDirectory("minyami-http-pending-write-", async (directory) => {
             const destination = path.join(directory, "chunk.bin");
             const writeFile = fs.promises.writeFile;
@@ -42,18 +43,24 @@ describe("DownloadHttpClient", () => {
                 releaseWrite = resolve;
             });
             jest.spyOn(fs.promises, "writeFile").mockImplementationOnce(async (file, body, options) => {
+                clock.mockReturnValue(30_000);
                 await writeFile(file, "partial");
                 notifyWriteStarted();
                 await writeReleased;
                 await writeFile(file, body, options);
             });
             const client = new DownloadHttpClient(normalizeDownloaderConfig());
+            const adapter = respondWith(data);
             let settled = false;
-            const download = client
-                .download("https://example.com/chunk", destination, { adapter: respondWith(data) })
-                .then(() => {
-                    settled = true;
-                });
+            const transferPromise = client.download("https://example.com/chunk", destination, {
+                adapter: (config) => {
+                    clock.mockReturnValue(2_000);
+                    return adapter(config);
+                },
+            });
+            const download = transferPromise.then(() => {
+                settled = true;
+            });
 
             try {
                 await writeStarted;
@@ -67,6 +74,7 @@ describe("DownloadHttpClient", () => {
 
             expect(fs.readFileSync(destination, "utf8")).toBe("complete downloaded chunk");
             expect(fs.readdirSync(directory)).toEqual(["chunk.bin"]);
+            expect(await transferPromise).toEqual({ bytes: data.byteLength, startedAt: 1_000, completedAt: 2_000 });
         });
     });
 
@@ -136,12 +144,16 @@ describe("DownloadHttpClient", () => {
         }
     });
 
-    test("downloads gzip content using the decoded body rather than the encoded Content-Length", async () => {
+    test.each([true, false])("preserves gzip content and measures bytes with Content-Length=%s", async (hasLength) => {
         const resource = Buffer.from("media-chunk".repeat(100));
         const encoded = gzipSync(resource);
         const server = http.createServer((_request, response) => {
             response.setHeader("content-encoding", "gzip");
-            response.setHeader("content-length", encoded.length);
+            if (hasLength) {
+                response.setHeader("content-length", encoded.length);
+            } else {
+                response.setHeader("transfer-encoding", "chunked");
+            }
             response.end(encoded);
         });
         const baseUrl = await listen(server);
@@ -151,9 +163,10 @@ describe("DownloadHttpClient", () => {
                 const destination = path.join(directory, "chunk.bin");
                 const client = new DownloadHttpClient(normalizeDownloaderConfig());
 
-                await client.download(`${baseUrl}/chunk`, destination);
+                const transfer = await client.download(`${baseUrl}/chunk`, destination);
 
                 expect(fs.readFileSync(destination)).toEqual(resource);
+                expect(transfer.bytes).toBe(hasLength ? encoded.length : resource.length);
                 expect(fs.readdirSync(directory)).toEqual(["chunk.bin"]);
             });
         } finally {

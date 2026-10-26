@@ -17,6 +17,12 @@ export interface DownloadRequestConfig extends AxiosRequestConfig {
     readonly byteRange?: DownloadByteRange;
 }
 
+export interface DownloadTransfer {
+    readonly bytes: number;
+    readonly startedAt: number;
+    readonly completedAt: number;
+}
+
 export class DownloadHttpClient {
     readonly axios: AxiosInstance;
     readonly agent: Agent | undefined;
@@ -66,11 +72,12 @@ export class DownloadHttpClient {
         });
     }
 
-    async download(url: string, destination: string, options: DownloadRequestConfig = {}): Promise<void> {
+    async download(url: string, destination: string, options: DownloadRequestConfig = {}): Promise<DownloadTransfer> {
         const { byteRange, ...requestOptions } = options;
         const timeout = requestOptions.timeout || 60000;
         // Keep a local timeout guard because some adapters do not abort stalled response bodies consistently.
         const abortScope = createTimedAbortScope(timeout, requestOptions.signal ?? getOptionalAbortSignal());
+        const startedAt = performance.now();
 
         try {
             const response = await this.request<ArrayBuffer>(url, {
@@ -87,6 +94,8 @@ export class DownloadHttpClient {
                     : {}),
                 signal: abortScope.signal,
             });
+            // Disk writes and decryption must not extend the measured network transfer interval.
+            const completedAt = performance.now();
             // The Node adapter already returns a Buffer; reuse it rather than copying a complete chunk.
             const body = Buffer.isBuffer(response.data) ? response.data : Buffer.from(response.data);
             // Empty chunks must retry instead of being admitted as successful output.
@@ -109,6 +118,19 @@ export class DownloadHttpClient {
             // Cancellation may arrive during asynchronous disk I/O, before the complete file is published.
             abortScope.signal.throwIfAborted();
             await fs.promises.rename(temporaryPath, destination);
+            const contentLength = response.headers["content-length"];
+            const encodedBytes =
+                typeof contentLength === "number"
+                    ? contentLength
+                    : typeof contentLength === "string" && /^\d+$/.test(contentLength)
+                      ? Number(contentLength)
+                      : NaN;
+            // Content-Length survives Axios decompression; without it, the decoded chunk size is an estimate.
+            return {
+                bytes: Number.isSafeInteger(encodedBytes) && encodedBytes > 0 ? encodedBytes : body.length,
+                startedAt,
+                completedAt,
+            };
         } finally {
             abortScope.dispose();
         }
