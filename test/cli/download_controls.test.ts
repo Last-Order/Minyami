@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, jest, test } from "@jest/globals";
 import { installCliDownloadControls } from "@/cli/download_controls";
+import { installCliDownloadProgress } from "@/cli/download_progress";
 import { DownloadController } from "@/core/download/downloader";
 import logger from "@/utils/log";
+
+jest.mock("@/cli/download_progress", () => ({ installCliDownloadProgress: jest.fn(() => () => undefined) }));
 
 afterEach(() => {
     jest.useRealTimers();
@@ -44,6 +47,23 @@ describe("CLI download controls", () => {
         dispose();
         jest.advanceTimersByTime(3000);
         expect(downloader.getSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    test("releases process controls even when terminal cleanup throws", () => {
+        jest.useFakeTimers();
+        const downloader = createController();
+        const previousListeners = process.listeners("SIGINT");
+        const error = new Error("terminal cleanup failed");
+        jest.mocked(installCliDownloadProgress).mockReturnValueOnce(() => {
+            throw error;
+        });
+        const dispose = installCliDownloadControls(downloader, true, true);
+
+        expect(() => dispose()).toThrow(error);
+        expect(process.listeners("SIGINT")).toEqual(previousListeners);
+        expect(jest.getTimerCount()).toBe(0);
+        jest.advanceTimersByTime(3000);
+        expect(downloader.getSnapshot).not.toHaveBeenCalled();
     });
 });
 

@@ -2,12 +2,20 @@ import chalk from "chalk";
 
 class ConsoleLogger {
     private isDebugMode = false;
+    private progressDisplayCount = 0;
+
     debug(message: unknown) {
         this.isDebugMode && console.debug(chalk.gray(`[MINYAMI][DEBUG] ${String(message)}`));
     }
 
     info(message: string) {
         console.info(chalk.white(`[MINYAMI][INFO] ${message}`));
+    }
+
+    progress(message: string) {
+        if (this.progressDisplayCount === 0) {
+            this.info(message);
+        }
     }
 
     warning(message: string) {
@@ -25,6 +33,18 @@ class ConsoleLogger {
 
     enableDebugMode() {
         this.isDebugMode = true;
+    }
+
+    /** An active CLI display replaces only chunk progress; ordinary logs retain their console routing. */
+    suppressProgressLogs(): () => void {
+        this.progressDisplayCount++;
+        let released = false;
+        return () => {
+            if (!released) {
+                released = true;
+                this.progressDisplayCount--;
+            }
+        };
     }
 }
 

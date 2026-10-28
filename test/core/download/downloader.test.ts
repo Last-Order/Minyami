@@ -56,6 +56,7 @@ describe("createDownloader", () => {
 
                 expect(requests).toBe(2);
                 expect(info).toHaveBeenCalledWith(expect.stringContaining("Current Speed: 0.05 Mbps"));
+                expect(downloader.getSnapshot().currentBytesPerSecond).toBe(6250);
                 expect(fs.readFileSync(output)).toEqual(payload);
             });
         } finally {

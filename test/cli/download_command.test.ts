@@ -11,7 +11,7 @@ import logger from "@/utils/log";
 jest.mock("@/core/archive");
 jest.mock("@/core/live");
 jest.mock("@/cli/config_file");
-jest.mock("@/cli/download_controls");
+jest.mock("@/cli/download_controls", () => ({ installCliDownloadControls: jest.fn() }));
 
 const controller: DownloadController = {
     download: jest.fn<DownloadController["download"]>(),

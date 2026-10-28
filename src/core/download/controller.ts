@@ -74,6 +74,8 @@ export interface DownloadSnapshot {
     successfulDuration: number;
     runningTaskCount: number;
     pendingTaskCount: number;
+    /** Estimated bytes/second over the last five seconds, based on completed chunk transfer intervals. */
+    currentBytesPerSecond?: number;
 }
 
 export interface SourceDownloadSnapshot extends DownloadSnapshot {

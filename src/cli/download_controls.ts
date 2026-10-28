@@ -1,5 +1,6 @@
 import { DownloadController } from "@/core/download/downloader";
 import logger from "@/utils/log";
+import { installCliDownloadProgress } from "./download_progress";
 
 /** Installs process-facing progress and signal controls around one CLI download. */
 export function installCliDownloadControls(
@@ -7,6 +8,7 @@ export function installCliDownloadControls(
     verbose: boolean,
     handleSignals: boolean,
 ): () => void {
+    const disposeProgress = installCliDownloadProgress(downloader, handleSignals);
     const verboseTimer = verbose
         ? setInterval(() => {
               const snapshot = downloader.getSnapshot();
@@ -35,5 +37,6 @@ export function installCliDownloadControls(
             clearInterval(verboseTimer);
         }
         process.off("SIGINT", onSigint);
+        disposeProgress();
     };
 }

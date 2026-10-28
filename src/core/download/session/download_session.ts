@@ -249,6 +249,7 @@ export class DownloadSession {
             successfulDuration: manifest.successfulDuration,
             runningTaskCount: this.scheduler?.runningCount ?? 0,
             pendingTaskCount: this.scheduler?.pendingCount ?? 0,
+            currentBytesPerSecond: this.bandwidth.bytesPerSecond(),
             totalChunkCount: manifest.totalChunkCount,
             isEnd: ["draining", "finalizing", "finished", "failed", "aborted"].includes(this.state.kind),
         };
@@ -530,7 +531,7 @@ export class DownloadSession {
     private logTaskSuccess(info: ChunkDownloadedInfo): void {
         const bandwidth = `${((this.bandwidth.bytesPerSecond() * 8) / 1_000_000).toFixed(2)} Mbps`;
         if (this.source.continuous) {
-            logger.info(
+            logger.progress(
                 `Processing ${info.taskName} finished. (Completed: ${info.completedChunkCount} / ${info.totalChunkCount} discovered | Successful: ${info.successfulChunkCount} | Dropped: ${info.droppedChunkCount} | Current Speed: ${bandwidth})`,
             );
             return;
@@ -539,7 +540,7 @@ export class DownloadSession {
             info.totalChunkCount === 0
                 ? "100.00"
                 : ((info.completedChunkCount / info.totalChunkCount) * 100).toFixed(2);
-        logger.info(
+        logger.progress(
             `Processing ${info.taskName} finished. (Completed: ${info.completedChunkCount} / ${info.totalChunkCount} or ${percentage}% | Successful: ${info.successfulChunkCount} | Dropped: ${info.droppedChunkCount} | Current Speed: ${bandwidth} | Completion ETA: ${info.completionEta})`,
         );
     }
