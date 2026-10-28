@@ -1,24 +1,15 @@
 # Changelog
 
-## 6.0.0-beta.9
+## 6.0.0-beta.10
 
 ### Changed
 
--   Replace per-chunk CLI progress logs with an Ink terminal dashboard showing aggregate progress across selected tracks,
-    Mbps, elapsed time, and archive ETA. Pack fields into fewer rows on wide terminals and wrap them as the window narrows.
-    Expand the progress bar to fill its line's remaining width. Preserve ordinary logs and retain line logs when stdout
-    or stderr is redirected or `TERM=dumb`. Use incremental rendering, skip unchanged frames and let Ink coordinate console
-    output to reduce flicker. Start after stream selection, then remove the dashboard and release terminal resources when
-    the session ends.
-
--   Progress logs now show `Current Speed` in Mbps over a rolling five-second window across all tracks, estimated
-    from completed chunks and their actual download intervals. Compressed responses use the encoded `Content-Length`
-    when available, falling back to chunk size otherwise. This replaces average successful chunks per second and
-    media-duration ratio.
-
-### Added
-
--   Expose the rolling transfer-rate estimate as optional `currentBytesPerSecond` in download snapshots for progress observers.
+-   Download progress now updates in place, showing overall progress, speed in Mbps, elapsed time, and estimated time
+    remaining for non-live downloads.
+-   The progress display adapts to terminal width and clears automatically when the download ends. Warnings, errors,
+    and output file locations remain visible.
+-   Download speed now reflects recent transfer activity.
+-   Redirected command output continues to use plain-text logs.
 
 ## 6.0.0-beta.9
 
