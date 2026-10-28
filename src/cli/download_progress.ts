@@ -70,10 +70,11 @@ export function installCliDownloadProgress(downloader: DownloadController, live:
         downloader.off("critical-error", dispose);
         if (instance) {
             try {
-                refresh();
+                // Replace pending frames as well, so Ink's final flush cannot restore the dashboard on exit.
+                instance.rerender(null);
             } finally {
                 resumeProgressLogs?.();
-                // Ink flushes the final frame, restores console output and releases its terminal resources.
+                // Ink flushes the empty view, restores console output and releases its terminal resources.
                 instance.unmount();
             }
         }

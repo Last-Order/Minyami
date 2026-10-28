@@ -116,7 +116,7 @@ describe("CLI progress display", () => {
     });
 
     test.each(["finished", "aborted", "failed"] as const)(
-        "leaves a final %s frame and releases resources",
+        "removes the dashboard and releases resources after the session is %s",
         (status) => {
             const { controller, events } = createController();
             const previousResizeListeners = process.stdout.listenerCount("resize");
@@ -126,14 +126,11 @@ describe("CLI progress display", () => {
             jest.mocked(controller.getSnapshot).mockReturnValue(createSnapshot({ status }));
             events.emit(status === "failed" ? "critical-error" : "finished");
 
-            expect(instance.rerender).toHaveBeenLastCalledWith(
-                expect.objectContaining({
-                    props: expect.objectContaining({
-                        children: expect.stringContaining(status[0].toUpperCase() + status.slice(1)),
-                    }),
-                }),
-            );
+            expect(instance.rerender).toHaveBeenLastCalledWith(null);
             expect(instance.unmount).toHaveBeenCalledTimes(1);
+            expect(instance.rerender.mock.invocationCallOrder.at(-1)).toBeLessThan(
+                instance.unmount.mock.invocationCallOrder[0],
+            );
             expect(events.eventNames()).toEqual([]);
             expect(process.stdout.listenerCount("resize")).toBe(previousResizeListeners);
             const frameCount = instance.rerender.mock.calls.length;
