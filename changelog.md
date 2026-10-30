@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.0.0-beta.11
+
+### Fixed
+
+-   Prevent `--help` descriptions from being truncated by upgrading erii to 3.0.0-beta.4. Help now wraps to the terminal
+    width and uses a stacked layout in narrow terminals. ([#155](https://github.com/Last-Order/Minyami/issues/155))
+
 ## 6.0.0-beta.10
 
 ### Changed
