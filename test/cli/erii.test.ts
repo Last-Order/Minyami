@@ -1,3 +1,4 @@
+import "../helpers/cli_rendering";
 import { afterEach, beforeEach, describe, expect, jest, test } from "@jest/globals";
 import { Erii, type TypedCommandHandler } from "erii";
 import type { MinyamiCliSchema } from "@/cli/schema";
@@ -5,9 +6,6 @@ import type { MinyamiCliSchema } from "@/cli/schema";
 interface TestCliSchema extends MinyamiCliSchema {
     commands: MinyamiCliSchema["commands"] & { other: {} };
 }
-
-// Keep parsing real; only terminal rendering needs a stub for clui's legacy octal escapes in Jest.
-jest.mock("clui", () => ({}));
 
 /** Dependency contracts: changes here require reviewing CLI compatibility before upgrading Erii. */
 describe("Erii compatibility contracts", () => {

@@ -1,23 +1,9 @@
+import "../helpers/cli_rendering";
 import { afterEach, beforeEach, describe, expect, jest, test } from "@jest/globals";
 import { Erii } from "erii";
 import { CliOptions, normalizeCliArguments } from "@/cli/arguments";
 import { configureCli } from "@/cli/program";
 import type { MinyamiCliSchema } from "@/cli/schema";
-
-// Only stub terminal layout: clui uses legacy escapes rejected by Jest's strict wrapper.
-jest.mock("clui", () => ({
-    Line: class {
-        padding() {
-            return this;
-        }
-        column() {
-            return this;
-        }
-        output() {
-            return this;
-        }
-    },
-}));
 
 describe("CLI command parsing", () => {
     const originalArgv = process.argv;
