@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.0.0-beta.12
+
+### Fixed
+
+-   Clear the download progress panel before merging or muxing starts, instead of leaving it visible until finalization ends.
+
 ## 6.0.0-beta.11
 
 ### Fixed

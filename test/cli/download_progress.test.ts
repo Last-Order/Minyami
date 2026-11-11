@@ -115,6 +115,43 @@ describe("CLI progress display", () => {
         );
     });
 
+    test.each([false, true])("removes the dashboard before merging or muxing (live: %s)", (live) => {
+        const { controller, events } = createController();
+        const previousResizeListeners = process.stdout.listenerCount("resize");
+        const info = jest.spyOn(console, "info").mockImplementation(() => undefined);
+        dispose = installCliDownloadProgress(controller, live);
+        events.emit("parsed");
+        jest.mocked(controller.getSnapshot).mockReturnValue(
+            createSnapshot({
+                status: "merging",
+                completedChunkCount: 10,
+                successfulChunkCount: 9,
+                runningTaskCount: 0,
+                pendingTaskCount: 0,
+                isEnd: true,
+            }),
+        );
+        events.emit("downloaded");
+
+        expect(instance.rerender).toHaveBeenLastCalledWith(null);
+        expect(instance.unmount).toHaveBeenCalledTimes(1);
+        expect(events.eventNames()).toEqual([]);
+        expect(jest.getTimerCount()).toBe(0);
+        expect(process.stdout.listenerCount("resize")).toBe(previousResizeListeners);
+        const frameCount = instance.rerender.mock.calls.length;
+        jest.advanceTimersByTime(1000);
+        events.emit("parsed");
+        events.emit("finished");
+        dispose();
+        expect(render).toHaveBeenCalledTimes(1);
+        expect(instance.rerender).toHaveBeenCalledTimes(frameCount);
+        expect(instance.unmount).toHaveBeenCalledTimes(1);
+        logger.info("Muxing audio and video tracks...");
+        logger.progress("plain progress restored");
+        expect(info).toHaveBeenCalledWith(expect.stringContaining("Muxing audio and video tracks..."));
+        expect(info).toHaveBeenCalledWith(expect.stringContaining("plain progress restored"));
+    });
+
     test.each(["finished", "aborted", "failed"] as const)(
         "removes the dashboard and releases resources after the session is %s",
         (status) => {

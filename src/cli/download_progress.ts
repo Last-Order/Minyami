@@ -65,7 +65,7 @@ export function installCliDownloadProgress(downloader: DownloadController, live:
         }
         terminal.off("resize", refresh);
         downloader.off("parsed", start);
-        downloader.off("downloaded", refresh);
+        downloader.off("downloaded", dispose);
         downloader.off("finished", dispose);
         downloader.off("critical-error", dispose);
         if (instance) {
@@ -80,7 +80,8 @@ export function installCliDownloadProgress(downloader: DownloadController, live:
         }
     };
     downloader.on("parsed", start);
-    downloader.on("downloaded", refresh);
+    // Task progress ends before output merging and muxing begin.
+    downloader.on("downloaded", dispose);
     downloader.on("finished", dispose);
     downloader.on("critical-error", dispose);
     return dispose;
