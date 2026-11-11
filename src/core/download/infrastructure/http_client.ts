@@ -1,6 +1,6 @@
 import * as fs from "fs";
+import type { Agent } from "http";
 import { URL } from "url";
-import { Agent } from "agent-base";
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import UA from "@/constants/ua";
 import { DownloadByteRange } from "@/core/source/types";

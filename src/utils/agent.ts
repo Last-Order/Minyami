@@ -1,6 +1,6 @@
 import { execFile } from "child_process";
+import type { Agent } from "http";
 import * as path from "path";
-import { Agent } from "agent-base";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import logger from "./log";

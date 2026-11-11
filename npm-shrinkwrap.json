@@ -9,7 +9,6 @@
             "version": "6.0.0-beta.12",
             "license": "GPL-3.0-or-later",
             "dependencies": {
-                "agent-base": "^9.0.0",
                 "axios": "^1.19.0",
                 "chalk": "^6.0.0",
                 "erii": "^3.0.0-beta.4",
@@ -24,7 +23,6 @@
             },
             "devDependencies": {
                 "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
-                "@types/jest": "^30.0.0",
                 "@types/node": "^24.13.3",
                 "@types/prompts": "^2.4.9",
                 "@types/react": "^19.3.0",
@@ -2117,17 +2115,6 @@
             "license": "MIT",
             "dependencies": {
                 "@types/istanbul-lib-report": "*"
-            }
-        },
-        "node_modules/@types/jest": {
-            "version": "30.0.0",
-            "resolved": "https://registry.npmjs.org/@types/jest/-/jest-30.0.0.tgz",
-            "integrity": "sha512-XTYugzhuwqWjws0CVz8QpM36+T+Dz5mTEBKhNs/esGLnCIlGdRy+Dq78NRjd7ls7r8BC8ZRMOrKlkO1hU0JOwA==",
-            "dev": true,
-            "license": "MIT",
-            "dependencies": {
-                "expect": "^30.0.0",
-                "pretty-format": "^30.0.0"
             }
         },
         "node_modules/@types/node": {
@@ -10309,16 +10296,6 @@
             "dev": true,
             "requires": {
                 "@types/istanbul-lib-report": "*"
-            }
-        },
-        "@types/jest": {
-            "version": "30.0.0",
-            "resolved": "https://registry.npmjs.org/@types/jest/-/jest-30.0.0.tgz",
-            "integrity": "sha512-XTYugzhuwqWjws0CVz8QpM36+T+Dz5mTEBKhNs/esGLnCIlGdRy+Dq78NRjd7ls7r8BC8ZRMOrKlkO1hU0JOwA==",
-            "dev": true,
-            "requires": {
-                "expect": "^30.0.0",
-                "pretty-format": "^30.0.0"
             }
         },
         "@types/node": {

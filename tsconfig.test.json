@@ -4,7 +4,7 @@
         "module": "commonjs",
         "rootDir": ".",
         "noEmit": true,
-        "types": ["node", "jest"]
+        "types": ["node"]
     },
     "include": ["src/**/*", "test/**/*.ts"]
 }
