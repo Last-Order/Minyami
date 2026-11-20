@@ -1,15 +1,15 @@
-import chalk from "chalk";
+import { styleText } from "node:util";
 
 class ConsoleLogger {
     private isDebugMode = false;
     private progressDisplayCount = 0;
 
     debug(message: unknown) {
-        this.isDebugMode && console.debug(chalk.gray(`[MINYAMI][DEBUG] ${String(message)}`));
+        this.isDebugMode && console.debug(styleText("gray", `[MINYAMI][DEBUG] ${String(message)}`));
     }
 
     info(message: string) {
-        console.info(chalk.white(`[MINYAMI][INFO] ${message}`));
+        console.info(styleText("white", `[MINYAMI][INFO] ${message}`));
     }
 
     progress(message: string) {
@@ -19,7 +19,7 @@ class ConsoleLogger {
     }
 
     warning(message: string) {
-        console.warn(chalk.yellow(`[MINYAMI][WARN] ${message}`));
+        console.warn(styleText("yellow", `[MINYAMI][WARN] ${message}`, { stream: process.stderr }));
     }
 
     error(message: string, error?: Error) {
@@ -28,7 +28,7 @@ class ConsoleLogger {
         }
         // Fatal errors must retain a concise cause outside debug mode; only the stack trace is debug-only.
         const reason = error?.message ? ` ${error.message}` : "";
-        console.info(chalk.red(`[MINYAMI][ERROR] ${message}${reason}`));
+        console.info(styleText("red", `[MINYAMI][ERROR] ${message}${reason}`));
     }
 
     enableDebugMode() {

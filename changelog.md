@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+-   Use Node.js terminal color detection for logs. Warning colors now follow stderr.
+
 ## 6.0.0-beta.12
 
 ### Fixed
