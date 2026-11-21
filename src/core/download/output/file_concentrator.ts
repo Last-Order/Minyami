@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { DownloadOutputLayout, DownloadOutputPrefix } from "@/core/source/types";
+import { DownloadOutputLayout, DownloadOutputPrefix, DownloadOutputTransform } from "@/core/source/types";
 import logger from "@/utils/log";
 
 // Large, finite buffers reduce merge I/O coordination overhead while keeping queued data bounded.
@@ -13,6 +13,7 @@ interface FileConcentratorParams {
     deleteAfterWritten?: boolean;
     /** Concatenate across dropped indices instead of starting a new output run. */
     ignoreBreakpoints?: boolean;
+    createOutputTransform?: () => DownloadOutputTransform;
 }
 
 /** A terminal successful task result. The index is its discovery/merge order. */
@@ -82,6 +83,8 @@ class FileConcentrator {
     private readonly deleteAfterWritten: boolean;
 
     private readonly ignoreBreakpoints: boolean;
+    private readonly createOutputTransform?: () => DownloadOutputTransform;
+    private transform?: DownloadOutputTransform;
 
     /** Actual staging/final paths, recorded only after their streams open successfully. */
     private readonly outputFilePaths: string[] = [];
@@ -120,13 +123,19 @@ class FileConcentrator {
     /** Caches finalization so repeated callers observe the same completion or failure. */
     private finalization?: Promise<void>;
 
-    constructor({ outputPath, deleteAfterWritten = false, ignoreBreakpoints = false }: FileConcentratorParams) {
+    constructor({
+        outputPath,
+        deleteAfterWritten = false,
+        ignoreBreakpoints = false,
+        createOutputTransform,
+    }: FileConcentratorParams) {
         const parsedOutputPath = path.parse(outputPath);
         this.outputFilename = path.join(parsedOutputPath.dir, parsedOutputPath.name);
         this.outputFileExt = parsedOutputPath.ext;
         this.requestedOutputPath = outputPath;
         this.deleteAfterWritten = deleteAfterWritten;
         this.ignoreBreakpoints = ignoreBreakpoints;
+        this.createOutputTransform = createOutputTransform;
     }
 
     public markTaskReady(task: ReadyTask): void {
@@ -236,6 +245,11 @@ class FileConcentrator {
                 identity: replayablePrefix.identity,
                 data,
             });
+            if (this.createOutputTransform) {
+                // Transformed tracks consume the cached initialization as context for later fragments.
+                await this.deleteInput(filePath);
+                return;
+            }
         }
         if (layout?.startsNewRun && this.writeStream) {
             await this.closeWriteStream();
@@ -248,14 +262,28 @@ class FileConcentrator {
             this.splitBeforeNextFile = false;
         }
         // Leading drops likewise produce no empty numbered staging files.
-        const output = this.writeStream ?? (await this.createNextWriteStream());
-        await this.appendRequiredPrefixes(layout?.requiredPrefixes ?? [], output);
-        await this.appendFile(filePath, output);
+        if (!this.writeStream) {
+            this.transform = this.createOutputTransform?.();
+            await this.createNextWriteStream();
+        }
+        const output = this.writeStream!;
+        const requiredPrefixes = layout?.requiredPrefixes ?? [];
+        if (this.transform) {
+            const prefixes = requiredPrefixes.map((prefix) => this.getPrefixData(prefix));
+            const bytes = this.transform(await fs.promises.readFile(filePath), prefixes);
+            await this.appendBuffer(bytes, output);
+        } else {
+            await this.appendRequiredPrefixes(requiredPrefixes, output);
+            await this.appendFile(filePath, output);
+        }
         if (replayablePrefix) {
             this.emittedPrefixes.add(prefixKey(replayablePrefix));
         }
         this.hasWrittenFile = true;
+        await this.deleteInput(filePath);
+    }
 
+    private async deleteInput(filePath: string): Promise<void> {
         if (this.deleteAfterWritten) {
             try {
                 await fs.promises.unlink(filePath);
@@ -281,13 +309,17 @@ class FileConcentrator {
             throw new Error("Required output prefixes are not present in the current output run.");
         }
         for (const prefix of missing) {
-            const cached = this.replayablePrefixes.get(prefix.slot);
-            if (!cached || cached.identity !== prefix.identity) {
-                throw new Error(`Required output prefix is unavailable for slot ${prefix.slot}.`);
-            }
-            await this.appendBuffer(cached.data, output);
+            await this.appendBuffer(this.getPrefixData(prefix), output);
             this.emittedPrefixes.add(prefixKey(prefix));
         }
+    }
+
+    private getPrefixData(prefix: DownloadOutputPrefix): Buffer {
+        const cached = this.replayablePrefixes.get(prefix.slot);
+        if (!cached || cached.identity !== prefix.identity) {
+            throw new Error(`Required output prefix is unavailable for slot ${prefix.slot}.`);
+        }
+        return cached.data;
     }
 
     private async appendFile(filePath: string, output: fs.WriteStream): Promise<void> {

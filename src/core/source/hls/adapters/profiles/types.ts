@@ -1,7 +1,12 @@
 import { MediaContainer } from "@/core/media_container";
 import { HLSMediaPlaylist, HLSSegment } from "@/core/source/hls/playlist/parser";
 import { HLSExplicitKey } from "@/core/source/hls/types";
-import { DownloadItem, DownloadSourceContext, DownloadSourceHttpClient } from "@/core/source/types";
+import {
+    DownloadItem,
+    DownloadOutputTransform,
+    DownloadSourceContext,
+    DownloadSourceHttpClient,
+} from "@/core/source/types";
 
 export const SAMPLE_AES_EXPLICIT_KEY_REQUIRED = "This HLS content is protected. Provide an explicit decryption key.";
 
@@ -14,6 +19,7 @@ export interface HLSProfilePrepareOptions {
 export interface HLSProfilePlan {
     readonly id: string;
     readonly container: MediaContainer;
+    readonly createOutputTransform?: () => DownloadOutputTransform;
 
     /** Registers every key referenced by the effective snapshot before any corresponding item is yielded. */
     ensureKeys(playlist: HLSMediaPlaylist, context: DownloadSourceContext): Promise<void>;

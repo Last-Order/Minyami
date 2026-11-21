@@ -14,6 +14,7 @@ export type {
     StreamCatalog,
     StreamOption,
     StreamSelector,
+    SubtitleTrack,
     TrackSelection,
     VideoTrack,
 } from "./core/source/stream_selection";
@@ -27,6 +28,7 @@ export type {
     DownloadItemNamingContext,
     DownloadOutputLayout,
     DownloadOutputPrefix,
+    DownloadOutputTransform,
     DownloadSource,
     DownloadSourceContext,
     DownloadSourceHttpClient,
@@ -53,7 +55,13 @@ export type {
     TrackArtifact,
 } from "./core/download/controller";
 export type { DownloaderConfig } from "./core/download/types";
-export { AAC_CONTAINER, MATROSKA_CONTAINER, MP4_CONTAINER, MPEG_TS_CONTAINER } from "./core/media_container";
+export {
+    AAC_CONTAINER,
+    MATROSKA_CONTAINER,
+    MP4_CONTAINER,
+    MPEG_TS_CONTAINER,
+    WEBVTT_CONTAINER,
+} from "./core/media_container";
 export type { MediaContainer } from "./core/media_container";
 export { FFmpegMuxer, MkvmergeMuxer } from "./core/muxer";
 export type { ExecutableRunner, Muxer, MuxInput, MuxRequest } from "./core/muxer";

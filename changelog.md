@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+-   Download and mux selected HLS WebVTT subtitle renditions into one MKV using FFmpeg. Interactive variant selection
+    checks all compatible subtitle tracks by default. Library selectors can choose subtitle tracks from the same option.
+
 ### Changed
 
 -   Use Node.js terminal color detection for logs. Warning colors now follow stderr.

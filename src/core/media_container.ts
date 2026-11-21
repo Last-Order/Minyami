@@ -10,6 +10,7 @@ export const MPEG_TS_CONTAINER = Object.freeze<MediaContainer>({ name: "MPEG-TS"
 export const AAC_CONTAINER = Object.freeze<MediaContainer>({ name: "AAC", extension: "aac" });
 export const MATROSKA_CONTAINER = Object.freeze<MediaContainer>({ name: "Matroska", extension: "mkv" });
 export const MP4_CONTAINER = Object.freeze<MediaContainer>({ name: "MP4", extension: "mp4" });
+export const WEBVTT_CONTAINER = Object.freeze<MediaContainer>({ name: "WebVTT", extension: "vtt" });
 
 const COMMON_VIDEO_EXTENSIONS = new Set([
     "3g2",

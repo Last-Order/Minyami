@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, jest, test } from "@jest/globals";
 import prompts from "prompts";
 import { selectStreamInteractively } from "@/cli/interactive_stream_selector";
-import { AudioTrack, StreamCatalog, VideoTrack } from "@/core/source/stream_selection";
+import { AudioTrack, StreamCatalog, SubtitleTrack, VideoTrack } from "@/core/source/stream_selection";
 import logger from "@/utils/log";
 
 jest.mock("prompts");
@@ -128,6 +128,42 @@ describe("interactive stream selector", () => {
         expect(warning).toHaveBeenCalledWith(
             "Interactive stream selection is unavailable. Selecting the highest-bandwidth option.",
         );
+    });
+
+    test("checks every compatible subtitle by default and accepts a subset", async () => {
+        setTTY(true);
+        const english: SubtitleTrack = { id: "en", type: "subtitle", name: "English", language: "en" };
+        const japanese: SubtitleTrack = {
+            id: "ja",
+            type: "subtitle",
+            name: "Japanese",
+            language: "ja",
+            isForced: true,
+        };
+        const german: SubtitleTrack = { id: "de", type: "subtitle", name: "German", language: "de" };
+        const subtitles: StreamCatalog = {
+            tracks: [lowVideo, highVideo, english, japanese, german],
+            options: [
+                { id: "low", tracks: [lowVideo, german], bandwidth: 800000 },
+                { id: "high", tracks: [highVideo, english, japanese], bandwidth: 2400000 },
+            ],
+        };
+        promptMock.mockImplementation(async (question) => {
+            const prompt = question as { name: string; choices: Array<{ value: unknown; selected?: boolean }> };
+            if (prompt.name === "video") {
+                return { video: prompt.choices[0].value };
+            }
+            expect(prompt).toMatchObject({ name: "subtitles", type: "multiselect" });
+            expect(prompt.choices.map(({ value, selected }) => [value, selected])).toEqual([
+                [english, true],
+                [japanese, true],
+            ]);
+            return { subtitles: [japanese] };
+        });
+
+        await expect(selectStreamInteractively(subtitles)).resolves.toEqual([highVideo, japanese]);
+        setTTY(false);
+        await expect(selectStreamInteractively(subtitles)).resolves.toEqual([highVideo]);
     });
 
     test("selects a sole option without prompting", async () => {

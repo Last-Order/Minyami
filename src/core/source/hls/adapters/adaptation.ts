@@ -1,6 +1,7 @@
 import { HLSMediaPlaylist } from "../playlist/parser";
 import { HLSAdaptationOptions, HLSAdaptationPlan } from "../types";
 import { selectHLSProfile } from "./profiles/selector";
+import { webVttHLSProfile } from "./profiles/webvtt";
 import { hlsSiteAdapters } from "./sites/registry";
 
 export interface PreparedHLSAdaptation {
@@ -9,13 +10,13 @@ export interface PreparedHLSAdaptation {
 }
 
 export async function prepareHLSAdaptation(options: HLSAdaptationOptions): Promise<PreparedHLSAdaptation> {
-    const siteAdapter = hlsSiteAdapters.find((adapter) => adapter.matches(options));
+    const siteAdapter = options.subtitles ? undefined : hlsSiteAdapters.find((adapter) => adapter.matches(options));
     const sitePlan = siteAdapter ? await siteAdapter.prepare(options) : {};
     // The site is selected once, while its segment transform is reused for every refreshed snapshot.
     const adaptPlaylist = (playlist: HLSMediaPlaylist): HLSMediaPlaylist =>
         sitePlan.adaptSegments ? { ...playlist, segments: sitePlan.adaptSegments(playlist.segments) } : playlist;
     const playlist = adaptPlaylist(options.playlist);
-    const profile = await selectHLSProfile(playlist, options.http);
+    const profile = options.subtitles ? webVttHLSProfile : await selectHLSProfile(playlist, options.http);
 
     // The profile plan is immutable for the cursor and owns all later key and item conversion.
     const profilePlan = await profile.prepare({
@@ -34,6 +35,7 @@ export async function prepareHLSAdaptation(options: HLSAdaptationOptions): Promi
             adaptPlaylist,
             ensureKeys: profilePlan.ensureKeys,
             toDownloadItem: profilePlan.toDownloadItem,
+            ...(profilePlan.createOutputTransform ? { createOutputTransform: profilePlan.createOutputTransform } : {}),
         },
     };
 }

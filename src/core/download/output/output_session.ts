@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
-import { createContainerOutputPath, MediaContainer } from "@/core/media_container";
+import { createContainerOutputPath, MATROSKA_CONTAINER, MediaContainer } from "@/core/media_container";
 import { Muxer, MuxInput, selectAvailableMuxer } from "@/core/muxer";
 import { MediaTrack } from "@/core/source/stream_selection";
 import { DownloadTrackId, SourceTrack } from "@/core/source/types";
@@ -72,11 +72,22 @@ export class OutputSession {
                     : new FileConcentrator({
                           outputPath: path.join(this.tempPath, path.basename(plannedOutputPath)),
                           deleteAfterWritten: !this.config.keepTemporaryFiles,
+                          createOutputTransform: track.createOutputTransform,
                       }),
                 outputPaths: [],
             });
         }
-        // Publish the complete output plan before filesystem creation so failure snapshots remain coherent.
+        // Publish the complete output plan before validation and filesystem creation for failure snapshots.
+        if (metadata.some(({ mediaTrack }) => mediaTrack.type === "subtitle")) {
+            if (this.config.noMerge) {
+                throw new Error(
+                    "Selected subtitle tracks require MKV muxing. Enable merging or deselect the subtitles.",
+                );
+            }
+            if (!metadata.some(({ mediaTrack }) => mediaTrack.type !== "subtitle")) {
+                throw new Error("Select an audio or video track to mux with the selected subtitles.");
+            }
+        }
         for (const track of this.tracks.values()) {
             fs.mkdirSync(track.tempPath);
         }
@@ -185,19 +196,41 @@ export class OutputSession {
     }
 
     private async muxTrackArtifacts(artifacts: readonly TrackArtifact[]): Promise<void> {
+        const requiredContainer = [...this.tracks.values()].some(
+            ({ metadata }) => metadata.mediaTrack.type === "subtitle",
+        )
+            ? MATROSKA_CONTAINER
+            : undefined;
         const hasVideo = artifacts.some((artifact) => artifact.mediaTrack.type === "video");
         const hasAudio = artifacts.some((artifact) => artifact.mediaTrack.type === "audio");
-        if (!hasVideo || !hasAudio) {
+        if (!requiredContainer && (!hasVideo || !hasAudio)) {
             return;
+        }
+        if (requiredContainer && artifacts.length !== this.tracks.size) {
+            throw new Error("Cannot mux subtitles because a selected track produced no output.");
         }
         if (artifacts.some((artifact) => artifact.outputPaths.length !== 1)) {
             // Split runs do not carry enough timing information to pair cross-track gaps safely.
+            if (requiredContainer) {
+                throw new Error("Cannot mux subtitles because a selected track was split into multiple output files.");
+            }
             logger.warning("Skip muxing because at least one track was split into multiple output files.");
             return;
         }
 
-        const muxer = await selectAvailableMuxer(this.config.muxers);
+        const candidates = requiredContainer
+            ? this.config.muxers.filter(
+                  ({ outputContainer }) => outputContainer.extension === requiredContainer.extension,
+              )
+            : this.config.muxers;
+        const preserveTimestamps = requiredContainer !== undefined;
+        const muxer = await selectAvailableMuxer(candidates, preserveTimestamps);
         if (!muxer) {
+            if (requiredContainer) {
+                throw new Error(
+                    "MKV subtitle muxing requires FFmpeg on PATH or a configured MKV muxer that preserves timestamps.",
+                );
+            }
             logger.warning("No available muxer was found. Keep the independently merged track files.");
             return;
         }
@@ -211,7 +244,7 @@ export class OutputSession {
             path.join(this.tempPath, path.basename(this.outputBasePath)),
             muxer.outputContainer,
         );
-        logger.info(`Muxing audio and video tracks with ${muxer.name}...`);
+        logger.info(`Muxing tracks with ${muxer.name}...`);
         try {
             await muxer.mux({ inputs, outputPath });
             const output = await fs.promises.stat(outputPath).catch((error: NodeJS.ErrnoException) => {

@@ -53,6 +53,7 @@ export class HLSMediaPlaylistCursor {
             playlist: this.playlist,
             explicitKeys: this.options.explicitKeys,
             http: context.http,
+            subtitles: this.options.mediaTrack.type === "subtitle",
         });
         this.playlist = adaptation.playlist;
         this.adaptationPlan = adaptation.plan;
@@ -67,6 +68,9 @@ export class HLSMediaPlaylistCursor {
                 sourcePath: this.options.sourcePath,
                 container: this.adaptationPlan.container,
                 ...(this.adaptationPlan.itemNamer ? { itemNamer: this.adaptationPlan.itemNamer } : {}),
+                ...(this.adaptationPlan.createOutputTransform
+                    ? { createOutputTransform: this.adaptationPlan.createOutputTransform }
+                    : {}),
                 itemTimeout: this.continuous ? this.followItemTimeout : undefined,
             },
         };

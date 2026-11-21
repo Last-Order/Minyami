@@ -17,6 +17,8 @@ export interface MuxRequest {
 export interface Muxer {
     readonly name: string;
     readonly outputContainer: MediaContainer;
+    /** Whether this muxer keeps inputs on their shared presentation timeline. */
+    readonly preservesTimestamps?: boolean;
     isAvailable(): Promise<boolean>;
     mux(request: MuxRequest): Promise<void>;
 }

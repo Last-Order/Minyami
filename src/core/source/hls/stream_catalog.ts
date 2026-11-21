@@ -1,14 +1,22 @@
-import { AudioTrack, freezeStreamCatalog, MediaTrack, StreamOption, VideoTrack } from "../stream_selection";
+import {
+    AudioTrack,
+    freezeStreamCatalog,
+    MediaTrack,
+    StreamOption,
+    SubtitleTrack,
+    VideoTrack,
+} from "../stream_selection";
 import { HLSAudioRendition, HLSMasterPlaylist, HLSVariant } from "./playlist/models";
 import { HLSMediaTrackPlan, HLSStreamCatalogPlan } from "./types";
 
 /** Normalizes HLS linkage while retaining playlist URLs only in the private plan. */
-export function createHLSStreamCatalogPlan(master: HLSMasterPlaylist): HLSStreamCatalogPlan {
+export function createHLSStreamCatalogPlan(master: HLSMasterPlaylist, includeSubtitles = true): HLSStreamCatalogPlan {
     const tracks: MediaTrack[] = [];
     const options: StreamOption[] = [];
     const mediaTracks = new Map<MediaTrack, HLSMediaTrackPlan>();
     const externalAudioTracks = new Map<HLSAudioRendition, AudioTrack>();
     const groups = groupAudioRenditions(master.audioRenditions);
+    const subtitleGroups = new Map<string, SubtitleTrack[]>();
 
     master.variants.forEach((variant, variantIndex) => {
         const primary = createPrimaryTrack(variant, variantIndex);
@@ -34,6 +42,31 @@ export function createHLSStreamCatalogPlan(master: HLSMasterPlaylist): HLSStream
                 }
                 optionTracks.push(audioTrack);
             }
+        }
+
+        if (includeSubtitles && variant.subtitleGroupId) {
+            let subtitles = subtitleGroups.get(variant.subtitleGroupId);
+            if (!subtitles) {
+                subtitles = [];
+                for (const [index, rendition] of (master.subtitleRenditions ?? []).entries()) {
+                    if (rendition.groupId !== variant.subtitleGroupId) {
+                        continue;
+                    }
+                    const track: SubtitleTrack = {
+                        id: `subtitle-${index + 1}`,
+                        type: "subtitle",
+                        name: rendition.name,
+                        ...(rendition.language ? { language: rendition.language } : {}),
+                        ...(rendition.characteristics ? { role: rendition.characteristics } : {}),
+                        isDefault: rendition.isDefault,
+                        isForced: rendition.isForced,
+                    };
+                    subtitles.push(track);
+                    addTrack(track, rendition.url);
+                }
+                subtitleGroups.set(variant.subtitleGroupId, subtitles);
+            }
+            optionTracks.push(...subtitles);
         }
 
         options.push({
@@ -101,7 +134,8 @@ function isAudioOnlyVariant(variant: HLSVariant, codecs?: readonly string[]): bo
     if (variant.resolution || !codecs?.length) {
         return false;
     }
-    return codecs.every(isAudioCodec);
+    const mediaCodecs = codecs.filter((codec) => !["wvtt", "stpp"].includes(codec.toLowerCase().split(".")[0]));
+    return mediaCodecs.length > 0 && mediaCodecs.every(isAudioCodec);
 }
 
 function isAudioCodec(codec: string): boolean {

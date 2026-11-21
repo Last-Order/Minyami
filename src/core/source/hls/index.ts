@@ -1,5 +1,6 @@
 import { getAbortSignal, iterateWithAbortSignal, runWithAbortSignal } from "@/utils/abort";
 import logger from "@/utils/log";
+import { AAC_CONTAINER } from "../../media_container";
 import { selectDefaultStream } from "../default_stream_selector";
 import { mergeAsyncIterables } from "../merge_async_iterables";
 import { MediaTrack, TrackSelection, validateTrackSelection } from "../stream_selection";
@@ -56,11 +57,18 @@ export class HLSSource implements DownloadSource {
             this.prepared = true;
             return { cancelled: true };
         }
+        const hasSubtitles = selectedTracks.some(({ mediaTrack }) => mediaTrack.type === "subtitle");
+        if (hasSubtitles && this.options.slice) {
+            throw new Error("HLS subtitle muxing requires a full download. Remove --slice or deselect the subtitles.");
+        }
 
         // Each selected Media Playlist owns independent sequence/dedup state even when tracks share one master.
         this.cursors = await Promise.all(
             selectedTracks.map(async (selected) => {
                 const playlist = selected.initialPlaylist ?? (await this.loadSelectedMediaPlaylist(selected));
+                if (hasSubtitles && playlist.hasDiscontinuity) {
+                    throw new Error("HLS subtitle muxing requires media playlists without timeline discontinuities.");
+                }
                 return new HLSMediaPlaylistCursor({
                     id: selected.sourceTrackId,
                     mediaTrack: selected.mediaTrack,
@@ -76,6 +84,9 @@ export class HLSSource implements DownloadSource {
         );
         // All cursors resolve keys before any track metadata is published to the downloader.
         const preparedTracks = await Promise.all(this.cursors.map((cursor) => cursor.prepare(context)));
+        if (hasSubtitles && preparedTracks.some(({ container }) => container === AAC_CONTAINER)) {
+            throw new Error("HLS subtitle muxing requires MPEG-TS or fMP4 audio and video tracks.");
+        }
         const container = preparedTracks[0].container;
         this.prepared = true;
         return { container, tracks: preparedTracks.map((prepared) => prepared.track) };
@@ -125,7 +136,7 @@ export class HLSSource implements DownloadSource {
                 },
             ];
         }
-        const plan = createHLSStreamCatalogPlan(loaded);
+        const plan = createHLSStreamCatalogPlan(loaded, !this.continuous);
         const selection = await this.selectTracks(plan);
         throwIfAborted();
         if (!selection) {

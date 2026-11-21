@@ -5,6 +5,7 @@ import {
     MediaTrack,
     StreamCatalog,
     StreamOption,
+    SubtitleTrack,
     TrackSelection,
     VideoTrack,
 } from "@/core/source/stream_selection";
@@ -41,10 +42,14 @@ export async function selectStreamInteractively(catalog: StreamCatalog): Promise
     }
 
     const videoChoices = createVideoChoices(catalog);
-    if (videoChoices.length === 0 && catalog.options.length === 1) {
+    if (videoChoices.length === 0 && catalog.options.length === 1 && !getSubtitleTracks(catalog.options[0]).length) {
         return defaultSelection;
     }
-    if (videoChoices.length === 1 && createAudioChoices(videoChoices[0].value.option).length === 0) {
+    if (
+        videoChoices.length === 1 &&
+        !createAudioChoices(videoChoices[0].value.option).length &&
+        !getSubtitleTracks(videoChoices[0].value.option).length
+    ) {
         return [videoChoices[0].value.track];
     }
 
@@ -54,7 +59,12 @@ export async function selectStreamInteractively(catalog: StreamCatalog): Promise
     }
 
     if (videoChoices.length === 0) {
-        return selectAudioOnlyOption(catalog);
+        const option = catalog.options.length === 1 ? catalog.options[0] : await selectAudioOnlyOption(catalog);
+        if (!option) {
+            return undefined;
+        }
+        const tracks = option.tracks.filter((track) => track.type !== "subtitle");
+        return selectSubtitles(option, tracks);
     }
 
     const selectedVideo = await selectVideo(videoChoices);
@@ -64,7 +74,7 @@ export async function selectStreamInteractively(catalog: StreamCatalog): Promise
 
     const audioChoices = createAudioChoices(selectedVideo.option);
     if (audioChoices.length === 0) {
-        return [selectedVideo.track];
+        return selectSubtitles(selectedVideo.option, [selectedVideo.track]);
     }
 
     const response = await prompts({
@@ -80,10 +90,45 @@ export async function selectStreamInteractively(catalog: StreamCatalog): Promise
 
     // The second prompt is derived from the selected option so it cannot cross a manifest compatibility boundary.
     const selectedAudioSet = new Set(selectedAudios);
-    return [
+    return selectSubtitles(selectedVideo.option, [
         selectedVideo.track,
         ...audioChoices.filter((choice) => selectedAudioSet.has(choice.value)).map((choice) => choice.value),
-    ];
+    ]);
+}
+
+function getSubtitleTracks(option: StreamOption): readonly SubtitleTrack[] {
+    return option.tracks.filter((track): track is SubtitleTrack => track.type === "subtitle");
+}
+
+async function selectSubtitles(
+    option: StreamOption,
+    tracks: readonly MediaTrack[],
+): Promise<TrackSelection | undefined> {
+    const subtitles = getSubtitleTracks(option);
+    if (!subtitles.length) {
+        return optionSelection(tracks);
+    }
+    const response = await prompts({
+        type: "multiselect",
+        name: "subtitles",
+        message: "Select subtitle tracks",
+        choices: subtitles.map((track) => ({
+            title: [track.name || track.id, track.language, track.isForced ? "Forced" : undefined]
+                .filter(Boolean)
+                .join(TRACK_DETAIL_SEPARATOR),
+            value: track,
+            selected: true,
+        })),
+    });
+    const selected = response.subtitles as readonly SubtitleTrack[] | undefined;
+    return selected
+        ? optionSelection([...tracks, ...subtitles.filter((track) => selected.includes(track))])
+        : undefined;
+}
+
+function optionSelection(tracks: readonly MediaTrack[]): TrackSelection | undefined {
+    const [first, ...rest] = tracks;
+    return first ? [first, ...rest] : undefined;
 }
 
 async function selectVideo(choices: readonly VideoChoice[]): Promise<VideoChoiceValue | undefined> {
@@ -101,7 +146,7 @@ async function selectVideo(choices: readonly VideoChoice[]): Promise<VideoChoice
     return response.video as VideoChoiceValue | undefined;
 }
 
-async function selectAudioOnlyOption(catalog: StreamCatalog): Promise<TrackSelection | undefined> {
+async function selectAudioOnlyOption(catalog: StreamCatalog): Promise<StreamOption | undefined> {
     const choices = createStreamOptionChoices(catalog);
     const response = await prompts({
         type: "select",
@@ -110,7 +155,7 @@ async function selectAudioOnlyOption(catalog: StreamCatalog): Promise<TrackSelec
         choices,
         initial: 0,
     });
-    return (response.option as StreamOption | undefined)?.tracks;
+    return response.option as StreamOption | undefined;
 }
 
 function createVideoChoices(catalog: StreamCatalog): VideoChoice[] {

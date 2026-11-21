@@ -3,6 +3,36 @@ import { parseMasterPlaylist } from "@/core/source/hls/playlist/master";
 import { createHLSStreamCatalogPlan } from "@/core/source/hls/stream_catalog";
 
 describe("HLS stream catalog", () => {
+    test("resolves subtitle variables and offers only the group referenced by each variant", () => {
+        const master = parseMasterPlaylist({
+            playlistUrl: "https://media.example/master.m3u8",
+            content: [
+                "#EXTM3U",
+                '#EXT-X-DEFINE:NAME="group",VALUE="main"',
+                '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="{$group}",NAME="English",LANGUAGE="en",FORCED=YES,URI="{$group}/en.m3u8"',
+                '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="other",NAME="Japanese",LANGUAGE="ja",URI="ja.m3u8"',
+                '#EXT-X-STREAM-INF:BANDWIDTH=10000,SUBTITLES="{$group}"',
+                "main.m3u8",
+                '#EXT-X-STREAM-INF:BANDWIDTH=20000,SUBTITLES="other"',
+                "other.m3u8",
+                '#EXT-X-STREAM-INF:BANDWIDTH=30000,SUBTITLES="{$group}"',
+                "another.m3u8",
+            ].join("\n"),
+        });
+        const { catalog, mediaTracks } = createHLSStreamCatalogPlan(master);
+
+        expect(catalog.options.map(({ tracks }) => tracks.map(({ id }) => id))).toEqual([
+            ["video-1", "subtitle-1"],
+            ["video-2", "subtitle-2"],
+            ["video-3", "subtitle-1"],
+        ]);
+        const english = catalog.options[0].tracks[1];
+        expect(english).toBe(catalog.options[2].tracks[1]);
+        expect(english).toMatchObject({ type: "subtitle", name: "English", language: "en", isForced: true });
+        expect(english).not.toHaveProperty("url");
+        expect(mediaTracks.get(english)?.sourcePath).toBe("https://media.example/main/en.m3u8");
+    });
+
     test("normalizes compatible tracks while keeping playlist URLs private", () => {
         const master = parseMasterPlaylist({
             content: [

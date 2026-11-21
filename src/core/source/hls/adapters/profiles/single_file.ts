@@ -29,10 +29,7 @@ export function toSingleFileDownloadItem(
     sampleAesScheme: SingleFileSampleAesScheme,
     missingIvMessage: string,
 ) {
-    if (!segment.encryption) {
-        return toDownloadItem(segment);
-    }
-    if (segment.encryption.method === "SAMPLE-AES") {
+    if (segment.encryption?.method === "SAMPLE-AES") {
         if (!segment.encryption.iv) {
             throw new Error(missingIvMessage);
         }
@@ -41,6 +38,16 @@ export function toSingleFileDownloadItem(
             keyId: segment.encryption.key.id,
             iv: segment.encryption.iv,
         });
+    }
+    return toAes128DownloadItem(segment);
+}
+
+export function toAes128DownloadItem(segment: HLSSegment) {
+    if (!segment.encryption) {
+        return toDownloadItem(segment);
+    }
+    if (segment.encryption.method !== "AES-128") {
+        throw new Error(`Unsupported HLS encryption method: ${segment.encryption.method}.`);
     }
     const iv = segment.encryption.iv;
     return toDownloadItem(segment, {

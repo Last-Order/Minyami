@@ -1,4 +1,4 @@
-export type MediaTrackType = "video" | "audio";
+export type MediaTrackType = "video" | "audio" | "subtitle";
 
 export interface BaseMediaTrack {
     /** Opaque identity unique inside one stream catalog. */
@@ -24,7 +24,15 @@ export interface AudioTrack extends BaseMediaTrack {
     readonly isDefault?: boolean;
 }
 
-export type MediaTrack = VideoTrack | AudioTrack;
+export interface SubtitleTrack extends BaseMediaTrack {
+    readonly type: "subtitle";
+    readonly language?: string;
+    readonly role?: string;
+    readonly isDefault?: boolean;
+    readonly isForced?: boolean;
+}
+
+export type MediaTrack = VideoTrack | AudioTrack | SubtitleTrack;
 
 export type TrackSelection = readonly [MediaTrack, ...MediaTrack[]];
 

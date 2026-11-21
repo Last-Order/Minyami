@@ -4,6 +4,7 @@ import {
     HLSParseError,
     HLSParseOptions,
     HLSPlaylistKind,
+    HLSSubtitleRendition,
     HLSVariant,
 } from "./models";
 import { findNextUri, getTagBody, parseAttributeList, resolvePlaylistUri } from "./syntax";
@@ -15,7 +16,7 @@ const MEDIA_TAG = "#EXT-X-MEDIA:";
 export function parseMasterPlaylist(options: HLSParseOptions): HLSMasterPlaylist {
     const { playlistUrl = "" } = options;
     const { lines, variables } = resolvePlaylistVariables(options, HLSPlaylistKind.Master);
-    const audioRenditions = parseAudioRenditions(lines, playlistUrl);
+    const { audioRenditions, subtitleRenditions } = parseRenditions(lines, playlistUrl);
     const variants: HLSVariant[] = [];
 
     for (let index = 0; index < lines.length; index++) {
@@ -37,45 +38,73 @@ export function parseMasterPlaylist(options: HLSParseOptions): HLSMasterPlaylist
     }
 
     const audioGroupIds = new Set(audioRenditions.map((rendition) => rendition.groupId));
+    const subtitleGroupIds = new Set(subtitleRenditions.map((rendition) => rendition.groupId));
     for (const variant of variants) {
         if (variant.audioGroupId && !audioGroupIds.has(variant.audioGroupId)) {
             throw new HLSParseError(`Missing audio renditions for group ${variant.audioGroupId}.`);
         }
+        if (variant.subtitleGroupId && !subtitleGroupIds.has(variant.subtitleGroupId)) {
+            throw new HLSParseError(`Missing subtitle renditions for group ${variant.subtitleGroupId}.`);
+        }
     }
 
-    return { kind: HLSPlaylistKind.Master, variants, audioRenditions, ...(variables ? { variables } : {}) };
+    return {
+        kind: HLSPlaylistKind.Master,
+        variants,
+        audioRenditions,
+        ...(subtitleRenditions.length ? { subtitleRenditions } : {}),
+        ...(variables ? { variables } : {}),
+    };
 }
 
-function parseAudioRenditions(lines: readonly string[], playlistUrl: string): HLSAudioRendition[] {
-    const renditions: HLSAudioRendition[] = [];
+function parseRenditions(lines: readonly string[], playlistUrl: string) {
+    const audioRenditions: HLSAudioRendition[] = [];
+    const subtitleRenditions: HLSSubtitleRendition[] = [];
     for (const line of lines) {
         if (!line.startsWith(MEDIA_TAG)) {
             continue;
         }
         const attributes = parseAttributeList(getTagBody(line));
-        if (attributes["TYPE"] !== "AUDIO") {
+        const type = attributes["TYPE"];
+        if (type !== "AUDIO" && type !== "SUBTITLES") {
             continue;
         }
 
         const groupId = attributes["GROUP-ID"];
         const name = attributes["NAME"];
         if (!groupId || !name) {
-            throw new HLSParseError("Missing GROUP-ID or NAME for HLS audio rendition.");
+            throw new HLSParseError(
+                `Missing GROUP-ID or NAME for HLS ${type === "AUDIO" ? "audio" : "subtitle"} rendition.`,
+            );
         }
         const uri = attributes["URI"];
-        const channels = parseChannelCount(attributes["CHANNELS"]);
-        renditions.push({
+        const rendition = {
             groupId,
             name,
-            ...(uri ? { url: resolvePlaylistUri(playlistUrl, uri) } : {}),
             ...(attributes["LANGUAGE"] ? { language: attributes["LANGUAGE"] } : {}),
             ...(attributes["CHARACTERISTICS"] ? { characteristics: attributes["CHARACTERISTICS"] } : {}),
-            ...(channels !== undefined ? { channels } : {}),
             isDefault: attributes["DEFAULT"] === "YES",
             autoSelect: attributes["AUTOSELECT"] === "YES",
+        };
+        if (type === "SUBTITLES") {
+            if (!uri) {
+                throw new HLSParseError("Missing URI for HLS subtitle rendition.");
+            }
+            subtitleRenditions.push({
+                ...rendition,
+                url: resolvePlaylistUri(playlistUrl, uri),
+                isForced: attributes["FORCED"] === "YES",
+            });
+            continue;
+        }
+        const channels = parseChannelCount(attributes["CHANNELS"]);
+        audioRenditions.push({
+            ...rendition,
+            ...(uri ? { url: resolvePlaylistUri(playlistUrl, uri) } : {}),
+            ...(channels !== undefined ? { channels } : {}),
         });
     }
-    return renditions;
+    return { audioRenditions, subtitleRenditions };
 }
 
 function createVariant(attributes: Record<string, string>, url: string): HLSVariant {
@@ -85,6 +114,7 @@ function createVariant(attributes: Record<string, string>, url: string): HLSVari
         ...(attributes["CODECS"] ? { codecs: attributes["CODECS"] } : {}),
         ...(attributes["FRAME-RATE"] ? { frameRate: +attributes["FRAME-RATE"] } : {}),
         ...(attributes["AUDIO"] ? { audioGroupId: attributes["AUDIO"] } : {}),
+        ...(attributes["SUBTITLES"] ? { subtitleGroupId: attributes["SUBTITLES"] } : {}),
     };
     const resolution = attributes["RESOLUTION"];
     if (!resolution || !resolution.includes("x")) {

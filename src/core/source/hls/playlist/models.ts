@@ -35,23 +35,33 @@ export interface HLSVariant {
     readonly frameRate?: number;
     readonly resolution?: { readonly width: number; readonly height: number };
     readonly audioGroupId?: string;
+    readonly subtitleGroupId?: string;
 }
 
-export interface HLSAudioRendition {
+interface HLSRendition {
     readonly groupId: string;
     readonly name: string;
-    readonly url?: string;
     readonly language?: string;
     readonly characteristics?: string;
-    readonly channels?: number;
     readonly isDefault: boolean;
     readonly autoSelect: boolean;
+}
+
+export interface HLSAudioRendition extends HLSRendition {
+    readonly url?: string;
+    readonly channels?: number;
+}
+
+export interface HLSSubtitleRendition extends HLSRendition {
+    readonly url: string;
+    readonly isForced: boolean;
 }
 
 export interface HLSMasterPlaylist {
     readonly kind: HLSPlaylistKind.Master;
     readonly variants: readonly HLSVariant[];
     readonly audioRenditions: readonly HLSAudioRendition[];
+    readonly subtitleRenditions?: readonly HLSSubtitleRendition[];
     readonly variables?: Readonly<Record<string, string>>;
 }
 
@@ -123,6 +133,7 @@ export interface HLSMediaPlaylist {
     readonly segments: readonly HLSSegment[];
     readonly keys: readonly HLSKeyReference[];
     readonly hasEndList: boolean;
+    readonly hasDiscontinuity?: true;
     readonly totalDuration: number;
     readonly averageSegmentDuration: number;
 }

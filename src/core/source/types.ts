@@ -109,6 +109,9 @@ export interface DownloadItemNamingContext {
 
 export type DownloadItemNamer = (item: DownloadItem, context: DownloadItemNamingContext) => string;
 
+/** Formats ordered media for one output file. Initialization data is supplied separately. */
+export type DownloadOutputTransform = (data: Buffer, prefixes: readonly Buffer[]) => Buffer;
+
 export interface SourceBatch {
     /** Every item in a batch belongs to one previously declared track. */
     readonly trackId: DownloadTrackId;
@@ -128,6 +131,7 @@ export interface SourceTrack {
     readonly container?: MediaContainer;
     readonly itemNamer?: DownloadItemNamer;
     readonly itemTimeout?: number;
+    readonly createOutputTransform?: () => DownloadOutputTransform;
 }
 
 export type SourceMetadata =

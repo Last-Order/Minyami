@@ -7,7 +7,7 @@ const DEFINE_TAG = "#EXT-X-DEFINE";
 // https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis-22#section-6.3.1
 const VARIABLE_ATTRIBUTES: Readonly<Record<string, ReadonlySet<string>>> = {
     [DEFINE_TAG]: new Set(["NAME", "VALUE", "IMPORT", "QUERYPARAM"]),
-    "#EXT-X-STREAM-INF": new Set(["CODECS", "AUDIO"]),
+    "#EXT-X-STREAM-INF": new Set(["CODECS", "AUDIO", "SUBTITLES"]),
     "#EXT-X-MEDIA": new Set(["GROUP-ID", "NAME", "LANGUAGE", "CHARACTERISTICS", "URI", "CHANNELS"]),
     "#EXT-X-KEY": new Set(["URI", "IV", "KEYFORMAT"]),
     "#EXT-X-MAP": new Set(["URI", "BYTERANGE"]),

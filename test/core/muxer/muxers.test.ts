@@ -42,8 +42,11 @@ const request = {
 
 describe("built-in muxers", () => {
     test("registers mkvmerge ahead of ffmpeg by default", () => {
-        expect(createDefaultMuxers().map((muxer) => muxer.name)).toEqual(["mkvmerge", "ffmpeg"]);
-        expect(createDefaultMuxers().map((muxer) => muxer.outputContainer.extension)).toEqual(["mkv", "mp4"]);
+        expect(createDefaultMuxers().map(({ name, outputContainer }) => [name, outputContainer.extension])).toEqual([
+            ["mkvmerge", "mkv"],
+            ["ffmpeg", "mp4"],
+            ["ffmpeg", "mkv"],
+        ]);
     });
 
     test("mkvmerge passes paths as direct process arguments", async () => {
@@ -136,6 +139,64 @@ describe("built-in muxers", () => {
                     "mixed output.mp4",
                 ],
             },
+        ]);
+    });
+
+    test("selects FFmpeg for MKV output that preserves a shared timeline", async () => {
+        const runner = new RecordingRunner(["mkvmerge", "ffmpeg"]);
+        const muxer = new FFmpegMuxer(runner, "mkv");
+        await expect(selectAvailableMuxer([new MkvmergeMuxer(runner), muxer], true)).resolves.toBe(muxer);
+        await muxer.mux({
+            inputs: [
+                request.inputs[0],
+                request.inputs[1],
+                {
+                    trackId: "subtitle-1",
+                    mediaTrack: { id: "en", type: "subtitle", language: "eng", name: "English", isForced: true },
+                    inputPath: "english.vtt",
+                },
+            ],
+            outputPath: "result.mkv",
+        });
+
+        expect(runner.availabilityChecks).toEqual([{ command: "ffmpeg", arguments_: ["-version"] }]);
+        expect(runner.runs[0].command).toBe("ffmpeg");
+        expect(runner.runs[0].arguments_).toEqual([
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-n",
+            "-copyts",
+            "-i",
+            "video track.ts",
+            "-i",
+            "english audio track.ts",
+            "-i",
+            "english.vtt",
+            "-map",
+            "0:v?",
+            "-map",
+            "0:a?",
+            "-map",
+            "1:v?",
+            "-map",
+            "1:a?",
+            "-map",
+            "2:s:0",
+            "-c",
+            "copy",
+            "-metadata:s:s:0",
+            "title=English",
+            "-metadata:s:s:0",
+            "language=eng",
+            "-disposition:s:0",
+            "forced",
+            "-avoid_negative_ts",
+            "disabled",
+            "-f",
+            "matroska",
+            "result.mkv",
         ]);
     });
 

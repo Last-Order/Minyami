@@ -153,6 +153,7 @@ export function parseMediaPlaylist(options: HLSParseOptions): HLSMediaPlaylist {
         segments,
         keys: [...keys.values()],
         hasEndList,
+        ...(lines.includes("#EXT-X-DISCONTINUITY") ? { hasDiscontinuity: true } : {}),
         totalDuration,
         averageSegmentDuration: totalDuration / mediaSegmentCount,
     };

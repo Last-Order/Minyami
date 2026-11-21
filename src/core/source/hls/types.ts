@@ -3,6 +3,7 @@ import type { MediaTrack, StreamCatalog, StreamSelector } from "@/core/source/st
 import type {
     DownloadItem,
     DownloadItemNamer,
+    DownloadOutputTransform,
     DownloadSourceContext,
     DownloadSourceHttpClient,
     DownloadTrackId,
@@ -43,6 +44,7 @@ export interface HLSAdaptationOptions {
     readonly playlist: HLSMediaPlaylist;
     readonly explicitKeys: readonly HLSExplicitKey[];
     readonly http: DownloadSourceHttpClient;
+    readonly subtitles?: boolean;
 }
 
 export interface HLSAdaptationPlan {
@@ -50,6 +52,7 @@ export interface HLSAdaptationPlan {
     readonly container: MediaContainer;
     readonly siteId?: string;
     readonly itemNamer?: DownloadItemNamer;
+    readonly createOutputTransform?: () => DownloadOutputTransform;
     adaptPlaylist(playlist: HLSMediaPlaylist): HLSMediaPlaylist;
     ensureKeys(playlist: HLSMediaPlaylist, context: DownloadSourceContext): Promise<void>;
     toDownloadItem(segment: HLSSegment): DownloadItem;
